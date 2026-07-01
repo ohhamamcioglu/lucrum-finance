@@ -205,6 +205,69 @@ const en = {
   systemAlertBoard: 'SYSTEM ALERT BOARD',
   clearAll: 'Clear All',
   searchPlaceholder: 'Search instruments, tickers, or reports...',
+
+  // Public nav
+  navHome: 'Home',
+  navPricing: 'Pricing',
+  navLogin: 'Log In',
+  navRegister: 'Sign Up',
+  navGoToApp: 'Go to App',
+  navAdmin: 'Admin',
+
+  // Landing page
+  landingHeadline: 'Institutional-grade portfolio intelligence, for everyone.',
+  landingSubhead: 'Track holdings, analyze risk, and benchmark performance across equities, funds, crypto, and fixed income — all in one place.',
+  landingCtaPrimary: 'Start Free',
+  landingCtaSecondary: 'View Pricing',
+  landingFeaturesTitle: 'Everything you need to manage your portfolio',
+  landingFeature1Title: 'Real-time Portfolio Tracking',
+  landingFeature1Desc: 'Live pricing across BIST, US equities, TEFAS funds, crypto, and fixed income.',
+  landingFeature2Title: 'Risk & Analytics',
+  landingFeature2Desc: 'Sharpe ratio, Value-at-Risk, and scenario stress-testing built in.',
+  landingFeature3Title: 'Benchmark Comparison',
+  landingFeature3Desc: 'Measure your net alpha against S&P 500, BIST100, Bitcoin, and more.',
+  landingFooterRights: 'All rights reserved.',
+
+  // Pricing page
+  pricingTitle: 'Simple, transparent pricing',
+  pricingSubtitle: 'Choose the plan that fits your portfolio.',
+  pricingPerMonth: '/ month',
+  pricingCurrentPlan: 'Current Plan',
+  pricingSelect: 'Choose Plan',
+  pricingSignUpFirst: 'Sign Up to Choose',
+  pricingPositions: 'Positions',
+  pricingAlerts: 'Price Alerts',
+  pricingUnlimited: 'Unlimited',
+  pricingUpgradeSuccess: 'Plan updated successfully.',
+  pricingUpgradeFailed: 'Plan update failed.',
+
+  // Legal pages
+  legalDisclaimer: 'This is a draft template, not legal advice. It must be reviewed by a licensed attorney before use with real users in production.',
+  legalLastUpdated: 'Last updated',
+  legalKvkkTitle: 'Personal Data Protection Notice (KVKK)',
+  legalTermsTitle: 'Terms of Service',
+  legalPrivacyTitle: 'Privacy Policy',
+
+  // Admin page
+  adminTitle: 'Admin Panel',
+  adminUsers: 'Users',
+  adminSearch: 'Search by email or name...',
+  adminEmail: 'Email',
+  adminName: 'Name',
+  adminTier: 'Subscription',
+  adminStatus: 'Status',
+  adminActive: 'Active',
+  adminDisabled: 'Disabled',
+  adminAdminBadge: 'Admin',
+  adminTotalUsers: 'Total Users',
+  adminActiveUsers: 'Active',
+  adminVerifiedUsers: 'Verified',
+  adminAdminUsers: 'Admins',
+  adminPrev: 'Previous',
+  adminNext: 'Next',
+  adminPage: (page: number, total: number) => `Page ${page} of ${total}`,
+  adminNoResults: 'No users found.',
+  adminCannotDisableSelf: 'You cannot disable your own account.',
 };
 
 const tr: typeof en = {
@@ -403,6 +466,69 @@ const tr: typeof en = {
   systemAlertBoard: 'SİSTEM UYARI PANELİ',
   clearAll: 'Tümünü Temizle',
   searchPlaceholder: 'Enstrüman, sembol veya rapor ara...',
+
+  // Public nav
+  navHome: 'Ana Sayfa',
+  navPricing: 'Fiyatlandırma',
+  navLogin: 'Giriş Yap',
+  navRegister: 'Kayıt Ol',
+  navGoToApp: 'Panele Git',
+  navAdmin: 'Yönetim',
+
+  // Landing page
+  landingHeadline: 'Kurumsal düzeyde portföy zekası, herkes için.',
+  landingSubhead: 'Hisse, fon, kripto ve sabit getirili varlıklarınızı tek bir yerden takip edin, risk analizi yapın ve performansınızı kıyaslayın.',
+  landingCtaPrimary: 'Ücretsiz Başla',
+  landingCtaSecondary: 'Fiyatlandırmayı Gör',
+  landingFeaturesTitle: 'Portföyünüzü yönetmek için ihtiyacınız olan her şey',
+  landingFeature1Title: 'Gerçek Zamanlı Portföy Takibi',
+  landingFeature1Desc: 'BIST, ABD hisseleri, TEFAS fonları, kripto ve sabit getirili varlıklarda canlı fiyatlandırma.',
+  landingFeature2Title: 'Risk & Analitik',
+  landingFeature2Desc: 'Sharpe oranı, Riske Maruz Değer (VaR) ve senaryo stres testleri dahil.',
+  landingFeature3Title: 'Kıyaslama',
+  landingFeature3Desc: 'Net alfanızı S&P 500, BIST100, Bitcoin ve daha fazlasıyla karşılaştırın.',
+  landingFooterRights: 'Tüm hakları saklıdır.',
+
+  // Pricing page
+  pricingTitle: 'Basit, şeffaf fiyatlandırma',
+  pricingSubtitle: 'Portföyünüze uygun planı seçin.',
+  pricingPerMonth: '/ ay',
+  pricingCurrentPlan: 'Mevcut Plan',
+  pricingSelect: 'Planı Seç',
+  pricingSignUpFirst: 'Seçmek İçin Kayıt Ol',
+  pricingPositions: 'Pozisyon',
+  pricingAlerts: 'Fiyat Alarmı',
+  pricingUnlimited: 'Sınırsız',
+  pricingUpgradeSuccess: 'Planınız başarıyla güncellendi.',
+  pricingUpgradeFailed: 'Plan güncelleme başarısız oldu.',
+
+  // Legal pages
+  legalDisclaimer: 'Bu bir taslak şablondur, hukuki danışmanlık değildir. Gerçek kullanıcı verisiyle canlıya çıkmadan önce bir avukat tarafından incelenmelidir.',
+  legalLastUpdated: 'Son güncelleme',
+  legalKvkkTitle: 'Kişisel Verilerin Korunması Aydınlatma Metni (KVKK)',
+  legalTermsTitle: 'Kullanım Şartları',
+  legalPrivacyTitle: 'Gizlilik Politikası',
+
+  // Admin page
+  adminTitle: 'Yönetim Paneli',
+  adminUsers: 'Kullanıcılar',
+  adminSearch: 'E-posta veya isimle ara...',
+  adminEmail: 'E-posta',
+  adminName: 'İsim',
+  adminTier: 'Abonelik',
+  adminStatus: 'Durum',
+  adminActive: 'Aktif',
+  adminDisabled: 'Devre Dışı',
+  adminAdminBadge: 'Admin',
+  adminTotalUsers: 'Toplam Kullanıcı',
+  adminActiveUsers: 'Aktif',
+  adminVerifiedUsers: 'Doğrulanmış',
+  adminAdminUsers: 'Admin',
+  adminPrev: 'Önceki',
+  adminNext: 'Sonraki',
+  adminPage: (page: number, total: number) => `Sayfa ${page} / ${total}`,
+  adminNoResults: 'Kullanıcı bulunamadı.',
+  adminCannotDisableSelf: 'Kendi hesabınızı devre dışı bırakamazsınız.',
 };
 
 export type Translations = typeof en;

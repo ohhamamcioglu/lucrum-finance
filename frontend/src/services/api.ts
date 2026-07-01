@@ -227,7 +227,7 @@ export const api = {
     return data.scores ?? {};
   },
 
-  async getUserProfile(): Promise<{ id: number; email: string; name: string; currency: string; subscription_tier: string; subscription_status: string; subscription_ends_at?: string }> {
+  async getUserProfile(): Promise<{ id: number; email: string; name: string; currency: string; subscription_tier: string; subscription_status: string; subscription_ends_at?: string; is_admin?: boolean }> {
     return request(`${BASE_URL}/api/users/me`);
   },
 
@@ -277,5 +277,34 @@ export const api = {
 
   async resendVerification(): Promise<{ status: string; message: string }> {
     return request(`${BASE_URL}/api/users/resend-verification`, { method: 'POST' });
+  },
+
+  async adminListUsers(page = 1, pageSize = 20, search = ''): Promise<{
+    items: {
+      id: number; email: string; name: string; subscription_tier: string; subscription_status: string;
+      is_admin: boolean; is_active: boolean; email_verified: boolean; created_at: string;
+    }[];
+    total: number; page: number; page_size: number;
+  }> {
+    const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+    return request(`${BASE_URL}/api/admin/users?page=${page}&page_size=${pageSize}${searchParam}`);
+  },
+
+  async adminUpdateUser(userId: number, patch: { subscription_tier?: string; is_active?: boolean }): Promise<{
+    id: number; email: string; name: string; subscription_tier: string; subscription_status: string;
+    is_admin: boolean; is_active: boolean; email_verified: boolean; created_at: string;
+  }> {
+    return request(`${BASE_URL}/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+  },
+
+  async adminGetStats(): Promise<{
+    total_users: number; active_users: number; verified_users: number; admin_users: number;
+    tier_breakdown: Record<string, number>;
+  }> {
+    return request(`${BASE_URL}/api/admin/stats`);
   },
 };

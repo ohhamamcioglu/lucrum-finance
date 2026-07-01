@@ -5,10 +5,11 @@ import { api } from '../services/api';
 
 interface AuthViewProps {
   onAuthSuccess: (token: string) => void;
+  initialMode?: 'login' | 'register';
 }
 
-export default function AuthView({ onAuthSuccess }: AuthViewProps) {
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
+export default function AuthView({ onAuthSuccess, initialMode = 'login' }: AuthViewProps) {
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const isLogin = mode === 'login';
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');

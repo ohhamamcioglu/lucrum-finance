@@ -1,7 +1,9 @@
 import { motion } from 'motion/react';
-import { Wallet, BarChart2, ShieldAlert, TrendingUp, Settings, Newspaper } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Wallet, BarChart2, ShieldAlert, TrendingUp, Settings, Newspaper, ShieldCheck } from 'lucide-react';
 import { ActiveTab, UserSettings } from '../types';
 import { useT } from '../i18n';
+import { useAuth } from '../AuthContext';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -11,6 +13,7 @@ interface SidebarProps {
 
 export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarProps) {
   const t = useT(settings.language);
+  const { isAdmin } = useAuth();
 
   const menuItems = [
     { id: 'portfolio', label: t.portfolio, icon: Wallet },
@@ -69,6 +72,17 @@ export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarPr
               </button>
             );
           })}
+
+          {isAdmin && (
+            <Link
+              to="/admin"
+              id="sidebar-tab-admin"
+              className="w-full flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-[#6B645E] hover:bg-[#E8E2D9] hover:text-[#2D2926]"
+            >
+              <ShieldCheck className="w-4 h-4 text-[#9E958C]" />
+              <span>{t.navAdmin}</span>
+            </Link>
+          )}
         </nav>
       </div>
 
