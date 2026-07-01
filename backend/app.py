@@ -21,6 +21,17 @@ try:
 except ImportError:
     pass
 
+# Hata izleme (Sentry) — SENTRY_DSN tanımlı değilse tamamen no-op, hiçbir şey göndermez.
+_sentry_dsn = os.getenv("SENTRY_DSN")
+if _sentry_dsn:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        environment=os.getenv("SENTRY_ENVIRONMENT", "development"),
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        send_default_pii=False,
+    )
+
 # Import routers
 from routers import (
     users,
