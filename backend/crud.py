@@ -10,10 +10,10 @@ from models import (
     LiabilityCreate, LiabilityUpdate, TargetAllocationCreate, PriceAlertCreate
 )
 from db_models import (
-    SessionLocal, DBUser, DBPosition, DBTransaction, DBPriceHistory, 
-    DBExchangeRate, DBPortfolioSnapshot, DBAssetClassSummary, 
-    DBPerformanceHistory, DBLiability, DBTargetAllocation, 
-    DBPriceAlert, DBNotification
+    SessionLocal, DBUser, DBPosition, DBTransaction, DBPriceHistory,
+    DBExchangeRate, DBPortfolioSnapshot, DBAssetClassSummary,
+    DBPerformanceHistory, DBLiability, DBTargetAllocation,
+    DBPriceAlert, DBNotification, DBAuthToken
 )
 
 # ----------------- HELPERS -----------------
@@ -84,6 +84,112 @@ def get_user_by_email(email: str, db: Optional[Session] = None) -> Optional[Dict
     try:
         user = session.query(DBUser).filter(DBUser.email == email.lower().strip()).first()
         return to_dict(user)
+    finally:
+        if must_close:
+            session.close()
+
+# ============ AUTH TOKENS (refresh / email-verify / password-reset) ============
+
+def create_auth_token(user_id: int, token_hash: str, token_type: str, expires_at: datetime, db: Optional[Session] = None) -> None:
+    """Yeni bir auth token kaydı oluşturur (ham token asla saklanmaz, sadece hash)."""
+    session, must_close = _get_db(db)
+    try:
+        record = DBAuthToken(
+            user_id=user_id,
+            token_hash=token_hash,
+            token_type=token_type,
+            expires_at=expires_at,
+        )
+        session.add(record)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def get_valid_auth_token(token_hash: str, token_type: str, db: Optional[Session] = None) -> Optional[DBAuthToken]:
+    """Süresi dolmamış, iptal edilmemiş ve kullanılmamış bir auth token'ı bulur."""
+    session, must_close = _get_db(db)
+    try:
+        record = session.query(DBAuthToken).filter(
+            DBAuthToken.token_hash == token_hash,
+            DBAuthToken.token_type == token_type,
+            DBAuthToken.revoked_at.is_(None),
+            DBAuthToken.used_at.is_(None),
+            DBAuthToken.expires_at > datetime.utcnow(),
+        ).first()
+        if record is not None:
+            session.expunge(record)
+        return record
+    finally:
+        if must_close:
+            session.close()
+
+def consume_auth_token(token_hash: str, db: Optional[Session] = None) -> None:
+    """Tek kullanımlık token'ı (email verify / password reset) kullanıldı olarak işaretler."""
+    session, must_close = _get_db(db)
+    try:
+        session.query(DBAuthToken).filter(DBAuthToken.token_hash == token_hash).update({"used_at": datetime.utcnow()})
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def revoke_auth_token(token_hash: str, db: Optional[Session] = None) -> None:
+    """Refresh token'ı iptal eder (logout / rotation)."""
+    session, must_close = _get_db(db)
+    try:
+        session.query(DBAuthToken).filter(DBAuthToken.token_hash == token_hash).update({"revoked_at": datetime.utcnow()})
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def revoke_all_refresh_tokens(user_id: int, db: Optional[Session] = None) -> None:
+    """Kullanıcının tüm refresh token'larını iptal eder (şifre sıfırlama sonrası tüm oturumları kapatır)."""
+    session, must_close = _get_db(db)
+    try:
+        session.query(DBAuthToken).filter(
+            DBAuthToken.user_id == user_id,
+            DBAuthToken.token_type == "REFRESH",
+            DBAuthToken.revoked_at.is_(None),
+        ).update({"revoked_at": datetime.utcnow()})
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def mark_email_verified(user_id: int, db: Optional[Session] = None) -> None:
+    session, must_close = _get_db(db)
+    try:
+        session.query(DBUser).filter(DBUser.id == user_id).update({"email_verified": True})
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def update_user_password(user_id: int, password_hash: str, db: Optional[Session] = None) -> None:
+    session, must_close = _get_db(db)
+    try:
+        session.query(DBUser).filter(DBUser.id == user_id).update({"password_hash": password_hash})
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
     finally:
         if must_close:
             session.close()

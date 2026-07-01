@@ -8,7 +8,8 @@ interface AuthViewProps {
 }
 
 export default function AuthView({ onAuthSuccess }: AuthViewProps) {
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const isLogin = mode === 'login';
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
@@ -24,7 +25,10 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
     setSuccessMsg('');
 
     try {
-      if (isLogin) {
+      if (mode === 'forgot') {
+        const res = await api.forgotPassword(email);
+        setSuccessMsg(res.message);
+      } else if (mode === 'login') {
         const data = await api.login(email, password);
         localStorage.setItem('lucrum_auth_token', data.access_token);
         onAuthSuccess(data.access_token);
@@ -34,7 +38,7 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
         }
         const data = await api.register(email, name, password);
         setSuccessMsg(lang === 'tr' ? 'Kayıt başarılı! Giriş yapılıyor...' : 'Registration successful! Logging in...');
-        
+
         // Wait a second for success visual feedback, then proceed
         setTimeout(() => {
           localStorage.setItem('lucrum_auth_token', data.access_token);
@@ -44,7 +48,7 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
     } catch (err: any) {
       setError(err?.message || (lang === 'tr' ? 'Bir hata oluştu.' : 'An error occurred.'));
     } finally {
-      if (isLogin) setLoading(false);
+      if (mode !== 'register') setLoading(false);
     }
   };
 
@@ -125,35 +129,43 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
         <p className="text-xs text-[#9E958C] font-semibold tracking-wider text-center uppercase mb-8">{t.subtitle}</p>
 
         {/* Tab Selection */}
-        <div className="flex w-full bg-[#F2EDE4] p-1 rounded-xl mb-6 border border-[#8C9A86]/10">
-          <button
-            type="button"
-            onClick={() => { setIsLogin(true); setError(''); }}
-            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-              isLogin
-                ? 'bg-white text-[#4A443F] shadow-sm'
-                : 'text-[#9E958C] hover:text-[#4A443F]'
-            }`}
-          >
-            {t.loginTab}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setIsLogin(false); setError(''); }}
-            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-              !isLogin
-                ? 'bg-white text-[#4A443F] shadow-sm'
-                : 'text-[#9E958C] hover:text-[#4A443F]'
-            }`}
-          >
-            {t.registerTab}
-          </button>
-        </div>
+        {mode !== 'forgot' && (
+          <div className="flex w-full bg-[#F2EDE4] p-1 rounded-xl mb-6 border border-[#8C9A86]/10">
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); }}
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                isLogin
+                  ? 'bg-white text-[#4A443F] shadow-sm'
+                  : 'text-[#9E958C] hover:text-[#4A443F]'
+              }`}
+            >
+              {t.loginTab}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('register'); setError(''); }}
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                mode === 'register'
+                  ? 'bg-white text-[#4A443F] shadow-sm'
+                  : 'text-[#9E958C] hover:text-[#4A443F]'
+              }`}
+            >
+              {t.registerTab}
+            </button>
+          </div>
+        )}
+
+        {mode === 'forgot' && (
+          <p className="text-xs text-[#4A443F] text-center mb-6">
+            {lang === 'tr' ? 'E-posta adresinize şifre sıfırlama bağlantısı gönderelim.' : "We'll send a password reset link to your email."}
+          </p>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="w-full space-y-4">
           <AnimatePresence mode="wait">
-            {!isLogin && (
+            {mode === 'register' && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -168,7 +180,7 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9E958C]" />
                   <input
                     type="text"
-                    required={!isLogin}
+                    required={mode === 'register'}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="John Doe"
@@ -196,22 +208,35 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block ml-1">
-              {t.passwordLabel}
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9E958C]" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 bg-[#F2EDE4]/40 border border-[#8C9A86]/20 focus:border-[#8C9A86] focus:bg-white rounded-xl text-sm text-[#4A443F] outline-none transition-all"
-              />
+          {mode !== 'forgot' && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between ml-1">
+                <label className="text-xs font-bold text-[#4A443F] uppercase tracking-wider block">
+                  {t.passwordLabel}
+                </label>
+                {isLogin && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('forgot'); setError(''); setSuccessMsg(''); }}
+                    className="text-[10px] text-[#8C9A86] hover:text-[#4A443F] font-semibold cursor-pointer"
+                  >
+                    {lang === 'tr' ? 'Şifremi unuttum' : 'Forgot password?'}
+                  </button>
+                )}
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9E958C]" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#F2EDE4]/40 border border-[#8C9A86]/20 focus:border-[#8C9A86] focus:bg-white rounded-xl text-sm text-[#4A443F] outline-none transition-all"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Feedback alerts */}
           {error && (
@@ -245,8 +270,22 @@ export default function AuthView({ onAuthSuccess }: AuthViewProps) {
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : null}
-            <span>{loading ? (isLogin ? t.loggingIn : t.registering) : (isLogin ? t.loginBtn : t.registerBtn)}</span>
+            <span>
+              {mode === 'forgot'
+                ? (loading ? (lang === 'tr' ? 'Gönderiliyor...' : 'Sending...') : (lang === 'tr' ? 'Sıfırlama Bağlantısı Gönder' : 'Send Reset Link'))
+                : (loading ? (isLogin ? t.loggingIn : t.registering) : (isLogin ? t.loginBtn : t.registerBtn))}
+            </span>
           </button>
+
+          {mode === 'forgot' && (
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setError(''); setSuccessMsg(''); }}
+              className="w-full text-center text-xs text-[#9E958C] hover:text-[#4A443F] font-semibold cursor-pointer"
+            >
+              {lang === 'tr' ? 'Giriş sayfasına dön' : 'Back to login'}
+            </button>
+          )}
         </form>
 
         {/* Demo Credential Note */}

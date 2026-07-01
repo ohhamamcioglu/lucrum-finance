@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, date
 from sqlalchemy import (
-    Column, Integer, String, Float, Date, DateTime, 
+    Column, Integer, String, Float, Boolean, Date, DateTime,
     ForeignKey, UniqueConstraint, Index, JSON, create_engine
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
@@ -39,9 +39,10 @@ class DBUser(Base):
     subscription_tier = Column(String, default="FREE")  # FREE, PRO, ENTERPRISE
     subscription_status = Column(String, default="active")  # active, past_due, canceled
     subscription_ends_at = Column(DateTime, nullable=True)
+    email_verified = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     positions = relationship("DBPosition", back_populates="user", cascade="all, delete-orphan")
     transactions = relationship("DBTransaction", back_populates="user", cascade="all, delete-orphan")
@@ -52,6 +53,7 @@ class DBUser(Base):
     targets = relationship("DBTargetAllocation", back_populates="user", cascade="all, delete-orphan")
     alerts = relationship("DBPriceAlert", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("DBNotification", back_populates="user", cascade="all, delete-orphan")
+    auth_tokens = relationship("DBAuthToken", back_populates="user", cascade="all, delete-orphan")
 
 
 class DBPosition(Base):
@@ -260,6 +262,30 @@ class DBNotification(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     user = relationship("DBUser", back_populates="notifications")
+
+
+class DBAuthToken(Base):
+    """Refresh token, email doğrulama ve şifre sıfırlama token'ları için ortak tablo.
+
+    Ham token asla saklanmaz — sadece sha256 hash'i tutulur, böylece DB sızıntısı
+    tek başına token'ların kullanılmasına izin vermez.
+    """
+    __tablename__ = "auth_tokens"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token_hash = Column(String, nullable=False, unique=True, index=True)
+    token_type = Column(String, nullable=False)  # REFRESH, EMAIL_VERIFY, PASSWORD_RESET
+    expires_at = Column(DateTime, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_auth_tokens_user_type", "user_id", "token_type"),
+    )
+
+    user = relationship("DBUser", back_populates="auth_tokens")
 
 
 # Dependency for database session

@@ -13,9 +13,10 @@ class UserBase(BaseModel):
     subscription_tier: str = "FREE"
     subscription_status: str = "active"
     subscription_ends_at: Optional[datetime] = None
+    email_verified: bool = False
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(min_length=8)
 
 class UserLogin(BaseModel):
     email: str
@@ -28,6 +29,16 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: Optional[int] = None
     email: Optional[str] = None
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8)
+
+class VerifyEmailRequest(BaseModel):
+    token: str
 
 class User(UserBase):
     id: int

@@ -9,6 +9,7 @@ import MarketsView from './components/MarketsView';
 import SettingsView from './components/SettingsView';
 import NewsView from './components/NewsView';
 import AuthView from './components/AuthView';
+import ResetPasswordView from './components/ResetPasswordView';
 
 import { Holding, ActiveTab, UserSettings, AssetCategory } from './types';
 import { INITIAL_SETTINGS, MARKET_ASSETS, calculatePortfolio, convertCurrency } from './utils';
@@ -47,6 +48,9 @@ async function fetchBenchmarkReturn(benchmark: string, days: number): Promise<nu
 
 export default function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('lucrum_auth_token'));
+  const [authChecked, setAuthChecked] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [performanceHistory, setPerformanceHistory] = useState<any[]>([]);
@@ -67,6 +71,42 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('portfolio');
   const [selectedSymbolFromSearch, setSelectedSymbolFromSearch] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Mount: URL'deki reset-password / verify-email parametrelerini işle,
+  // ardından httpOnly refresh cookie üzerinden oturumu sessizce doğrula.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resetParam = params.get('reset-password');
+    const verifyParam = params.get('verify-email');
+
+    if (resetParam) {
+      setResetToken(resetParam);
+    }
+
+    if (verifyParam) {
+      api.verifyEmail(verifyParam)
+        .then((res) => setVerifyMessage(res.message))
+        .catch(() => setVerifyMessage('Doğrulama bağlantısı geçersiz veya süresi dolmuş.'));
+    }
+
+    if (resetParam || verifyParam) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    api.tryRestoreSession()
+      .then((restoredToken) => {
+        setToken((prev) => {
+          if (prev) return prev; // Bu sırada kullanıcı zaten manuel giriş yaptıysa dokunma
+          if (restoredToken) {
+            localStorage.setItem('lucrum_auth_token', restoredToken);
+            return restoredToken;
+          }
+          localStorage.removeItem('lucrum_auth_token');
+          return null;
+        });
+      })
+      .finally(() => setAuthChecked(true));
+  }, []);
 
   const loadData = async () => {
     try {
@@ -326,7 +366,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('lucrum_auth_token');
+    api.logout().catch(() => {});
     setToken(null);
     setHoldings([]);
     setPerformanceHistory([]);
@@ -342,8 +382,34 @@ export default function App() {
 
   const t = useT(settings?.language || 'tr');
 
+  if (resetToken) {
+    return <ResetPasswordView token={resetToken} onDone={() => setResetToken(null)} />;
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-[#F9F7F2] flex flex-col items-center justify-center font-sans">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
+          className="w-10 h-10 border-4 border-[#8C9A86] border-t-transparent rounded-full mb-4"
+        />
+      </div>
+    );
+  }
+
   if (!token) {
-    return <AuthView onAuthSuccess={setToken} />;
+    return (
+      <>
+        {verifyMessage && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-[#8C9A86] text-white text-xs font-semibold text-center py-2 px-4 flex items-center justify-center gap-3">
+            <span>{verifyMessage}</span>
+            <button onClick={() => setVerifyMessage(null)} className="underline cursor-pointer">Kapat</button>
+          </div>
+        )}
+        <AuthView onAuthSuccess={setToken} />
+      </>
+    );
   }
 
   if (loading && holdings.length === 0) {

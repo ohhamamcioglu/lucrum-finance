@@ -56,30 +56,64 @@ export interface PerformanceResponse {
   history: PerformanceHistoryPoint[];
 }
 
-// Centralized request wrapper with auth header injection and 401 handling
-async function request(url: string, options: RequestInit = {}): Promise<any> {
+// Refresh token httpOnly cookie'de tutulur; access token kısa ömürlü olduğundan
+// 401 alındığında burada sessizce yenilenir. Eşzamanlı 401'lerin tek bir refresh
+// çağrısını paylaşması için in-flight promise'i modül seviyesinde tutuyoruz.
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${BASE_URL}/api/users/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.access_token as string;
+      })
+      .catch(() => null)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
+function logoutAndRedirect() {
+  localStorage.removeItem('lucrum_auth_token');
+  window.location.reload();
+}
+
+// Centralized request wrapper with auth header injection, cookie-based refresh, and 401 handling
+async function request(url: string, options: RequestInit = {}, isRetry = false): Promise<any> {
   const token = localStorage.getItem('lucrum_auth_token');
   const headers = new Headers(options.headers || {});
-  
+
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  
-  const res = await fetch(url, { ...options, headers });
-  
+
+  const res = await fetch(url, { ...options, headers, credentials: 'include' });
+
   if (res.status === 401) {
-    // Access token expired or invalid -> log out
-    localStorage.removeItem('lucrum_auth_token');
-    // Clear and reload page to trigger redirect to login view
-    window.location.reload();
+    if (!isRetry) {
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        localStorage.setItem('lucrum_auth_token', newToken);
+        return request(url, options, true);
+      }
+    }
+    // Refresh de başarısız oldu -> gerçekten oturum sonlanmış
+    logoutAndRedirect();
     throw new Error('Unauthorized');
   }
-  
+
   if (!res.ok) {
     const errText = await res.text().catch(() => 'Request failed');
     throw new Error(errText || `HTTP error! status: ${res.status}`);
   }
-  
+
   return res.json();
 }
 
@@ -203,5 +237,45 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan })
     });
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await fetch(`${BASE_URL}/api/users/logout`, { method: 'POST', credentials: 'include' });
+    } finally {
+      localStorage.removeItem('lucrum_auth_token');
+    }
+  },
+
+  async tryRestoreSession(): Promise<string | null> {
+    return refreshAccessToken();
+  },
+
+  async forgotPassword(email: string): Promise<{ status: string; message: string }> {
+    return request(`${BASE_URL}/api/users/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<{ status: string; message: string }> {
+    return request(`${BASE_URL}/api/users/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, new_password: newPassword })
+    });
+  },
+
+  async verifyEmail(token: string): Promise<{ status: string; message: string }> {
+    return request(`${BASE_URL}/api/users/verify-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+  },
+
+  async resendVerification(): Promise<{ status: string; message: string }> {
+    return request(`${BASE_URL}/api/users/resend-verification`, { method: 'POST' });
   },
 };
