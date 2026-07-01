@@ -42,7 +42,7 @@ def send_verification_email(to_email: str, token: str) -> None:
 
 
 def send_password_reset_email(to_email: str, token: str) -> None:
-    link = f"{FRONTEND_URL}/?reset-password={token}"
+    link = f"{FRONTEND_URL}/reset-password?token={token}"
     html = f"""
     <p>Şifrenizi sıfırlamak için aşağıdaki bağlantıya tıklayın:</p>
     <p><a href="{link}">{link}</a></p>
