@@ -7,10 +7,10 @@ from sqlalchemy.orm import sessionmaker
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from db_models import (
-    Base, DBUser, DBPosition, DBTransaction, DBPriceHistory, 
-    DBExchangeRate, DBPortfolioSnapshot, DBAssetClassSummary, 
-    DBPerformanceHistory, DBLiability, DBTargetAllocation, 
-    DBPriceAlert, DBNotification
+    Base, DBUser, DBPosition, DBTransaction, DBPriceHistory,
+    DBExchangeRate, DBPortfolioSnapshot, DBAssetClassSummary,
+    DBPerformanceHistory, DBLiability, DBTargetAllocation,
+    DBPriceAlert, DBNotification, DBAuthToken
 )
 
 def migrate():
@@ -59,7 +59,8 @@ def migrate():
         (DBLiability, "liabilities"),
         (DBTargetAllocation, "target_allocations"),
         (DBPriceAlert, "price_alerts"),
-        (DBNotification, "notifications")
+        (DBNotification, "notifications"),
+        (DBAuthToken, "auth_tokens")
     ]
 
     try:
