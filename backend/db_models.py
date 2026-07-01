@@ -40,6 +40,8 @@ class DBUser(Base):
     subscription_status = Column(String, default="active")  # active, past_due, canceled
     subscription_ends_at = Column(DateTime, nullable=True)
     email_verified = Column(Boolean, default=False, nullable=False)
+    is_admin = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

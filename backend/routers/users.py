@@ -111,6 +111,11 @@ def login(
             detail="E-posta adresi veya şifre hatalı.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if not user.get("is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Hesabınız devre dışı bırakılmıştır."
+        )
 
     _issue_refresh_cookie(user["id"], response, db)
     access_token = create_access_token(data={"sub": str(user["id"]), "email": user["email"]})
@@ -138,6 +143,9 @@ def refresh_access_token(
     user = get_user_by_id(record.user_id, db=db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kullanıcı bulunamadı.")
+    if not user.get("is_active", True):
+        response.delete_cookie(REFRESH_COOKIE_NAME, path="/api/users")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Hesabınız devre dışı bırakılmıştır.")
 
     # Rotation: eski token'ı iptal et, yenisini ver (çalınmış token replay'ini sınırlar)
     revoke_auth_token(token_hash, db=db)

@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Dict, Any
-from sqlalchemy import desc, and_
+from sqlalchemy import desc, and_, func
 from sqlalchemy.orm import Session
 
 from models import (
@@ -84,6 +84,81 @@ def get_user_by_email(email: str, db: Optional[Session] = None) -> Optional[Dict
     try:
         user = session.query(DBUser).filter(DBUser.email == email.lower().strip()).first()
         return to_dict(user)
+    finally:
+        if must_close:
+            session.close()
+
+# ============ ADMIN ============
+
+def list_users_paginated(page: int = 1, page_size: int = 20, search: Optional[str] = None, db: Optional[Session] = None) -> Dict[str, Any]:
+    """Sayfalı ve aranabilir kullanıcı listesi (admin panel)."""
+    session, must_close = _get_db(db)
+    try:
+        query = session.query(DBUser)
+        if search:
+            like = f"%{search.strip()}%"
+            query = query.filter((DBUser.email.ilike(like)) | (DBUser.name.ilike(like)))
+        total = query.count()
+        items = query.order_by(desc(DBUser.created_at)).offset((page - 1) * page_size).limit(page_size).all()
+        return {"items": to_dict_list(items), "total": total, "page": page, "page_size": page_size}
+    finally:
+        if must_close:
+            session.close()
+
+def update_user_subscription_tier(user_id: int, tier: str, db: Optional[Session] = None) -> Optional[Dict]:
+    """Admin: bir kullanıcının abonelik tier'ını değiştirir (mock — gerçek ödeme yok)."""
+    session, must_close = _get_db(db)
+    try:
+        user = session.query(DBUser).filter(DBUser.id == user_id).first()
+        if not user:
+            return None
+        user.subscription_tier = tier
+        user.subscription_status = "active"
+        user.subscription_ends_at = datetime.utcnow() + timedelta(days=30)
+        session.commit()
+        session.refresh(user)
+        return to_dict(user)
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def set_user_active(user_id: int, is_active: bool, db: Optional[Session] = None) -> Optional[Dict]:
+    """Admin: bir kullanıcının hesabını etkinleştirir/devre dışı bırakır."""
+    session, must_close = _get_db(db)
+    try:
+        user = session.query(DBUser).filter(DBUser.id == user_id).first()
+        if not user:
+            return None
+        user.is_active = is_active
+        session.commit()
+        session.refresh(user)
+        return to_dict(user)
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def get_admin_stats(db: Optional[Session] = None) -> Dict[str, Any]:
+    """Admin: temel kullanıcı istatistikleri (toplam, aktif, doğrulanmış, admin sayısı, tier dağılımı)."""
+    session, must_close = _get_db(db)
+    try:
+        total_users = session.query(DBUser).count()
+        active_users = session.query(DBUser).filter(DBUser.is_active == True).count()
+        verified_users = session.query(DBUser).filter(DBUser.email_verified == True).count()
+        admin_users = session.query(DBUser).filter(DBUser.is_admin == True).count()
+        tier_rows = session.query(DBUser.subscription_tier, func.count(DBUser.id)).group_by(DBUser.subscription_tier).all()
+        return {
+            "total_users": total_users,
+            "active_users": active_users,
+            "verified_users": verified_users,
+            "admin_users": admin_users,
+            "tier_breakdown": {(tier or "FREE"): count for tier, count in tier_rows},
+        }
     finally:
         if must_close:
             session.close()

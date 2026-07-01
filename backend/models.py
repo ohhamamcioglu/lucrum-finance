@@ -14,6 +14,7 @@ class UserBase(BaseModel):
     subscription_status: str = "active"
     subscription_ends_at: Optional[datetime] = None
     email_verified: bool = False
+    is_admin: bool = False
 
 class UserCreate(UserBase):
     password: str = Field(min_length=8)
@@ -47,6 +48,38 @@ class User(UserBase):
 
     class Config:
         from_attributes = True
+
+# Admin
+class AdminUserSummary(BaseModel):
+    id: int
+    email: str
+    name: str
+    subscription_tier: str
+    subscription_status: str
+    is_admin: bool
+    is_active: bool
+    email_verified: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class AdminUserListResponse(BaseModel):
+    items: List[AdminUserSummary]
+    total: int
+    page: int
+    page_size: int
+
+class AdminUpdateUserRequest(BaseModel):
+    subscription_tier: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class AdminStatsResponse(BaseModel):
+    total_users: int
+    active_users: int
+    verified_users: int
+    admin_users: int
+    tier_breakdown: dict
 
 # Pozisyon
 class PositionBase(BaseModel):
