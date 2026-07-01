@@ -1,0 +1,6 @@
+{
+  "name": "Lucrum Analytics",
+  "description": "Institutional-grade portfolio analytics, stress testing, and real-time risk assessment dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,211 @@
+{
+  "timestamp": "2026-06-23T20:01:35.215069",
+  "classifications": {
+    "JET": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NMS"
+    },
+    "SAS": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NMS"
+    },
+    "TI3": {
+      "class": "TEFAS Fonu",
+      "source": "Kullanici Bilgisi",
+      "note": "TEFAS fonu - kod: TI3"
+    },
+    "YAS": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NMS"
+    },
+    "KZL": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: YHD"
+    },
+    "AFA": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: N/A"
+    },
+    "AFT": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: N/A"
+    },
+    "GESAN": {
+      "class": "BIST Hissesi",
+      "source": "yfinance (.IS)",
+      "note": "Sembol: GESAN.IS"
+    },
+    "PATEK": {
+      "class": "BIST Hissesi",
+      "source": "yfinance (.IS)",
+      "note": "Sembol: PATEK.IS"
+    },
+    "GWIND": {
+      "class": "BIST Hissesi",
+      "source": "yfinance (.IS)",
+      "note": "Sembol: GWIND.IS"
+    },
+    "GO2": {
+      "class": "TEFAS Fonu",
+      "source": "Kullanici Bilgisi",
+      "note": "TEFAS fonu - kod: GO2"
+    },
+    "GO3": {
+      "class": "TEFAS Fonu",
+      "source": "Kullanici Bilgisi",
+      "note": "TEFAS fonu - kod: GO3"
+    },
+    "GO4": {
+      "class": "TEFAS Fonu",
+      "source": "Kullanici Bilgisi",
+      "note": "TEFAS fonu - kod: GO4"
+    },
+    "CWENE": {
+      "class": "BIST Hissesi",
+      "source": "yfinance (.IS)",
+      "note": "Sembol: CWENE.IS"
+    },
+    "SDTTR": {
+      "class": "BIST Hissesi",
+      "source": "yfinance (.IS)",
+      "note": "Sembol: SDTTR.IS"
+    },
+    "ASELS": {
+      "class": "BIST Hissesi",
+      "source": "yfinance (.IS)",
+      "note": "Sembol: ASELS.IS"
+    },
+    "TAO": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: PCX"
+    },
+    "BRETT": {
+      "class": "Kripto",
+      "source": "CoinGecko",
+      "note": "Sembol: BRETT"
+    },
+    "BTC": {
+      "class": "Kripto",
+      "source": "yfinance",
+      "note": "Sembol: BTC-USD"
+    },
+    "YAY": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NMS"
+    },
+    "AFV": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NMS"
+    },
+    "BIH": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NMS"
+    },
+    "HBU": {
+      "class": "BIST Hissesi",
+      "source": "yfinance (.IS)",
+      "note": "Sembol: HBU.IS"
+    },
+    "DXYZ": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NYQ"
+    },
+    "PTF": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NGM"
+    },
+    "ARKQ": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: BTS"
+    },
+    "AIQ": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NGM"
+    },
+    "JMOM": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: PCX"
+    },
+    "SMH": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NGM"
+    },
+    "QQQ": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NGM"
+    },
+    "BOTZ": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NGM"
+    },
+    "VEA": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Vanguard FTSE Developed Markets ETF"
+    },
+    "VOO": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: PCX"
+    },
+    "VTI": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: PCX"
+    },
+    "QQQM": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NGM"
+    },
+    "ARKK": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: BTS"
+    },
+    "VNQ": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: PCX"
+    },
+    "BRK.B": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: N/A"
+    },
+    "URNM": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: PCX"
+    },
+    "UPST": {
+      "class": "ABD Hisse/ETF",
+      "source": "yfinance (direkt)",
+      "note": "Borsası: NMS"
+    }
+  },
+  "summary": {
+    "ABD Hisse/ETF": 26,
+    "BIST Hissesi": 7,
+    "Kripto": 3,
+    "TEFAS Fonu": 4
+  }
+}

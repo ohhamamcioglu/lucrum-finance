@@ -1,0 +1,166 @@
+from datetime import date, datetime
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Query
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from sqlalchemy.orm import Session
+
+import twelve_data as td
+from cache import finance_cache as _fc
+from models import TargetAllocation, TargetAllocationCreate
+from crud import (
+    get_positions, get_target_allocations, save_target_allocations,
+    get_portfolio_snapshots, save_portfolio_snapshot
+)
+from services import calculate_portfolio, calculate_twrr_and_metrics
+from dependencies import get_current_user_id, get_db
+
+router = APIRouter(prefix="/api/portfolio", tags=["Portfolio"])
+
+@router.get("", response_model=dict)
+def get_portfolio(
+    refresh: bool = False,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """Portföy özetini ve detaylı holdings'i al"""
+    portfolio = calculate_portfolio(user_id, bypass_cache=refresh)
+
+    # Snapshot'ı kaydet
+    try:
+        save_portfolio_snapshot(user_id, date.today(), portfolio, db=db)
+    except:
+        pass
+
+    return portfolio
+
+@router.get("/history")
+def get_portfolio_history(
+    days: int = Query(90, ge=1, le=365),
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """Portföy geçmişini al"""
+    snapshots = get_portfolio_snapshots(user_id, days, db=db)
+    return [
+        {
+            "date": s["snapshot_date"],
+            "value": s["total_value_try"],
+            "invested": s["total_invested_try"],
+            "return_pct": s["total_return_pct"],
+        }
+        for s in snapshots
+    ]
+
+@router.get("/performance")
+def get_performance(
+    days: int = Query(90, ge=7, le=730),
+    currency: str = Query('TRY'),
+    user_id: int = Depends(get_current_user_id)
+):
+    """Portföy TWRR ve endeks performans karşılaştırmasını al"""
+    try:
+        metrics = calculate_twrr_and_metrics(user_id, days, currency)
+        return metrics
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+def _compute_risk_score(symbol: str, asset_class: str) -> float:
+    """
+    Beta'dan riskScore hesapla (1-8 arası).
+    US hisseler → Twelve Data beta. BIST/Kripto → yfinance fallback.
+    Formül: riskScore = beta * 4
+    """
+    ac = (asset_class or '').strip()
+    if ac in ('Nakit', 'Cash', 'TL Mevduat'):
+        return 1.0
+    if ac in ('FixedIncome', 'Tahvil', 'Bono', 'TL Tahvil'):
+        return 2.0
+    if ac == 'Kripto':
+        return 7.0
+
+    # US hisseler → Twelve Data (DB cache'li, hızlı)
+    if ac == 'ABD Hisse/ETF':
+        beta = td.get_beta_value(symbol)
+        if beta is not None and beta > 0:
+            return round(max(1.0, min(8.0, beta * 4)), 2)
+        return 4.0
+
+    # BIST → Twelve Data beta göstergesi
+    yf_sym = symbol if symbol.upper().endswith('.IS') else symbol + '.IS'
+    beta = td.get_beta_value(yf_sym)
+    if beta is not None and beta > 0:
+        return round(max(1.0, min(8.0, beta * 4)), 2)
+
+    return 4.0
+
+@router.get("/risk-scores")
+def get_portfolio_risk_scores(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Portföydeki her sembol için yfinance beta'dan riskScore döner.
+    Cache'de olanları anında döner, olmayanlara paralel yfinance çağrısı yapar.
+    7 gün TTL ile SQLite'a cache'lenir.
+    """
+    positions = get_positions(user_id, db=db)
+    scores: dict = {}
+    to_fetch: list = []  # (sym, ac) — cache'de yok
+
+    for pos in positions:
+        sym = pos['ticker']
+        ac  = pos.get('asset_class') or ''
+        cache_key = f"risk_score_{sym}"
+        cached = _fc.get(cache_key, ttl=7 * 24 * 3600)
+        if cached is not None:
+            scores[sym] = cached
+        else:
+            to_fetch.append((sym, ac))
+
+    # Paralel yfinance çağrısı (en fazla 8 thread)
+    def fetch_one(sym_ac):
+        sym, ac = sym_ac
+        score = _compute_risk_score(sym, ac)
+        _fc.set(f"risk_score_{sym}", score)
+        return sym, score
+
+    if to_fetch:
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            for future in as_completed(ex.submit(fetch_one, t) for t in to_fetch):
+                try:
+                    sym, score = future.result()
+                    scores[sym] = score
+                except Exception:
+                    pass
+
+    return {"scores": scores}
+
+@router.get("/targets", response_model=List[TargetAllocation])
+def list_targets(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """Hedef dağılım oranlarını al"""
+    rows = get_target_allocations(user_id, db=db)
+    return [TargetAllocation(**r) for r in rows]
+
+@router.post("/targets", response_model=List[TargetAllocation])
+def save_targets(
+    allocations: List[TargetAllocationCreate],
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """Hedef dağılım oranlarını kaydet"""
+    rows = save_target_allocations(user_id, allocations, db=db)
+    return [TargetAllocation(**r) for r in rows]
+
+@router.post("/reset")
+def reset_portfolio_db():
+    """Sıfırla ve varsayılan verileri yükle"""
+    try:
+        from init_db import init_database, load_holdings_to_db
+        init_database()
+        load_holdings_to_db()
+        return {"status": "success", "message": "Database reset to factory defaults"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

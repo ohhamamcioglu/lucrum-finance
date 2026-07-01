@@ -1,0 +1,39 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Databases
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+
+# Cache & temp
+*.pkl
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Scanner output (regeneratable)
+backend/results.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Claude Code local-only settings (may contain machine-specific paths/secrets)
+.claude/settings.local.json

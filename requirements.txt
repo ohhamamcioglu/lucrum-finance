@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pytefas
+requests
+python-multipart
+pyjwt
+bcrypt
+sqlalchemy
+alembic
+psycopg2-binary
+redis
+celery
+slowapi

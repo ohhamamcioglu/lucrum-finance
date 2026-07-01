@@ -1,0 +1,61 @@
+export type AssetCategory = 'Equity' | 'Crypto' | 'FixedIncome' | 'Cash';
+
+export interface Holding {
+  id: string;
+  symbol: string;
+  name: string;
+  category: AssetCategory;
+  sector: string;
+  shares: number;
+  avgBuyPrice: number;
+  currentPrice: number;
+  riskScore: number; // 1-10
+  assetClass?: string;
+}
+
+export interface Transaction {
+  id: string;
+  symbol: string;
+  name: string;
+  type: 'BUY' | 'SELL';
+  shares: number;
+  price: number;
+  date: string;
+  category: AssetCategory;
+}
+
+export interface UserSettings {
+  baseCurrency: 'USD' | 'EUR' | 'TRY' | 'GBP';
+  benchmark: 'S&P 500' | 'Nasdaq' | 'Bitcoin' | 'Gold' | 'BIST100' | 'DAX' | 'FTSE 100' | 'CAC 40' | 'Euro Stoxx';
+  riskTolerance: 'Conservative' | 'Balanced' | 'Aggressive';
+  userName: string;
+  userRole: string;
+  userAvatar: string;
+  language: 'tr' | 'en';
+}
+
+export type ActiveTab = 'portfolio' | 'analytics' | 'risk' | 'markets' | 'news' | 'settings';
+
+export interface NewsArticle {
+  ticker: string;
+  title: string;
+  summary: string;
+  url: string;
+  source: string;
+  published_at: string;
+}
+
+export interface MarketAsset {
+  symbol: string;
+  name: string;
+  category: AssetCategory;
+  sector: string;
+  price: number;
+  change24h: number;
+  volume24h: string;
+  marketCap: string;
+  peRatio?: number;
+  beta: number;
+  sparkline: number[];
+  description: string;
+}

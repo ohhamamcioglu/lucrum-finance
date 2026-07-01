@@ -1,0 +1,370 @@
+{
+  "metadata": {
+    "last_updated": "2026-06-23T20:17:59.880543",
+    "source": "PDF (Portföy - Sayfa1.pdf)",
+    "note": "Sol taraf (BIST/Kripto) tarih bilgisi eksik - ARDINDAN TAKSİ GÜNCELLE"
+  },
+  "holdings": [
+    {
+      "ticker": "JET",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 3997,
+      "buy_price": 1.01,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 4036.97
+    },
+    {
+      "ticker": "SAS",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 4769,
+      "buy_price": 1.15,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 5484.35
+    },
+    {
+      "ticker": "TI3",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 60000,
+      "buy_price": 0.1,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 6000.0
+    },
+    {
+      "ticker": "YAS",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 409,
+      "buy_price": 13.41,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 5484.69
+    },
+    {
+      "ticker": "KZL",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 135,
+      "buy_price": 10.27,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 1386.45
+    },
+    {
+      "ticker": "AFA",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 3332,
+      "buy_price": 0.6,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 1999.2
+    },
+    {
+      "ticker": "AFT",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 2863,
+      "buy_price": 0.42,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 1202.46
+    },
+    {
+      "ticker": "GESAN",
+      "asset_class": "BIST Hissesi",
+      "quantity": 108,
+      "buy_price": 47.9,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 5173.2
+    },
+    {
+      "ticker": "PATEK",
+      "asset_class": "BIST Hissesi",
+      "quantity": 203,
+      "buy_price": 24.4,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 4953.2
+    },
+    {
+      "ticker": "GWIND",
+      "asset_class": "BIST Hissesi",
+      "quantity": 80,
+      "buy_price": 24.15,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 1932.0
+    },
+    {
+      "ticker": "GO2",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 1408,
+      "buy_price": 1.596335227,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 2247.64
+    },
+    {
+      "ticker": "GO3",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 1839,
+      "buy_price": 1.766073953,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 3247.81
+    },
+    {
+      "ticker": "GO4",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 2326,
+      "buy_price": 1.896289768,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 4410.77
+    },
+    {
+      "ticker": "CWENE",
+      "asset_class": "BIST Hissesi",
+      "quantity": 186.544,
+      "buy_price": 15.84,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 2954.86
+    },
+    {
+      "ticker": "SDTTR",
+      "asset_class": "BIST Hissesi",
+      "quantity": 15,
+      "buy_price": 189.18,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 2837.7
+    },
+    {
+      "ticker": "ASELS",
+      "asset_class": "BIST Hissesi",
+      "quantity": 7,
+      "buy_price": 172.8,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 1209.6
+    },
+    {
+      "ticker": "TAO",
+      "asset_class": "Kripto",
+      "quantity": 0.474,
+      "buy_price": 11386.36,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 5397.13464
+    },
+    {
+      "ticker": "BRETT",
+      "asset_class": "Kripto",
+      "quantity": 7772.35,
+      "buy_price": 0.65151854,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 5063.830124369
+    },
+    {
+      "ticker": "BTC",
+      "asset_class": "Kripto",
+      "quantity": 0.0012889,
+      "buy_price": 3834963.41,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 4942.884339149
+    },
+    {
+      "ticker": "YAY",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 4,
+      "buy_price": 1928.067699,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 7712.27
+    },
+    {
+      "ticker": "AFV",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 9608,
+      "buy_price": 0.569203,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 5468.9
+    },
+    {
+      "ticker": "BIH",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 323,
+      "buy_price": 7.722198,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 2494.27
+    },
+    {
+      "ticker": "HBU",
+      "asset_class": "TEFAS Fonu",
+      "quantity": 1600,
+      "buy_price": 1.509188,
+      "buy_date": "2024-01-01",
+      "buy_currency": "TRY",
+      "invested_tl": 2414.7
+    },
+    {
+      "ticker": "DXYZ",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 1,
+      "buy_price": 12.77,
+      "buy_date": "2024-06-17",
+      "buy_currency": "USD",
+      "invested_usd": 12.77
+    },
+    {
+      "ticker": "PTF",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 3,
+      "buy_price": 59.84,
+      "buy_date": "2024-05-21",
+      "buy_currency": "USD",
+      "invested_usd": 179.52
+    },
+    {
+      "ticker": "ARKQ",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 2.061735463,
+      "buy_price": 84.88,
+      "buy_date": "2026-06-11",
+      "buy_currency": "USD",
+      "invested_usd": 175.0
+    },
+    {
+      "ticker": "AIQ",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 2.091074655,
+      "buy_price": 42.39,
+      "buy_date": "2026-06-11",
+      "buy_currency": "USD",
+      "invested_usd": 88.64
+    },
+    {
+      "ticker": "JMOM",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 2,
+      "buy_price": 52.73,
+      "buy_date": "2024-05-21",
+      "buy_currency": "USD",
+      "invested_usd": 105.46
+    },
+    {
+      "ticker": "SMH",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 0.34640146,
+      "buy_price": 395.47,
+      "buy_date": "2026-01-20",
+      "buy_currency": "USD",
+      "invested_usd": 136.99
+    },
+    {
+      "ticker": "QQQ",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 0.08593485,
+      "buy_price": 562.17,
+      "buy_date": "2025-07-21",
+      "buy_currency": "USD",
+      "invested_usd": 48.31
+    },
+    {
+      "ticker": "VEA",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 0.41527655,
+      "buy_price": 56.95,
+      "buy_date": "2025-07-21",
+      "buy_currency": "USD",
+      "invested_usd": 23.65
+    },
+    {
+      "ticker": "VOO",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 0.16886689,
+      "buy_price": 577.97,
+      "buy_date": "2025-07-21",
+      "buy_currency": "USD",
+      "invested_usd": 97.6
+    },
+    {
+      "ticker": "VTI",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 0.23536818,
+      "buy_price": 309.94,
+      "buy_date": "2025-07-21",
+      "buy_currency": "USD",
+      "invested_usd": 72.95
+    },
+    {
+      "ticker": "QQQM",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 0.539723332,
+      "buy_price": 255.65,
+      "buy_date": "2025-12-22",
+      "buy_currency": "USD",
+      "invested_usd": 137.98
+    },
+    {
+      "ticker": "ARKK",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 1.80730724,
+      "buy_price": 76.91,
+      "buy_date": "2026-07-23",
+      "buy_currency": "USD",
+      "invested_usd": 139.0
+    },
+    {
+      "ticker": "VNQ",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 0.53429203,
+      "buy_price": 90.4,
+      "buy_date": "2025-07-21",
+      "buy_currency": "USD",
+      "invested_usd": 48.3
+    },
+    {
+      "ticker": "BRK-B",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 0.2344832,
+      "buy_price": 498.2,
+      "buy_date": "2024-12-22",
+      "buy_currency": "USD",
+      "invested_usd": 116.82
+    },
+    {
+      "ticker": "URNM",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 1.63225241,
+      "buy_price": 70.8,
+      "buy_date": "2026-01-20",
+      "buy_currency": "USD",
+      "invested_usd": 115.56
+    },
+    {
+      "ticker": "UPST",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 0.94,
+      "buy_price": 82,
+      "buy_date": "2025-07-23",
+      "buy_currency": "USD",
+      "invested_usd": 77.08
+    },
+    {
+      "ticker": "BOTZ",
+      "asset_class": "ABD Hisse/ETF",
+      "quantity": 5.471509615,
+      "buy_price": 32.83464863217643,
+      "buy_date": "2025-06-11",
+      "buy_currency": "USD",
+      "cost_basis_tly": 7644.5303781463335
+    }
+  ],
+  "summary_by_class": {}
+}

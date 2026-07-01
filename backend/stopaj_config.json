@@ -1,0 +1,80 @@
+{
+  "_meta": {
+    "last_updated": "2026-06-21",
+    "sources": [
+      "MC Legal — mclegal.com.tr (CB Kararı güncellemeleri)",
+      "Alomaliye — CB Kararı 11107 (27.03.2026)",
+      "Lebibyalkin — Hisse yoğun fon tanımı",
+      "GVK Geçici Madde 67, SPK Tebliğ III-52.1"
+    ],
+    "update_note": "18 ayda 5 değişiklik yaşandı. Son değişiklik: 27.03.2026 (CB Kararı 11107). Periyodik doğrulama şart.",
+    "stopaj_uygulama_zamani": "Satış/itfa anında uygulanır — alım tarihindeki oran DEĞİL, satış anındaki oran geçerlidir."
+  },
+
+  "tarihsel_oranlar": {
+    "_aciklama": "Referans için — stopaj satış anında uygulanır, bu tablo kayıt amacıyla tutulmaktadır.",
+    "23.12.2020-30.04.2024": {"para_piyasasi_tahvil": 0.00, "hisse_senedi_yogun_tefas": 0.00, "karma_yabanci_serbest": 0.10},
+    "01.05.2024-31.10.2024": {"para_piyasasi_tahvil": 0.075,"hisse_senedi_yogun_tefas": 0.00, "karma_yabanci_serbest": 0.10},
+    "01.11.2024-31.01.2025": {"para_piyasasi_tahvil": 0.10, "hisse_senedi_yogun_tefas": 0.00, "karma_yabanci_serbest": 0.10},
+    "01.02.2025-08.07.2025": {"para_piyasasi_tahvil": 0.15, "hisse_senedi_yogun_tefas": 0.00, "karma_yabanci_serbest": 0.15},
+    "09.07.2025-26.03.2026": {"para_piyasasi_tahvil": 0.175,"hisse_senedi_yogun_tefas": 0.00, "karma_yabanci_serbest": 0.175},
+    "27.03.2026-devam":      {"para_piyasasi_tahvil": 0.175,"hisse_senedi_yogun_tefas": 0.00, "karma_yabanci_serbest": 0.175,
+                              "_not": "27.03.2026 CB Kararı 11107: TEFAS-dışı serbest yoğun fonlar %0 avantajını kaybetti. TEFAS'ta işlem görenler hâlâ %0."}
+  },
+
+  "kategoriler": {
+    "hisse_senedi_yogun_fon": {
+      "_tanim": "Portföyünün devamlı olarak en az %51'i BİST'te işlem gören YERLİ hisse senetlerinden oluşan ve TEFAS'ta işlem gören fonlar. Fon adında '(Hisse Senedi Yoğun Fon)' ibaresi yer alır. NOT: Yabancı hisse >%51 olan fonlar bu kategoriye GİRMEZ — stopaj %17.5.",
+      "_siniflandirma_kriterleri": {
+        "bist_stock_pct_min": 0.51,
+        "foreign_stock_sayilmaz": true,
+        "tefas_listeli_olmali": true,
+        "fund_name_keyword": "HİSSE SENEDİ YOĞUN FON"
+      },
+      "oranlar": {
+        "tum_sureler": {
+          "stopaj_orani": 0.00,
+          "_not": "Elde tutma süresinden BAĞIMSIZ %0 — 1 yıl kuralı YOKTUR. GVK Geç. Md. 67."
+        }
+      }
+    },
+    "diger_fon": {
+      "_tanim": "Yabancı hisse (YAY, GBG dahil), karma/değişken, para piyasası, tahvil, altın, fon sepeti vb. — BİST yerli hisse yoğun olmayan her şey.",
+      "_kritik_not": "YAY gibi fonlar TEFAS'ta 'hisse senedi yoğun fon' etiketiyle görünebilir FAKAT portföyleri yabancı hisse → bu fonlar diger_fon kategorisinde %17.5'e tabidir.",
+      "_ornekler": [
+        "YAY (yabancı teknoloji hisseleri %94)",
+        "GBG (G-20 yabancı hisse %86 + ETF %12)",
+        "karma/değişken fonlar",
+        "tahvil/para piyasası fonları"
+      ],
+      "oranlar": {
+        "tum_sureler": {
+          "stopaj_orani": 0.175,
+          "_not": "Tüm elde tutma sürelerinde %17.5 (27.03.2026 CB Kararı 11107). Sık değişiyor — doğrula."
+        }
+      }
+    }
+  },
+
+  "fon_siniflandirmalari": {
+    "_aciklama": "Bilinen fonların sınıflandırması — pytefas breakdown her sorguda çekilmemesi için.",
+    "YAY": {
+      "kategori": "diger_fon",
+      "gerekce": "foreign_stock_pct=%94.08 — tamamı yabancı hisse (Nasdaq/NYSE teknoloji), yerli BİST hissesi yok. TEFAS etiketi 'hisse senedi yoğun fon' olsa da YERLİ hisse şartını karşılamaz → %17.5 stopaj.",
+      "breakdown_tarihi": "2026-06-19",
+      "breakdown_ozet": {"foreign_stock_pct": 94.08, "investment_fund_pct": 4.98, "deposit_fx_pct": 0.94}
+    },
+    "GBG": {
+      "kategori": "diger_fon",
+      "gerekce": "foreign_stock_pct=%86.02 + foreign_etf=%11.59 — tamamı yabancı varlık → %17.5 stopaj.",
+      "breakdown_tarihi": "2026-06-19",
+      "breakdown_ozet": {"foreign_stock_pct": 86.02, "foreign_etf_pct": 11.59, "investment_fund_pct": 2.39}
+    },
+    "HBU": {
+      "kategori": "hisse_senedi_yogun_fon",
+      "gerekce": "stock_pct=%94.55 (yerli BİST-30 hisseleri), fon adında 'HİSSE SENEDİ YOĞUN FON' ibaresi var, TEFAS'ta işlem görüyor → %0 stopaj.",
+      "breakdown_tarihi": "2026-06-19",
+      "breakdown_ozet": {"stock_pct": 94.55}
+    }
+  }
+}

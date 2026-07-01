@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "lucrum-finance": {
+      "command": "python",
+      "args": ["C:\\Users\\ohham\\lucrum-finance-mcp\\backend\\server.py"],
+      "env": {}
+    }
+  }
+}

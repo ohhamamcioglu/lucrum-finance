@@ -1,0 +1,102 @@
+{
+  "cycle_month": "2026-06",
+  "dry_run": false,
+  "amount_tl": 20000,
+  "effective_amount_tl": 20000.0,
+  "pending_pool_tl": 0.0,
+  "pool_ratio_pct": 100.0,
+  "pool_note": "Havuz tam (120 aday)",
+  "total_aum": 20000.0,
+  "max_position_tl": 2000.0,
+  "total_pending_cash": 0.0,
+  "usd_try_rate": 35,
+  "is_first_month": true,
+  "sell_signals": [],
+  "topup": [],
+  "new_buys": [
+    {
+      "ticker": "ASELS.IS",
+      "tl_amount": 1227.73,
+      "composite_score": 0.9365,
+      "rank": 1,
+      "weight_pct": 6.14,
+      "f_score": 8.0,
+      "z_score": 7.837,
+      "peg": null,
+      "momentum_6m": 90.67,
+      "sector": "Industrials",
+      "is_illiquid": false
+    },
+    {
+      "ticker": "RODRG.IS",
+      "tl_amount": 935.04,
+      "composite_score": 0.7132,
+      "rank": 17,
+      "weight_pct": 4.68,
+      "f_score": 7.0,
+      "z_score": 5.405,
+      "peg": null,
+      "momentum_6m": 12.72,
+      "sector": "Consumer Cyclical",
+      "is_illiquid": false
+    },
+    {
+      "ticker": "CCOLA.IS",
+      "tl_amount": 868.52,
+      "composite_score": 0.6625,
+      "rank": 35,
+      "weight_pct": 4.34,
+      "f_score": 8.0,
+      "z_score": 4.198,
+      "peg": 0.67,
+      "momentum_6m": 37.43,
+      "sector": "Consumer Defensive",
+      "is_illiquid": false
+    },
+    {
+      "ticker": "GUBRF.IS",
+      "tl_amount": 865.95,
+      "composite_score": 0.6605,
+      "rank": 36,
+      "weight_pct": 4.33,
+      "f_score": 7.0,
+      "z_score": 5.459,
+      "peg": 0.6,
+      "momentum_6m": 49.85,
+      "sector": "Basic Materials",
+      "is_illiquid": false
+    },
+    {
+      "ticker": "FROTO.IS",
+      "tl_amount": 856.94,
+      "composite_score": 0.6537,
+      "rank": 37,
+      "weight_pct": 4.28,
+      "f_score": 7.0,
+      "z_score": 3.924,
+      "peg": null,
+      "momentum_6m": -1.18,
+      "sector": "Consumer Cyclical",
+      "is_illiquid": false
+    }
+  ],
+  "pending_us_tl": 15245.83,
+  "pending_us_tickers": [
+    "MU",
+    "HWM",
+    "BEN",
+    "LITE",
+    "WDC",
+    "HIG",
+    "MCHP",
+    "COHR"
+  ],
+  "total_allocated_tl": 4754.18,
+  "summary": {
+    "sat": 0,
+    "top_up": 0,
+    "yeni_alim": 5,
+    "beklemede_tl": 15245.83,
+    "nakitte_tl": 15245.83
+  }
+}

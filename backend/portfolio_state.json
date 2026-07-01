@@ -1,0 +1,3611 @@
+{
+  "quality_gate_history": {
+    "ASELS.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "AHGAZ.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "QUAGR.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AYDEM.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ARDYZ.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HLGYO.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ODAS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TKFEN.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DOHOL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BTCIM.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MU": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "KRDMD.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ACSEL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HWM": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "MGROS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BEN": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "RODRG.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "TRGYO.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LITE": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "WDC": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "HIG": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "MCHP": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CRL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "COHR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "BERA.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CIEN": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "KAPLM.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SNDK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GLW": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "JBHT": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "LRCX": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "FDXF": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KLAC": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "TPR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CCOLA.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "GUBRF.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "FROTO.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "EKGYO.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LUV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "STX": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ASUZU.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VTRS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ADI": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "VICI": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "LOGO.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "KIM": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "AVOD.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TXN": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CSCO": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "TER": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "GEV": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "FFIV": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "DD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AVGO": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "APA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TT": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "DAL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MPARK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AGESA.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FTNT": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "EUPWR.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MRNA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SWK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ETN": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "AKSEN.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FOX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MIATK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SISE.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CVS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IEX": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ECILC.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FCX": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "FIX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ULKER.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HEKTS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NTAP": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CWENE.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NDSN": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "TDY": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "HST": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "AMD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "YATAS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "INTC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DDOG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ALFAS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VRT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CTVA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CF": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "PWR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AMAT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EME": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LH": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "UDR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "AKSA.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CDNS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "NXPI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GLRYH.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "NEM": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "GILD": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "BIMAS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FDX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DVA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CCL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DELL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VMC": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "HALKB.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PM": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "BRISA.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BKR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CHD": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "DGX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MPC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BMY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "JBL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MAVI.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HPE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TAVHL.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ROST": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "GESAN.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KARTN.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ON": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "STT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IFF": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EGEEN.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "INCY": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "UNH": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "TUPRS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AAPL": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "OKE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ODFL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EIX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TRGP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DUK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GD": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "KEYS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ISCTR.IS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CSGP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "OTKAR.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EXPD": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CAT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PGSUS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AMGN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "RTX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IBKR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "UAL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TJX": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ES": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NDAQ": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "INDES.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TGT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PANW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AOS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "NTHOL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CAH": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CBOE": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "COP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SJM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SWKS": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "EMR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "VLO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GWIND.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MTB": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "BRYAT.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MAR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DVN": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "WMT": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "GWW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SBAC": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "EQIX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LMT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "RVTY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "RCL": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "KEY": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "FITB": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ALGN": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "EREGL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BDX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AEE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GRMN": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CLX": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "HII": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AMZN": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CSX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WMB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MSI": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "GL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "STE": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "XYZ": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GNRC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ED": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FAST": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "UNP": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ANET": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KVUE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "QCOM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FSLR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "EQT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "XOM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DIS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LHX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DLR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VTR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "WELL": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "JCI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "RF": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "AON": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "YKBNK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "L": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ADEL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ETR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MPWR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CPAY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KORDS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WST": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TTKOM.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NVDA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "Q": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TOASO.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MA": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ALKIM.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PSX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HAL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "OXY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EBAY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CFG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PG": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "NUE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SAHOL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "APH": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ATO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FTV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "REG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CHRW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AEFES.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FANG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MGM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NTRS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BNY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "D": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NSC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WAB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ROK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PCG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IVZ": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AKAM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SCHW": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "URI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ADM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NWSA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "J": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MAS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NWS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PEG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "UHS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AME": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DOV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CRWD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AIZ": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CVX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SLB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BF-B": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "DG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CNP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TTWO": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "V": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "BR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CMI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TPL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PAPIL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GOOGL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TXT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TYL": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "GOOG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AJG": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "USB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AWK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ABBV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DXCM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "COF": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MSCI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EXR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "RL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CNC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ABNB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ENKAI.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ORLY": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "WEC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HLT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VRSN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EXE": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "DE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "COST": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MCO": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "LLY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LIN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MLM": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "SBUX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "XEL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MNST": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HUBB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PH": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IDXX": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "DOC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CMCSA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GEN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MDLZ": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MRSH": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ITW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EQR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AMT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "INVH": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IRM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ZBRA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BBY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LYB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KMI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "APP": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "DECK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VST": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AES": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "YUM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SOKM.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TSN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WBD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PLTR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "EFX": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ARCLK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TFC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PTC": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ECL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MCD": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "CARR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KMB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VAKBN.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FIS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KCHOL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KDP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "STLD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DRI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GPC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "APTV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SPGI": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "HON": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BALL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PPG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GPN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PFG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SPG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "OYAKC.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FOXA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MAA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AMCR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HCA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PNC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ADP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MCK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DLTR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "NFLX": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "PRU": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AEP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LNT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IBM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CVNA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MOS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CHTR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "XYL": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "HUM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ALLE": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "TKO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SRE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SOLV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SNA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ALB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BAC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CIMSA.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PYPL": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "ORCL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MET": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "JNJ": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "UPS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CEG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PPL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "A": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EXPE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VZ": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AZO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ZOREN.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FRT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HAS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LOW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "THYAO.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CDW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FISV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "COO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CTAS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LYV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DPZ": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "EXC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PNR": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "INTU": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "APO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "O": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WSM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TECH": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AKBNK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CMG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CAG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CPT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TDG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SKBNK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VRTX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PSA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EOG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AIG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ACGL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FICO": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "TCELL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "OTIS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WDAY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DTE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ALBRK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CPB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PKG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SASA.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PFE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ELV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EVRG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ICE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TEL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ADBE": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "GS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MDT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HBAN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CCI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "STZ": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "JKHY": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "VLTO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SHW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WRB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VRSK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "META": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SATS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ISGYO.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "RSG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WAT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ARES": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NEE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PCAR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "RMD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PSKY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SMCI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "T": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SYY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "C": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PETKM.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ULTA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CME": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PLD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LVS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LII": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CTSH": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "DOW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HRL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ESS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TRV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ALL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NOC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "RJF": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BXP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CMS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CASY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HSIC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ALARK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CINF": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TURSG.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ROL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SYF": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PGR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ADSK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "APD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ABT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CPRT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BLK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KKR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ISRG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PNW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PHM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "UBER": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CRH": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IQV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TMUS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "REGN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NCLH": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AVB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MMM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NRG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MKC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AMP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BIIB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MRK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MSFT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GARAN.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FDS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SNPAM.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IT": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HSY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CRM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PODD": [
+      {
+        "month": "2026-06",
+        "passed": true
+      }
+    ],
+    "BAX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WTW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WYNN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TAP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "MTD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NVR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VEEV": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HPQ": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TTRAK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "COR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "OMC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BRK-B": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BSX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ZBH": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "HOOD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AXP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ARE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DASH": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "CBRE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ISMEN.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AKGRT.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "JPM": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BRO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TSCO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DOAS.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BKNG": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AVY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LDOS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SYK": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TROW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PAYX": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NKE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TTD": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KHC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GDDY": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "POOL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "SNPS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PEP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TSLA": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "EL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "NOW": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AFL": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LULU": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ZTS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "BLDR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ROP": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "WFC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ERIE": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "F": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TRMB": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "COIN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DHI": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "LEN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "DHR": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "TMO": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "AXON": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VESBE.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ACN": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GIS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "GEHC": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "FENER.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "ANACM.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "IPEKE.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KERVT.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KOZAA.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "KOZAL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PEHOL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "PRARK.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ],
+    "VESTEL.IS": [
+      {
+        "month": "2026-06",
+        "passed": false
+      }
+    ]
+  },
+  "last_cycle": "2026-06"
+}
