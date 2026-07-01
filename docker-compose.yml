@@ -96,7 +96,8 @@ services:
 
 volumes:
   postgres_data:
-  # Not: twelve_data.db/cache.db/historical_data.db gibi piyasa verisi SQLite
-  # dosyaları şu an container'ın ephemeral dosya sisteminde (TTL'li cache, kayıp
-  # önemli değil). Bunlar Postgres'e taşınana kadar (Faz 3 devamı) container
-  # yeniden oluşturulduğunda sıfırdan Twelve Data API'den yeniden doldurulur.
+  # Not: historical_db.py (kalıcı finansal zaman serisi) artık DATABASE_URL
+  # ayarlıysa doğrudan Postgres'i kullanıyor — container yeniden oluşturulsa
+  # bile veri kaybolmaz. twelve_data.db/cache.db ise hâlâ container'ın
+  # ephemeral dosya sisteminde kalıyor (TTL'li API cache'i, kayıp önemli
+  # değil — cache.py zaten REDIS_URL varsa Redis'i tercih ediyor).

@@ -14,6 +14,11 @@ Tablo tasarimi:
 Look-ahead guvenlik:
   financial_records.available_from  = fiscal_end + 4 ay
   get_historical_snapshot()         = available_from <= as_of_date kosulu
+
+Depolama:
+  DATABASE_URL postgresql:// ise Postgres kullanılır (kalıcı — bu veri API'den
+  geri alınamaz, container'ın ephemeral disk'inde kaybedilmemeli). Aksi halde
+  yerel SQLite dosyasına (historical_data.db) düşer.
 """
 
 from __future__ import annotations
@@ -30,7 +35,12 @@ import pandas as pd
 _HERE   = os.path.dirname(os.path.abspath(__file__))
 _DB_PATH = os.path.join(_HERE, "historical_data.db")
 
-_DDL = """
+_PG_URL = os.getenv("DATABASE_URL", "")
+if _PG_URL.startswith("postgres://"):
+    _PG_URL = _PG_URL.replace("postgres://", "postgresql://", 1)
+IS_POSTGRES = _PG_URL.startswith("postgresql://")
+
+_DDL_SQLITE = """
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
 
@@ -61,10 +71,93 @@ CREATE INDEX IF NOT EXISTS idx_px_ticker   ON price_snapshots(ticker);
 CREATE INDEX IF NOT EXISTS idx_px_date     ON price_snapshots(ticker, price_date);
 """
 
+_DDL_POSTGRES = """
+CREATE TABLE IF NOT EXISTS financial_records (
+    id             SERIAL PRIMARY KEY,
+    ticker         TEXT      NOT NULL,
+    fiscal_end     DATE      NOT NULL,
+    available_from DATE      NOT NULL,
+    source         TEXT      NOT NULL DEFAULT 'yfinance',
+    record_json    TEXT      NOT NULL,
+    fetched_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(ticker, fiscal_end, source)
+);
+
+CREATE TABLE IF NOT EXISTS price_snapshots (
+    id          SERIAL PRIMARY KEY,
+    ticker      TEXT      NOT NULL,
+    price_date  DATE      NOT NULL,
+    close_price REAL,
+    source      TEXT      NOT NULL DEFAULT 'yfinance',
+    fetched_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(ticker, price_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fin_ticker  ON financial_records(ticker);
+CREATE INDEX IF NOT EXISTS idx_fin_avail   ON financial_records(ticker, available_from);
+CREATE INDEX IF NOT EXISTS idx_px_ticker   ON price_snapshots(ticker);
+CREATE INDEX IF NOT EXISTS idx_px_date     ON price_snapshots(ticker, price_date);
+"""
+
 _LOCK = threading.Lock()
 
+if IS_POSTGRES:
+    import psycopg2
+    import psycopg2.extras
+    import psycopg2.pool
 
-def _conn(path: str = _DB_PATH) -> sqlite3.Connection:
+    _pg_pool = psycopg2.pool.SimpleConnectionPool(1, 10, _PG_URL)
+
+    class _PGCursorResult:
+        """sqlite3.Cursor'a benzer minimal arayüz (.fetchone()/.fetchall() zincirlenebilsin diye)."""
+
+        def __init__(self, cursor):
+            self._cursor = cursor
+
+        def fetchone(self):
+            return self._cursor.fetchone()
+
+        def fetchall(self):
+            return self._cursor.fetchall()
+
+        @property
+        def rowcount(self):
+            return self._cursor.rowcount
+
+    class _PGConn:
+        """psycopg2 bağlantısını sqlite3.Connection'ın execute/executemany/executescript
+        ve context-manager arayüzüne uyarlar; böylece aşağıdaki fonksiyonlar SQLite/Postgres
+        farkını görmeden aynı kodla çalışabilir."""
+
+        def __init__(self):
+            self._conn = _pg_pool.getconn()
+            self._cursor = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+        def execute(self, sql: str, params=None):
+            self._cursor.execute(sql.replace("?", "%s"), params or ())
+            return _PGCursorResult(self._cursor)
+
+        def executemany(self, sql: str, rows):
+            self._cursor.executemany(sql.replace("?", "%s"), rows)
+
+        def executescript(self, sql: str):
+            self._cursor.execute(sql)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            if exc_type is None:
+                self._conn.commit()
+            else:
+                self._conn.rollback()
+            self._cursor.close()
+            _pg_pool.putconn(self._conn)
+
+
+def _conn(path: str = _DB_PATH):
+    if IS_POSTGRES:
+        return _PGConn()
     con = sqlite3.connect(path, check_same_thread=False, timeout=30.0)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA journal_mode=WAL")
@@ -74,7 +167,7 @@ def _conn(path: str = _DB_PATH) -> sqlite3.Connection:
 
 def _init(path: str = _DB_PATH) -> None:
     with _conn(path) as con:
-        con.executescript(_DDL)
+        con.executescript(_DDL_POSTGRES if IS_POSTGRES else _DDL_SQLITE)
 
 
 _init()  # modül yüklenince şemayı oluştur/doğrula
@@ -338,26 +431,29 @@ def stats(path: str = _DB_PATH) -> dict:
     sql_fin = """
         SELECT COUNT(*) AS total_records,
                COUNT(DISTINCT ticker) AS tickers_fin,
-               MIN(fiscal_end) AS oldest_fin,
-               MAX(fiscal_end) AS newest_fin
+               CAST(MIN(fiscal_end) AS TEXT) AS oldest_fin,
+               CAST(MAX(fiscal_end) AS TEXT) AS newest_fin
         FROM financial_records
     """
     sql_px = """
         SELECT COUNT(*) AS total_prices,
                COUNT(DISTINCT ticker) AS tickers_px,
-               MIN(price_date) AS oldest_px,
-               MAX(price_date) AS newest_px
+               CAST(MIN(price_date) AS TEXT) AS oldest_px,
+               CAST(MAX(price_date) AS TEXT) AS newest_px
         FROM price_snapshots
     """
     with _conn(path) as con:
         fin_row = con.execute(sql_fin).fetchone()
         px_row  = con.execute(sql_px).fetchone()
-    db_mb = os.path.getsize(path) / 1_048_576 if os.path.exists(path) else 0.0
+    if IS_POSTGRES:
+        db_mb = None  # Postgres'te tek dosya boyutu kavramı yok (docker system df ile ölçülür)
+    else:
+        db_mb = round(os.path.getsize(path) / 1_048_576, 2) if os.path.exists(path) else 0.0
     return {
         "financial_records":  dict(fin_row) if fin_row else {},
         "price_snapshots":    dict(px_row)  if px_row  else {},
-        "db_size_mb":         round(db_mb, 2),
-        "db_path":            path,
+        "db_size_mb":         db_mb,
+        "db_path":            "postgres" if IS_POSTGRES else path,
     }
 
 
