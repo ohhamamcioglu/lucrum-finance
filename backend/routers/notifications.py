@@ -1,4 +1,5 @@
 from datetime import datetime
+import email.utils
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -95,16 +96,22 @@ def get_news_notifications(
     def fetch_ticker_news(ticker):
         if _is_tefas(ticker):
             return []
-        return _get_news_for_ticker(ticker)
-        
+        items = _get_news_for_ticker(ticker)
+        for item in items:
+            item["tag"] = "portfolio"
+        return items
+
     def fetch_macro_news(query_id, query):
         cached = _news_db.get(f"news_macro_{query_id}", ttl=_NEWS_TTL)
         if cached:
             return cached
         rss_news = _fetch_google_news_rss(query)
-        # Mark macro source
+        # Frontend "Makro" filtresi tag=="macro" bekliyor — eskiden burada sadece
+        # "related_ticker" set ediliyordu, frontend'in okuduğu "tag" alanı hiç yoktu,
+        # bu yüzden Makro sekmesi her zaman boş görünüyordu.
         for item in rss_news:
             item["related_ticker"] = "Macro"
+            item["tag"] = "macro"
         _news_db.set(f"news_macro_{query_id}", rss_news)
         return rss_news
 
@@ -123,16 +130,36 @@ def get_news_notifications(
                 pass
                 
     # Tarihe göre azalan sırala
+    # Not: alan adı eskiden "datetime" idi ama makale nesneleri "published_at" kullanıyor —
+    # x.get("datetime") her zaman None dönüp sıralama sessizce hiç çalışmıyordu.
+    # Ayrıca Google News RSS pubDate RFC 822 formatında ("Wed, 02 Jul 2026 10:00:00 GMT")
+    # gelir, bunu email.utils.parsedate_to_datetime ile ayrıştırmak gerekiyor.
     def parse_dt(dt_str):
         if not dt_str:
             return datetime.min
         try:
-            return datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-        except:
-            try:
-                return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
-            except:
-                return datetime.min
+            return email.utils.parsedate_to_datetime(dt_str).replace(tzinfo=None)
+        except Exception:
+            pass
+        try:
+            return datetime.fromisoformat(dt_str.replace("Z", "+00:00")).replace(tzinfo=None)
+        except Exception:
+            pass
+        try:
+            return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            return datetime.min
 
-    all_news.sort(key=lambda x: parse_dt(x.get("datetime")), reverse=True)
-    return all_news[:30]
+    # Makro ve portföy haberlerini AYRI AYRI sırala/kes, sonra birleştir — tek bir ortak
+    # all_news[:30] kesimi kullanılsaydı, portföydeki 30+ sembolden gelen çok sayıda (ve
+    # genelde daha taze) haber az sayıdaki (~15) makro haberi tamamen dışarı itiyordu,
+    # bu yüzden Makro sekmesi sonuçta hep boş görünüyordu (tag alanı doğru olsa bile).
+    macro_news = sorted(
+        [n for n in all_news if n.get("tag") == "macro"],
+        key=lambda x: parse_dt(x.get("published_at")), reverse=True
+    )[:10]
+    portfolio_news = sorted(
+        [n for n in all_news if n.get("tag") != "macro"],
+        key=lambda x: parse_dt(x.get("published_at")), reverse=True
+    )[:20]
+    return portfolio_news + macro_news

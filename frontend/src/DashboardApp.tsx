@@ -122,7 +122,10 @@ export default function DashboardApp() {
           symbol: pos.ticker,
           name: marketAsset ? marketAsset.name : pos.ticker,
           category: category,
-          sector: marketAsset ? marketAsset.sector : (pos.asset_class || 'Other'),
+          // marketAsset.sector zaten İngilizce (Technology, Cryptocurrency vb.) — statik listede
+          // olmayan pozisyonlar için ham asset_class'a düşerken aynı taksonomiye normalize et,
+          // yoksa örn. 'Kripto' (DB) ve 'Cryptocurrency' (statik liste) grafikte iki ayrı dilim olur.
+          sector: marketAsset ? marketAsset.sector : (pos.asset_class === 'Kripto' ? 'Cryptocurrency' : (pos.asset_class || 'Other')),
           shares: pos.quantity,
           avgBuyPrice: avgBuyPrice,
           currentPrice: currentPrice,
@@ -374,7 +377,7 @@ export default function DashboardApp() {
       {/* Main viewport area */}
       <main className="ml-64 mt-16 p-8 h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar">
         <div className="max-w-7xl mx-auto">
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 10 }}
@@ -435,6 +438,7 @@ export default function DashboardApp() {
                   onUpdateSettings={handleUpdateSettings}
                   onResetPortfolio={handleResetPortfolio}
                   onLogout={handleLogout}
+                  currentPositionCount={portfolioMetrics.holdings.length}
                 />
               )}
             </motion.div>

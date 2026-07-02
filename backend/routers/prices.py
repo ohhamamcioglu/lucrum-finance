@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 import twelve_data as td
-from crud import get_exchange_rate_history, get_price_history
+from crud import get_exchange_rate_history
 from services import get_usd_try_rate, get_eur_try_rate, get_gbp_try_rate
 from dependencies import get_current_user_id, get_db
 
@@ -50,16 +50,27 @@ def get_rates_history(
 def get_ticker_price_history(
     ticker: str,
     days: int = Query(90, ge=1, le=365),
-    db: Session = Depends(get_db)
+    asset_class: Optional[str] = None,
 ):
-    """Belirli varlık için fiyat geçmişini al"""
-    rows = get_price_history(ticker, days, db=db)
+    """Belirli varlık için fiyat geçmişini al.
+
+    Not: `price_history` tablosu hiçbir yerde yazılmıyor (save_price_history import
+    edilmiş ama hiç çağrılmıyor) — bu yüzden burada her zaman boş dönerdi ve örn.
+    Risk sekmesindeki korelasyon matrisi hiçbir zaman veri bulamazdı. Bunun yerine
+    Twelve Data'nın kendi TTL'li time_series cache'inden (td_time_series) besleniyoruz.
+    """
+    td_symbol = ticker.upper().strip()
+    if (asset_class or "") == "Kripto" and not td_symbol.endswith("-USD") and "/" not in td_symbol:
+        td_symbol = f"{td_symbol}-USD"
+
+    bars = td.get_time_series(td_symbol, days, "1day")
+    is_try_priced = (asset_class or "") in ("BIST Hissesi", "TL Mevduat", "TL Tahvil")
     return [
         {
-            "date": r["price_date"],
-            "price_usd": r["price_usd"],
-            "price_try": r["price_try"],
-            "source": r["source"]
+            "date": b["date"][:10],
+            "price_usd": None if is_try_priced else b["close"],
+            "price_try": b["close"] if is_try_priced else None,
+            "source": "twelve_data"
         }
-        for r in rows
+        for b in bars if b.get("close") is not None
     ]

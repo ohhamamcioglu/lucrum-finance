@@ -111,7 +111,14 @@ async function request(url: string, options: RequestInit = {}, isRetry = false):
 
   if (!res.ok) {
     const errText = await res.text().catch(() => 'Request failed');
-    throw new Error(errText || `HTTP error! status: ${res.status}`);
+    // FastAPI hataları {"detail": "..."} JSON döner — parse edip temiz mesajı çıkar,
+    // aksi halde kullanıcı ham JSON string görür (örn. pozisyon limiti hatası).
+    let message = errText || `HTTP error! status: ${res.status}`;
+    try {
+      const parsed = JSON.parse(errText);
+      if (typeof parsed?.detail === 'string') message = parsed.detail;
+    } catch { /* JSON değil, ham metni kullan */ }
+    throw new Error(message);
   }
 
   return res.json();
@@ -196,7 +203,14 @@ export const api = {
 
   async getPriceHistory(ticker: string, days = 90, assetClass?: string): Promise<{ date: string; price: number }[]> {
     const classParam = assetClass ? `&asset_class=${encodeURIComponent(assetClass)}` : '';
-    return request(`${BASE_URL}/api/prices/${ticker}/history?days=${days}${classParam}`);
+    const raw: { date: string; price_usd: number | null; price_try: number | null }[] =
+      await request(`${BASE_URL}/api/prices/history/${ticker}?days=${days}${classParam}`);
+    // Backend price_usd/price_try döner, ancak korelasyon/benchmark hesaplamaları tek bir
+    // 'price' alanı bekliyor — göreli fiyat hareketi için hangi para birimi tutarlı olsun
+    // fark etmez, sadece bir tanesi seçilmeli.
+    return raw
+      .map((r) => ({ date: r.date, price: r.price_usd ?? r.price_try }))
+      .filter((r): r is { date: string; price: number } => r.price != null);
   },
 
   async getNewsFeed(): Promise<{ ticker: string; tag: string; title: string; summary: string; url: string; source: string; published_at: string }[]> {

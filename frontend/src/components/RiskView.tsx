@@ -75,7 +75,13 @@ export default function RiskView({ holdings, settings }: RiskViewProps) {
       setCorrLoading(false);
     });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      // Fetch tamamlanmadan iptal edildiyse (örn. kullanıcı sekmeden hemen ayrıldı), prevSymsRef'i
+      // sıfırla — aksi halde corrLoading=true'da asılı kalır ve aynı sembollerle geri dönüldüğünde
+      // guard (satır 57) yeniden denemeyi sonsuza dek engeller.
+      if (prevSymsRef.current === nonCashSymKey) prevSymsRef.current = '';
+    };
   }, [nonCashSymKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Portföy risk profili: equity ağırlığı + ortalama beta

@@ -12,9 +12,10 @@ interface SettingsViewProps {
   onUpdateSettings: (newSettings: Partial<UserSettings>) => void;
   onResetPortfolio: () => void;
   onLogout: () => void;
+  currentPositionCount: number;
 }
 
-export default function SettingsView({ settings, onUpdateSettings, onResetPortfolio, onLogout }: SettingsViewProps) {
+export default function SettingsView({ settings, onUpdateSettings, onResetPortfolio, onLogout, currentPositionCount }: SettingsViewProps) {
   const t = useT(settings.language);
   const [userName, setUserName] = useState(settings.userName);
   const [userRole, setUserRole] = useState(settings.userRole);
@@ -263,15 +264,16 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
                 {/* Plans Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {[
-                    { id: 'FREE', title: 'Free', price: '0$', limitPos: '5', limitAlert: '3' },
-                    { id: 'PRO', title: 'Pro', price: '19$', limitPos: '50', limitAlert: '20' },
-                    { id: 'ENTERPRISE', title: 'Enterprise', price: '99$', limitPos: 'Sınırsız', limitAlert: 'Sınırsız' }
+                    { id: 'FREE', title: 'Free', price: '0$', limitPos: '5', limitPosNum: 5, limitAlert: '3' },
+                    { id: 'PRO', title: 'Pro', price: '19$', limitPos: '50', limitPosNum: 50, limitAlert: '20' },
+                    { id: 'ENTERPRISE', title: 'Enterprise', price: '99$', limitPos: 'Sınırsız', limitPosNum: null, limitAlert: 'Sınırsız' }
                   ].map((p) => {
                     const isCurrent = profile?.subscription_tier === p.id;
+                    const isOverLimit = isCurrent && p.limitPosNum !== null && currentPositionCount > p.limitPosNum;
                     return (
                       <div key={p.id} className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
-                        isCurrent 
-                          ? 'border-[#8C9A86] bg-[#8C9A86]/5 shadow-sm' 
+                        isCurrent
+                          ? 'border-[#8C9A86] bg-[#8C9A86]/5 shadow-sm'
                           : 'border-[#E8E2D9] hover:border-[#8C9A86]/50 bg-[#F9F7F2]/40'
                       }`}>
                         <div>
@@ -280,10 +282,23 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
                             <span className="text-[10px] font-bold text-[#6B645E]">{p.price} / ay</span>
                           </div>
                           <div className="mt-3 space-y-1.5 text-[10px] text-[#6B645E] font-medium">
-                            <div className="flex justify-between">
+                            <div className="flex justify-between items-center">
                               <span>Pozisyon:</span>
-                              <span className="font-bold text-[#2D2926]">{p.limitPos}</span>
+                              {isCurrent ? (
+                                <span className={`font-bold ${isOverLimit ? 'text-[#B5836F]' : 'text-[#2D2926]'}`}>
+                                  {currentPositionCount} / {p.limitPos}
+                                </span>
+                              ) : (
+                                <span className="font-bold text-[#2D2926]">{p.limitPos}</span>
+                              )}
                             </div>
+                            {isOverLimit && (
+                              <div className="text-[9px] text-[#B5836F] font-semibold leading-relaxed pt-0.5">
+                                {settings.language === 'tr'
+                                  ? `Sınırı aştınız (${currentPositionCount}/${p.limitPos}) — yeni pozisyon eklemek için yükseltin.`
+                                  : `Over limit (${currentPositionCount}/${p.limitPos}) — upgrade to add new positions.`}
+                              </div>
+                            )}
                             <div className="flex justify-between">
                               <span>Fiyat Alarmı:</span>
                               <span className="font-bold text-[#2D2926]">{p.limitAlert}</span>

@@ -158,8 +158,13 @@ def _api(endpoint: str, params: dict, timeout: int = 15) -> dict | list | None:
             msg = data.get("message", "")
             logging.warning("TD %s: %s", endpoint, msg[:100])
             if "speed limit" in msg.lower() or "rate limit" in msg.lower() or r.status_code == 429:
-                logging.warning("[RATE LIMIT] Twelve Data speed limit hit! Sleeping for 60s to cool down...")
-                time.sleep(60)
+                # Not: burada senkron time.sleep(60) YAPMA — bu, isteği işleyen FastAPI worker
+                # thread'ini bloke eder (Starlette'in paylaşımlı threadpool'unda bir slot kilitlenir),
+                # ve 40+ pozisyonlu bir portföyde eş zamanlı çağrılar (örn. korelasyon matrisi)
+                # bu yüzden dakikalarca "hesaplanıyor" gibi asılı kalırdı. _throttle() zaten
+                # giden istekleri proaktif olarak sınırlıyor; burada sadece logla ve None dön,
+                # çağıran taraf (DB cache / fallback) bunu zaten nazikçe idare ediyor.
+                logging.warning("[RATE LIMIT] Twelve Data speed limit hit for %s — atlaniyor.", endpoint)
             return None
         return data
     except Exception as e:
@@ -1033,12 +1038,14 @@ def get_balance_sheet(symbol: str) -> list[dict]:
                     for col in df.columns[:4]:
                         fiscal_date = str(col)[:10]
                         col_data = df[col].to_dict()
-                        cash = col_data.get("CashAndCashEquivalents") or col_data.get("CashCashEquivalentsAndShortTermInvestments") or col_data.get("Cash")
-                        total_assets = col_data.get("TotalAssets")
-                        total_liab = col_data.get("TotalLiabilitiesNetMinInterest") or col_data.get("TotalLiabilities")
-                        total_equity = col_data.get("StockholdersEquity") or col_data.get("TotalEquity")
-                        retained_earnings = col_data.get("RetainedEarnings")
-                        total_debt = col_data.get("TotalDebt") or col_data.get("LongTermDebt")
+                        # yfinance'in quarterly_balance_sheet DataFrame'i satır etiketlerini boşluklu
+                        # Title Case kullanır (örn. "Total Assets"), bitişik-yazım anahtarlar hiç eşleşmiyordu.
+                        cash = col_data.get("Cash And Cash Equivalents") or col_data.get("Cash Cash Equivalents And Short Term Investments") or col_data.get("CashAndCashEquivalents")
+                        total_assets = col_data.get("Total Assets") or col_data.get("TotalAssets")
+                        total_liab = col_data.get("Total Liabilities Net Minority Interest") or col_data.get("TotalLiabilitiesNetMinInterest")
+                        total_equity = col_data.get("Stockholders Equity") or col_data.get("StockholdersEquity")
+                        retained_earnings = col_data.get("Retained Earnings") or col_data.get("RetainedEarnings")
+                        total_debt = col_data.get("Total Debt") or col_data.get("Long Term Debt") or col_data.get("TotalDebt")
                         
                         row = {
                             "fiscal_date":      fiscal_date,
@@ -1224,9 +1231,15 @@ def get_ema(symbol: str, period: int = 20, interval: str = "1day", n: int = 30) 
     return get_indicator(symbol, "ema", interval, n, time_period=period)
 
 def get_beta_value(symbol: str) -> Optional[float]:
-    """Güncel Beta değeri (risk skoru için)."""
+    """Güncel Beta değeri (risk skoru için).
+    get_indicator() taze API yanıtında sağlayıcının ham alan adını ("beta"),
+    eski formatlı cache'den okurken kanonik adı ("v1") döndürebiliyor — ikisini
+    de dene."""
     data = get_indicator(symbol, "beta", "1day", 1, time_period=252)
-    return data[0]["v1"] if data else None
+    if not data:
+        return None
+    row = data[0]
+    return row.get("beta") if row.get("beta") is not None else row.get("v1")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1478,10 +1491,17 @@ class TwelveDataCrawler:
         self.last_api_call = 0
         self.api_delay = 1.8  # minimum 1.8 seconds delay between any API calls (~33 req/min max)
         self.registered_symbols: dict[str, str] = {}  # sym → asset_class
+        # ETF'ler/fonlar için "statistics" 403/404 ile kalıcı olarak başarısız olur, ama başarısızlık
+        # DB'ye yazılmadığından _is_stale() hep True döner ve crawler her 5sn'lik boş-kuyruk taramasında
+        # aynı sembolü sonsuza dek yeniden dener — API kotasını tüketip gerçek kullanıcı isteklerini
+        # (örn. korelasyon matrisi) aç bırakır. Bu sembolleri süreç ömrü boyunca hafızada işaretleyip atla.
+        self._fundamentals_unavailable: set[str] = set()
 
     def _supports_fundamentals(self, sym: str) -> bool:
         """Twelve Data fundamentals (statistics, balance, profile) only work for US stocks."""
         if "/" in sym or ":" in sym:
+            return False
+        if sym in self._fundamentals_unavailable:
             return False
         ac = self.registered_symbols.get(sym, "")
         if ac in ("BIST Hissesi", "Kripto"):
@@ -1627,7 +1647,11 @@ class TwelveDataCrawler:
 
                 if target in ("all", "statistics"):
                     self._enforce_delay()
-                    get_statistics(symbol)
+                    stats_result = get_statistics(symbol)
+                    if not stats_result:
+                        # ETF/fon gibi fundamentals'ı olmayan bir sembol — bu süreç boyunca
+                        # bir daha deneme, aksi halde her boş-kuyruk taramasında sonsuza dek yeniden denenir.
+                        self._fundamentals_unavailable.add(symbol)
 
                 if target in ("all", "balance"):
                     self._enforce_delay()
@@ -1754,11 +1778,13 @@ def get_income_statement(symbol: str) -> dict:
                     for col in df.columns[:4]:
                         fiscal_date = str(col)[:10]
                         col_data = df[col].to_dict()
-                        sales = col_data.get("TotalRevenue") or col_data.get("OperatingRevenue")
-                        net_inc = col_data.get("NetIncome")
-                        ebitda = col_data.get("EBITDA") or col_data.get("NormalizedEBITDA")
-                        op_inc = col_data.get("OperatingIncome")
-                        gross_prof = col_data.get("GrossProfit")
+                        # yfinance'in quarterly_income_stmt DataFrame'i satır etiketlerini boşluklu
+                        # Title Case kullanır (örn. "Total Revenue"), bitişik-yazım anahtarlar hiç eşleşmiyordu.
+                        sales = col_data.get("Total Revenue") or col_data.get("Operating Revenue") or col_data.get("TotalRevenue")
+                        net_inc = col_data.get("Net Income") or col_data.get("NetIncome")
+                        ebitda = col_data.get("EBITDA") or col_data.get("Normalized EBITDA")
+                        op_inc = col_data.get("Operating Income") or col_data.get("OperatingIncome")
+                        gross_prof = col_data.get("Gross Profit") or col_data.get("GrossProfit")
                         row = {
                             "fiscal_date": fiscal_date,
                             "period":      "Quarterly",
@@ -1846,8 +1872,10 @@ def get_cash_flow(symbol: str) -> dict:
                     for col in df.columns[:4]:
                         fiscal_date = str(col)[:10]
                         col_data = df[col].to_dict()
-                        op_cf = col_data.get("OperatingCashFlow") or col_data.get("CashFlowFromOperatingActivities")
-                        free_cf = col_data.get("FreeCashFlow")
+                        # yfinance'in quarterly_cashflow DataFrame'i satır etiketlerini boşluklu
+                        # Title Case kullanır (örn. "Operating Cash Flow"), bitişik-yazım anahtarlar hiç eşleşmiyordu.
+                        op_cf = col_data.get("Operating Cash Flow") or col_data.get("Cash Flow From Continuing Operating Activities") or col_data.get("OperatingCashFlow")
+                        free_cf = col_data.get("Free Cash Flow") or col_data.get("FreeCashFlow")
                         row = {
                             "fiscal_date": fiscal_date,
                             "period":      "Quarterly",

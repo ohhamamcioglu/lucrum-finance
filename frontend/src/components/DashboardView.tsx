@@ -604,7 +604,7 @@ export default function DashboardView({
           <div className="flex-1 w-full relative" style={{ minHeight: 0 }}>
             {perfPoints.length > 1 ? (() => {
               const W = 560; const H = 200;
-              const PAD_L = 0; const PAD_R = 8; const PAD_T = 10; const PAD_B = 24;
+              const PAD_L = 0; const PAD_R = 36; const PAD_T = 10; const PAD_B = 24;
               const chartW = W - PAD_L - PAD_R;
               const chartH = H - PAD_T - PAD_B;
               const stepX = chartW / (perfPoints.length - 1);
