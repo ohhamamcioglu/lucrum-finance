@@ -231,12 +231,36 @@ export const api = {
     return request(`${BASE_URL}/api/users/me`);
   },
 
-  async subscribeToPlan(plan: string): Promise<{ status: string; message: string; subscription_tier: string; subscription_status: string; subscription_ends_at: string }> {
+  async subscribeToPlan(plan: string): Promise<{ status: string; message: string; subscription_tier: string; subscription_status: string; subscription_ends_at: string | null }> {
     return request(`${BASE_URL}/api/users/subscribe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan })
     });
+  },
+
+  async createStripeCheckout(plan: string): Promise<{ checkout_url: string }> {
+    return request(`${BASE_URL}/api/payments/stripe/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan })
+    });
+  },
+
+  async createIyzicoCheckout(plan: string, buyer: {
+    identity_number: string; phone: string; address: string; city: string; country: string;
+  }): Promise<{ checkout_url: string }> {
+    return request(`${BASE_URL}/api/payments/iyzico/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, ...buyer })
+    });
+  },
+
+  async getPaymentHistory(): Promise<{
+    id: number; provider: string; plan_tier: string; amount: number; currency: string; status: string; created_at: string;
+  }[]> {
+    return request(`${BASE_URL}/api/payments/history`);
   },
 
   async logout(): Promise<void> {

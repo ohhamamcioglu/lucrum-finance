@@ -268,6 +268,30 @@ const en = {
   adminPage: (page: number, total: number) => `Page ${page} of ${total}`,
   adminNoResults: 'No users found.',
   adminCannotDisableSelf: 'You cannot disable your own account.',
+
+  // Checkout / payments
+  checkoutChoosePayment: 'Choose a payment method',
+  checkoutStripeBtn: 'Credit Card (Stripe)',
+  checkoutIyzicoBtn: 'Local Card (iyzico)',
+  checkoutRedirecting: 'Redirecting to payment page...',
+  checkoutFailedUnconfigured: 'This payment method is not available yet.',
+  checkoutFailedGeneric: 'Could not start checkout, please try again.',
+  paymentSuccessToast: 'Payment successful! Your plan has been upgraded.',
+  paymentFailedToast: 'Payment failed. No charge was made.',
+  paymentCancelledToast: 'Payment cancelled.',
+
+  // iyzico buyer info modal
+  iyzicoModalTitle: 'Payment Details',
+  iyzicoModalSubtitle: 'Required for card payment verification in Turkey.',
+  iyzicoIdentityNumber: 'National ID Number (T.C. Kimlik No)',
+  iyzicoPhone: 'Phone Number',
+  iyzicoAddress: 'Address',
+  iyzicoCity: 'City',
+  iyzicoCountry: 'Country',
+  iyzicoContinue: 'Continue to Payment',
+  iyzicoCancel: 'Cancel',
+  iyzicoIdentityInvalid: 'National ID must be exactly 11 digits.',
+  iyzicoFieldRequired: 'This field is required.',
 };
 
 const tr: typeof en = {
@@ -529,6 +553,30 @@ const tr: typeof en = {
   adminPage: (page: number, total: number) => `Sayfa ${page} / ${total}`,
   adminNoResults: 'Kullanıcı bulunamadı.',
   adminCannotDisableSelf: 'Kendi hesabınızı devre dışı bırakamazsınız.',
+
+  // Checkout / ödeme
+  checkoutChoosePayment: 'Ödeme yöntemi seçin',
+  checkoutStripeBtn: 'Kredi Kartı (Stripe)',
+  checkoutIyzicoBtn: 'Yerli Kart (iyzico)',
+  checkoutRedirecting: 'Ödeme sayfasına yönlendiriliyorsunuz...',
+  checkoutFailedUnconfigured: 'Bu ödeme yöntemi henüz kullanılamıyor.',
+  checkoutFailedGeneric: 'Ödeme başlatılamadı, lütfen tekrar deneyin.',
+  paymentSuccessToast: 'Ödeme başarılı! Planınız yükseltildi.',
+  paymentFailedToast: 'Ödeme başarısız oldu. Herhangi bir tahsilat yapılmadı.',
+  paymentCancelledToast: 'Ödeme iptal edildi.',
+
+  // iyzico ödeme bilgileri modalı
+  iyzicoModalTitle: 'Ödeme Bilgileri',
+  iyzicoModalSubtitle: 'Türkiye\'de kart ödemesi doğrulaması için gereklidir.',
+  iyzicoIdentityNumber: 'T.C. Kimlik No',
+  iyzicoPhone: 'Telefon Numarası',
+  iyzicoAddress: 'Adres',
+  iyzicoCity: 'Şehir',
+  iyzicoCountry: 'Ülke',
+  iyzicoContinue: 'Ödemeye Devam Et',
+  iyzicoCancel: 'Vazgeç',
+  iyzicoIdentityInvalid: 'T.C. Kimlik No tam olarak 11 haneli olmalıdır.',
+  iyzicoFieldRequired: 'Bu alan zorunludur.',
 };
 
 export type Translations = typeof en;

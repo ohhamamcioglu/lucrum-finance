@@ -4,6 +4,8 @@ import { UserSettings } from '../types';
 import { useT } from '../i18n';
 import type { Language } from '../i18n';
 import { api } from '../services/api';
+import { useCheckout } from '../hooks/useCheckout';
+import IyzicoBuyerModal from './IyzicoBuyerModal';
 
 interface SettingsViewProps {
   settings: UserSettings;
@@ -22,10 +24,19 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const checkout = useCheckout();
 
   useEffect(() => {
     loadProfile();
   }, []);
+
+  useEffect(() => {
+    if (checkout.error) {
+      setToastMessage(checkout.error);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+    }
+  }, [checkout.error]);
 
   const loadProfile = async () => {
     try {
@@ -39,16 +50,16 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
     }
   };
 
-  const handleUpgrade = async (plan: string) => {
+  const handleDowngradeToFree = async () => {
     try {
       setLoadingProfile(true);
-      const res = await api.subscribeToPlan(plan);
-      setToastMessage(settings.language === 'tr' ? res.message : `Successfully upgraded to ${plan}!`);
+      const res = await api.subscribeToPlan('FREE');
+      setToastMessage(settings.language === 'tr' ? res.message : `Successfully switched to FREE!`);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
       await loadProfile();
     } catch (err: any) {
-      setToastMessage(settings.language === 'tr' ? "Abonelik yükseltme başarısız." : "Upgrade failed.");
+      setToastMessage(settings.language === 'tr' ? "Plan değişikliği başarısız." : "Plan change failed.");
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
       setLoadingProfile(false);
@@ -280,22 +291,43 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
                           </div>
                         </div>
 
-                        <button
-                          disabled={isCurrent}
-                          onClick={() => handleUpgrade(p.id)}
-                          className={`w-full mt-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center ${
-                            isCurrent
-                              ? 'bg-[#8C9A86]/20 text-[#8C9A86] cursor-not-allowed'
-                              : 'bg-[#8C9A86] hover:bg-[#7A8874] text-white'
-                          }`}
-                        >
-                          {isCurrent ? 'Aktif' : 'Seç'}
-                        </button>
+                        {isCurrent ? (
+                          <button
+                            disabled
+                            className="w-full mt-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#8C9A86]/20 text-[#8C9A86] cursor-not-allowed"
+                          >
+                            Aktif
+                          </button>
+                        ) : p.id === 'FREE' ? (
+                          <button
+                            onClick={handleDowngradeToFree}
+                            className="w-full mt-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8874] text-white cursor-pointer"
+                          >
+                            Seç
+                          </button>
+                        ) : (
+                          <div className="mt-4 space-y-1.5">
+                            <button
+                              disabled={checkout.submitting}
+                              onClick={() => checkout.startStripeCheckout(p.id)}
+                              className="w-full py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8874] disabled:bg-[#8C9A86]/60 text-white cursor-pointer"
+                            >
+                              {t.checkoutStripeBtn}
+                            </button>
+                            <button
+                              disabled={checkout.submitting}
+                              onClick={() => checkout.startIyzicoCheckout(p.id)}
+                              className="w-full py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-[#8C9A86]/30 hover:border-[#8C9A86] disabled:opacity-60 text-[#4A443F] cursor-pointer"
+                            >
+                              {t.checkoutIyzicoBtn}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
-                
+
                 {profile?.subscription_ends_at && profile.subscription_tier !== 'FREE' && (
                   <p className="text-[10px] text-[#9E958C] text-center font-medium italic">
                     {settings.language === 'tr' 
@@ -392,6 +424,15 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
           <CheckCircle className="w-4 h-4" />
           <span>{toastMessage}</span>
         </div>
+      )}
+
+      {checkout.iyzicoPlan && (
+        <IyzicoBuyerModal
+          lang={settings.language}
+          submitting={checkout.submitting}
+          onCancel={checkout.cancelIyzicoModal}
+          onSubmit={checkout.submitIyzicoBuyer}
+        />
       )}
 
     </div>

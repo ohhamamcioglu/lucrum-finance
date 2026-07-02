@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Crown, Sparkles, CheckCircle } from 'lucide-react';
 import PublicNav from './PublicNav';
+import IyzicoBuyerModal from './IyzicoBuyerModal';
 import { useT } from '../i18n';
 import type { Language } from '../i18n';
 import { useAuth } from '../AuthContext';
+import { useCheckout } from '../hooks/useCheckout';
 import { api } from '../services/api';
 
 const PLANS = [
@@ -18,9 +20,11 @@ export default function PricingPage() {
   const t = useT(lang);
   const { token } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const checkout = useCheckout();
 
   const [currentTier, setCurrentTier] = useState<string | null>(null);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [freeLoading, setFreeLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,20 +32,46 @@ export default function PricingPage() {
     api.getUserProfile().then((p) => setCurrentTier(p.subscription_tier)).catch(() => {});
   }, [token]);
 
-  const handleSelect = async (planId: string) => {
+  // ?payment=success|failed|cancelled — Stripe/iyzico'dan geri dönüşte gösterilecek bildirim
+  useEffect(() => {
+    const paymentParam = searchParams.get('payment');
+    if (!paymentParam) return;
+    if (paymentParam === 'success') {
+      setToast(t.paymentSuccessToast);
+      api.getUserProfile().then((p) => setCurrentTier(p.subscription_tier)).catch(() => {});
+    } else if (paymentParam === 'failed') {
+      setToast(t.paymentFailedToast);
+    } else if (paymentParam === 'cancelled') {
+      setToast(t.paymentCancelledToast);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('payment');
+    setSearchParams(next, { replace: true });
+    setTimeout(() => setToast(null), 4000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (checkout.error) {
+      setToast(checkout.error);
+      setTimeout(() => setToast(null), 4000);
+    }
+  }, [checkout.error]);
+
+  const handleSelectFree = async () => {
     if (!token) {
       navigate('/register');
       return;
     }
     try {
-      setLoadingId(planId);
-      const res = await api.subscribeToPlan(planId);
+      setFreeLoading(true);
+      const res = await api.subscribeToPlan('FREE');
       setCurrentTier(res.subscription_tier);
       setToast(t.pricingUpgradeSuccess);
     } catch {
       setToast(t.pricingUpgradeFailed);
     } finally {
-      setLoadingId(null);
+      setFreeLoading(false);
       setTimeout(() => setToast(null), 3000);
     }
   };
@@ -59,6 +89,7 @@ export default function PricingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PLANS.map((p) => {
             const isCurrent = token && currentTier === p.id;
+            const isPaidPlan = p.id !== 'FREE';
             return (
               <div
                 key={p.id}
@@ -88,17 +119,47 @@ export default function PricingPage() {
                   </li>
                 </ul>
 
-                <button
-                  disabled={!!isCurrent || loadingId === p.id}
-                  onClick={() => handleSelect(p.id)}
-                  className={`w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    isCurrent
-                      ? 'bg-[#8C9A86]/20 text-[#8C9A86] cursor-not-allowed'
-                      : 'bg-[#8C9A86] hover:bg-[#7A8875] text-white'
-                  }`}
-                >
-                  {isCurrent ? t.pricingCurrentPlan : token ? t.pricingSelect : t.pricingSignUpFirst}
-                </button>
+                {isCurrent ? (
+                  <button
+                    disabled
+                    className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-[#8C9A86]/20 text-[#8C9A86] cursor-not-allowed"
+                  >
+                    {t.pricingCurrentPlan}
+                  </button>
+                ) : !isPaidPlan ? (
+                  <button
+                    disabled={freeLoading}
+                    onClick={handleSelectFree}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8875] text-white cursor-pointer"
+                  >
+                    {token ? t.pricingSelect : t.pricingSignUpFirst}
+                  </button>
+                ) : !token ? (
+                  <button
+                    onClick={() => navigate('/register')}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8875] text-white cursor-pointer"
+                  >
+                    {t.pricingSignUpFirst}
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-[#9E958C] text-center">{t.checkoutChoosePayment}</p>
+                    <button
+                      disabled={checkout.submitting}
+                      onClick={() => checkout.startStripeCheckout(p.id)}
+                      className="w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8875] disabled:bg-[#8C9A86]/60 text-white cursor-pointer"
+                    >
+                      {t.checkoutStripeBtn}
+                    </button>
+                    <button
+                      disabled={checkout.submitting}
+                      onClick={() => checkout.startIyzicoCheckout(p.id)}
+                      className="w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider border border-[#8C9A86]/30 hover:border-[#8C9A86] disabled:opacity-60 text-[#4A443F] cursor-pointer"
+                    >
+                      {t.checkoutIyzicoBtn}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -109,8 +170,17 @@ export default function PricingPage() {
         </div>
       </div>
 
+      {checkout.iyzicoPlan && (
+        <IyzicoBuyerModal
+          lang={lang}
+          submitting={checkout.submitting}
+          onCancel={checkout.cancelIyzicoModal}
+          onSubmit={checkout.submitIyzicoBuyer}
+        />
+      )}
+
       {toast && (
-        <div className="fixed bottom-6 right-6 bg-[#4A443F] text-white rounded-xl px-5 py-3 shadow-2xl z-50 text-sm font-semibold">
+        <div className="fixed bottom-6 right-6 bg-[#4A443F] text-white rounded-xl px-5 py-3 shadow-2xl z-50 text-sm font-semibold max-w-sm">
           {toast}
         </div>
       )}
