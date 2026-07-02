@@ -135,7 +135,7 @@ export const api = {
   },
 
   async getExchangeRates(): Promise<ExchangeRateResponse> {
-    return request(`${BASE_URL}/api/exchange-rate`);
+    return request(`${BASE_URL}/api/prices/rates`);
   },
 
   async getPortfolio(refresh = false): Promise<PortfolioResponse> {
@@ -200,7 +200,7 @@ export const api = {
   },
 
   async getNewsFeed(): Promise<{ ticker: string; tag: string; title: string; summary: string; url: string; source: string; published_at: string }[]> {
-    return request(`${BASE_URL}/api/notifications/news-feed`);
+    return request(`${BASE_URL}/api/notifications/news`);
   },
 
   async getAssetOverview(ticker: string, assetClass: string): Promise<any> {

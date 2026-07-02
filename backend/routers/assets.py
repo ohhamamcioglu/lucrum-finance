@@ -349,7 +349,7 @@ def _get_news_for_ticker(ticker: str, asset_class: str = "") -> list[dict]:
     return unique
 
 def _fetch_twelve_data_news(us_tickers: list[str]) -> list[dict]:
-    TWELVE_DATA_API_KEY = td.TWELVE_DATA_API_KEY
+    TWELVE_DATA_API_KEY = td.API_KEY
     if not TWELVE_DATA_API_KEY or not us_tickers:
         return []
 
