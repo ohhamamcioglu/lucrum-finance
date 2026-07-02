@@ -298,8 +298,8 @@ class DBPayment(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    provider = Column(String, nullable=False)  # 'stripe' | 'iyzico'
-    provider_reference = Column(String, nullable=False)  # stripe session.id / iyzico token
+    provider = Column(String, nullable=False)  # 'lemonsqueezy'
+    provider_reference = Column(String, nullable=False)  # benzersiz placeholder — asıl korelasyon DBPayment.id üzerinden
     plan_tier = Column(String, nullable=False)  # 'PRO' | 'ENTERPRISE'
     amount = Column(Float, nullable=False)
     currency = Column(String, nullable=False)  # 'USD' | 'TRY'

@@ -1,43 +1,19 @@
 import { useState } from 'react';
 import { api } from '../services/api';
-import { IyzicoBuyerInfo } from '../components/IyzicoBuyerModal';
 
 /**
  * Pricing sayfası ve Settings'teki abonelik kartında ortak checkout mantığı:
- * Stripe doğrudan yönlendirir, iyzico önce buyer bilgisi modalını açar.
+ * tek sağlayıcı (Lemon Squeezy) olduğu için doğrudan hosted checkout'a yönlendirir.
  */
 export function useCheckout() {
-  const [iyzicoPlan, setIyzicoPlan] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const startStripeCheckout = async (plan: string) => {
+  const startCheckout = async (plan: string) => {
     setError(null);
     setSubmitting(true);
     try {
-      const res = await api.createStripeCheckout(plan);
-      window.location.href = res.checkout_url;
-    } catch (err: any) {
-      setSubmitting(false);
-      setError(err?.message || null);
-    }
-  };
-
-  const startIyzicoCheckout = (plan: string) => {
-    setError(null);
-    setIyzicoPlan(plan);
-  };
-
-  const cancelIyzicoModal = () => {
-    setIyzicoPlan(null);
-  };
-
-  const submitIyzicoBuyer = async (buyer: IyzicoBuyerInfo) => {
-    if (!iyzicoPlan) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await api.createIyzicoCheckout(iyzicoPlan, buyer);
+      const res = await api.createLemonSqueezyCheckout(plan);
       window.location.href = res.checkout_url;
     } catch (err: any) {
       setSubmitting(false);
@@ -46,13 +22,9 @@ export function useCheckout() {
   };
 
   return {
-    iyzicoPlan,
     submitting,
     error,
-    startStripeCheckout,
-    startIyzicoCheckout,
-    cancelIyzicoModal,
-    submitIyzicoBuyer,
+    startCheckout,
     clearError: () => setError(null),
   };
 }

@@ -253,21 +253,11 @@ export const api = {
     });
   },
 
-  async createStripeCheckout(plan: string): Promise<{ checkout_url: string }> {
-    return request(`${BASE_URL}/api/payments/stripe/checkout`, {
+  async createLemonSqueezyCheckout(plan: string): Promise<{ checkout_url: string }> {
+    return request(`${BASE_URL}/api/payments/lemonsqueezy/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan })
-    });
-  },
-
-  async createIyzicoCheckout(plan: string, buyer: {
-    identity_number: string; phone: string; address: string; city: string; country: string;
-  }): Promise<{ checkout_url: string }> {
-    return request(`${BASE_URL}/api/payments/iyzico/checkout`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, ...buyer })
     });
   },
 

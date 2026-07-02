@@ -82,16 +82,8 @@ class AdminStatsResponse(BaseModel):
     tier_breakdown: dict
 
 # Ödeme
-class StripeCheckoutRequest(BaseModel):
+class LemonSqueezyCheckoutRequest(BaseModel):
     plan: str  # PRO | ENTERPRISE
-
-class IyzicoCheckoutRequest(BaseModel):
-    plan: str  # PRO | ENTERPRISE
-    identity_number: str = Field(min_length=11, max_length=11)
-    phone: str
-    address: str
-    city: str
-    country: str = "Türkiye"
 
 class CheckoutResponse(BaseModel):
     checkout_url: str

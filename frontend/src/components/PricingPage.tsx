@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Crown, Sparkles, CheckCircle } from 'lucide-react';
 import PublicNav from './PublicNav';
-import IyzicoBuyerModal from './IyzicoBuyerModal';
 import { useT } from '../i18n';
 import type { Language } from '../i18n';
 import { useAuth } from '../AuthContext';
@@ -32,7 +31,7 @@ export default function PricingPage() {
     api.getUserProfile().then((p) => setCurrentTier(p.subscription_tier)).catch(() => {});
   }, [token]);
 
-  // ?payment=success|failed|cancelled — Stripe/iyzico'dan geri dönüşte gösterilecek bildirim
+  // ?payment=success|failed|cancelled — Lemon Squeezy'den geri dönüşte gösterilecek bildirim
   useEffect(() => {
     const paymentParam = searchParams.get('payment');
     if (!paymentParam) return;
@@ -142,23 +141,13 @@ export default function PricingPage() {
                     {t.pricingSignUpFirst}
                   </button>
                 ) : (
-                  <div className="space-y-2">
-                    <p className="text-[9px] font-bold uppercase tracking-wider text-[#9E958C] text-center">{t.checkoutChoosePayment}</p>
-                    <button
-                      disabled={checkout.submitting}
-                      onClick={() => checkout.startStripeCheckout(p.id)}
-                      className="w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8875] disabled:bg-[#8C9A86]/60 text-white cursor-pointer"
-                    >
-                      {t.checkoutStripeBtn}
-                    </button>
-                    <button
-                      disabled={checkout.submitting}
-                      onClick={() => checkout.startIyzicoCheckout(p.id)}
-                      className="w-full py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider border border-[#8C9A86]/30 hover:border-[#8C9A86] disabled:opacity-60 text-[#4A443F] cursor-pointer"
-                    >
-                      {t.checkoutIyzicoBtn}
-                    </button>
-                  </div>
+                  <button
+                    disabled={checkout.submitting}
+                    onClick={() => checkout.startCheckout(p.id)}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8875] disabled:bg-[#8C9A86]/60 text-white cursor-pointer"
+                  >
+                    {t.checkoutBtn}
+                  </button>
                 )}
               </div>
             );
@@ -169,15 +158,6 @@ export default function PricingPage() {
           <Link to="/legal/terms" className="hover:text-[#4A443F] underline">{t.legalTermsTitle}</Link>
         </div>
       </div>
-
-      {checkout.iyzicoPlan && (
-        <IyzicoBuyerModal
-          lang={lang}
-          submitting={checkout.submitting}
-          onCancel={checkout.cancelIyzicoModal}
-          onSubmit={checkout.submitIyzicoBuyer}
-        />
-      )}
 
       {toast && (
         <div className="fixed bottom-6 right-6 bg-[#4A443F] text-white rounded-xl px-5 py-3 shadow-2xl z-50 text-sm font-semibold max-w-sm">

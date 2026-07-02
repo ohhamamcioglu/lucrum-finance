@@ -5,7 +5,6 @@ import { useT } from '../i18n';
 import type { Language } from '../i18n';
 import { api } from '../services/api';
 import { useCheckout } from '../hooks/useCheckout';
-import IyzicoBuyerModal from './IyzicoBuyerModal';
 
 interface SettingsViewProps {
   settings: UserSettings;
@@ -321,22 +320,13 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
                             Seç
                           </button>
                         ) : (
-                          <div className="mt-4 space-y-1.5">
-                            <button
-                              disabled={checkout.submitting}
-                              onClick={() => checkout.startStripeCheckout(p.id)}
-                              className="w-full py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8874] disabled:bg-[#8C9A86]/60 text-white cursor-pointer"
-                            >
-                              {t.checkoutStripeBtn}
-                            </button>
-                            <button
-                              disabled={checkout.submitting}
-                              onClick={() => checkout.startIyzicoCheckout(p.id)}
-                              className="w-full py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-[#8C9A86]/30 hover:border-[#8C9A86] disabled:opacity-60 text-[#4A443F] cursor-pointer"
-                            >
-                              {t.checkoutIyzicoBtn}
-                            </button>
-                          </div>
+                          <button
+                            disabled={checkout.submitting}
+                            onClick={() => checkout.startCheckout(p.id)}
+                            className="w-full mt-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8874] disabled:bg-[#8C9A86]/60 text-white cursor-pointer"
+                          >
+                            {t.checkoutBtn}
+                          </button>
                         )}
                       </div>
                     );
@@ -439,15 +429,6 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
           <CheckCircle className="w-4 h-4" />
           <span>{toastMessage}</span>
         </div>
-      )}
-
-      {checkout.iyzicoPlan && (
-        <IyzicoBuyerModal
-          lang={settings.language}
-          submitting={checkout.submitting}
-          onCancel={checkout.cancelIyzicoModal}
-          onSubmit={checkout.submitIyzicoBuyer}
-        />
       )}
 
     </div>
