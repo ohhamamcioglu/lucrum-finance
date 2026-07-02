@@ -13,7 +13,7 @@ from db_models import (
     SessionLocal, DBUser, DBPosition, DBTransaction, DBPriceHistory,
     DBExchangeRate, DBPortfolioSnapshot, DBAssetClassSummary,
     DBPerformanceHistory, DBLiability, DBTargetAllocation,
-    DBPriceAlert, DBNotification, DBAuthToken
+    DBPriceAlert, DBNotification, DBAuthToken, DBPayment
 )
 
 # ----------------- HELPERS -----------------
@@ -159,6 +159,101 @@ def get_admin_stats(db: Optional[Session] = None) -> Dict[str, Any]:
             "admin_users": admin_users,
             "tier_breakdown": {(tier or "FREE"): count for tier, count in tier_rows},
         }
+    finally:
+        if must_close:
+            session.close()
+
+# ============ PAYMENTS ============
+
+def create_payment_record(user_id: int, provider: str, provider_reference: str,
+                          plan_tier: str, amount: float, currency: str,
+                          db: Optional[Session] = None) -> Dict:
+    """Yeni bir ödeme kaydı oluşturur (status='pending')."""
+    session, must_close = _get_db(db)
+    try:
+        payment = DBPayment(
+            user_id=user_id,
+            provider=provider,
+            provider_reference=provider_reference,
+            plan_tier=plan_tier,
+            amount=amount,
+            currency=currency,
+            status="pending",
+        )
+        session.add(payment)
+        session.commit()
+        session.refresh(payment)
+        return to_dict(payment)
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def get_payment_by_reference(provider: str, provider_reference: str, db: Optional[Session] = None) -> Optional[DBPayment]:
+    session, must_close = _get_db(db)
+    try:
+        payment = session.query(DBPayment).filter(
+            DBPayment.provider == provider,
+            DBPayment.provider_reference == provider_reference,
+        ).first()
+        if payment is not None:
+            session.expunge(payment)
+        return payment
+    finally:
+        if must_close:
+            session.close()
+
+def mark_payment_succeeded(payment_id: int, db: Optional[Session] = None) -> None:
+    """Ödemeyi başarılı işaretler ve kullanıcının abonelik durumunu günceller.
+    İdempotent: ödeme zaten 'succeeded' ise hiçbir şey yapmaz (webhook/callback
+    tekrar tekrar tetiklenebilir, tier'ın iki kez uygulanmasını önler)."""
+    session, must_close = _get_db(db)
+    try:
+        payment = session.query(DBPayment).filter(DBPayment.id == payment_id).first()
+        if not payment or payment.status == "succeeded":
+            return
+        payment.status = "succeeded"
+        payment.completed_at = datetime.utcnow()
+
+        user = session.query(DBUser).filter(DBUser.id == payment.user_id).first()
+        if user:
+            user.subscription_tier = payment.plan_tier
+            user.subscription_status = "active"
+            user.subscription_ends_at = datetime.utcnow() + timedelta(days=30)
+
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def mark_payment_failed(payment_id: int, db: Optional[Session] = None) -> None:
+    session, must_close = _get_db(db)
+    try:
+        payment = session.query(DBPayment).filter(DBPayment.id == payment_id).first()
+        if not payment or payment.status == "succeeded":
+            return
+        payment.status = "failed"
+        payment.completed_at = datetime.utcnow()
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def list_user_payments(user_id: int, db: Optional[Session] = None) -> List[Dict]:
+    session, must_close = _get_db(db)
+    try:
+        payments = session.query(DBPayment).filter(
+            DBPayment.user_id == user_id
+        ).order_by(desc(DBPayment.created_at)).all()
+        return to_dict_list(payments)
     finally:
         if must_close:
             session.close()

@@ -36,6 +36,11 @@ celery_app.conf.update(
             "task": "tasks.enrich_portfolio_holdings_task",
             # Every hour
             "schedule": 3600.0,
+        },
+        "downgrade-expired-subscriptions-daily": {
+            "task": "tasks.downgrade_expired_subscriptions_task",
+            # Every day
+            "schedule": 86400.0,
         }
     }
 )

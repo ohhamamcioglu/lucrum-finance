@@ -56,6 +56,7 @@ class DBUser(Base):
     alerts = relationship("DBPriceAlert", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("DBNotification", back_populates="user", cascade="all, delete-orphan")
     auth_tokens = relationship("DBAuthToken", back_populates="user", cascade="all, delete-orphan")
+    payments = relationship("DBPayment", back_populates="user", cascade="all, delete-orphan")
 
 
 class DBPosition(Base):
@@ -288,6 +289,30 @@ class DBAuthToken(Base):
     )
 
     user = relationship("DBUser", back_populates="auth_tokens")
+
+
+class DBPayment(Base):
+    """Ödeme geçmişi / audit trail. DBUser.subscription_* alanları yalnızca bir
+    ödeme 'succeeded' olduğunda güncellenir — bu tablo o kararın kanıtını tutar."""
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    provider = Column(String, nullable=False)  # 'stripe' | 'iyzico'
+    provider_reference = Column(String, nullable=False)  # stripe session.id / iyzico token
+    plan_tier = Column(String, nullable=False)  # 'PRO' | 'ENTERPRISE'
+    amount = Column(Float, nullable=False)
+    currency = Column(String, nullable=False)  # 'USD' | 'TRY'
+    status = Column(String, nullable=False, default="pending")  # pending | succeeded | failed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_reference", name="uq_provider_reference"),
+        Index("idx_payments_user", "user_id"),
+    )
+
+    user = relationship("DBUser", back_populates="payments")
 
 
 # Dependency for database session

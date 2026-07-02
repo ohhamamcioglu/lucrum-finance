@@ -81,6 +81,33 @@ class AdminStatsResponse(BaseModel):
     admin_users: int
     tier_breakdown: dict
 
+# Ödeme
+class StripeCheckoutRequest(BaseModel):
+    plan: str  # PRO | ENTERPRISE
+
+class IyzicoCheckoutRequest(BaseModel):
+    plan: str  # PRO | ENTERPRISE
+    identity_number: str = Field(min_length=11, max_length=11)
+    phone: str
+    address: str
+    city: str
+    country: str = "Türkiye"
+
+class CheckoutResponse(BaseModel):
+    checkout_url: str
+
+class PaymentSummary(BaseModel):
+    id: int
+    provider: str
+    plan_tier: str
+    amount: float
+    currency: str
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # Pozisyon
 class PositionBase(BaseModel):
     ticker: str

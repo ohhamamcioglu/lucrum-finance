@@ -260,10 +260,16 @@ def subscribe(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    """Kullanıcı abonelik planını günceller (Mocked Payment Checkout/Webhook)"""
+    """Kullanıcının kendi kendine ücretsiz plana düşmesini sağlar.
+    PRO/ENTERPRISE yükseltmesi artık gerçek ödeme gerektiriyor — bkz. /api/payments/*.
+    (Bu endpoint eskiden ödeme olmadan doğrudan tier ataması yapan mock bir
+    checkout'tu; ödeme entegrasyonuyla birlikte bu bypass kapatıldı.)"""
     plan = req.plan.upper().strip()
-    if plan not in ("FREE", "PRO", "ENTERPRISE"):
-        raise HTTPException(status_code=400, detail="Geçersiz plan seçimi.")
+    if plan != "FREE":
+        raise HTTPException(
+            status_code=400,
+            detail="Bu plan için ödeme gereklidir, lütfen fiyatlandırma sayfasını kullanın."
+        )
 
     from db_models import DBUser
     user = db.query(DBUser).filter(DBUser.id == user_id).first()
@@ -272,7 +278,7 @@ def subscribe(
 
     user.subscription_tier = plan
     user.subscription_status = "active"
-    user.subscription_ends_at = datetime.utcnow() + timedelta(days=30)
+    user.subscription_ends_at = None
 
     db.commit()
 
@@ -281,5 +287,5 @@ def subscribe(
         "message": f"Abonelik planınız başarıyla {plan} olarak güncellendi.",
         "subscription_tier": plan,
         "subscription_status": "active",
-        "subscription_ends_at": user.subscription_ends_at.isoformat()
+        "subscription_ends_at": user.subscription_ends_at.isoformat() if user.subscription_ends_at else None
     }

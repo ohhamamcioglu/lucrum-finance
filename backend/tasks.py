@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, datetime
 from celery_app import celery_app
 from db_models import SessionLocal, DBUser, DBPosition
 from crud import save_portfolio_snapshot
@@ -67,5 +67,29 @@ def enrich_portfolio_holdings_task():
             logger.info(f"[CELERY] Registered and warmed cache for {len(symbols)} symbols.")
     except Exception as e:
         logger.error(f"[CELERY] Cache enrichment task failed: {e}")
+    finally:
+        db.close()
+
+@celery_app.task
+def downgrade_expired_subscriptions_task():
+    """Süresi dolmuş (subscription_ends_at geçmiş) ücretli abonelikleri FREE'ye düşürür.
+    Tek seferlik/dönemsel ödeme modelinde otomatik yenileme olmadığı için bu görev
+    olmadan süresi dolan kullanıcı sonsuza dek PRO/ENTERPRISE limitlerinde kalırdı."""
+    db = SessionLocal()
+    try:
+        expired = db.query(DBUser).filter(
+            DBUser.subscription_tier != "FREE",
+            DBUser.subscription_ends_at.isnot(None),
+            DBUser.subscription_ends_at < datetime.utcnow(),
+        ).all()
+        for user in expired:
+            user.subscription_tier = "FREE"
+            user.subscription_status = "active"
+            logger.info(f"[CELERY] Subscription expired, downgraded to FREE: '{user.email}'")
+        db.commit()
+        logger.info(f"[CELERY] Downgraded {len(expired)} expired subscription(s).")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[CELERY] Subscription downgrade task failed: {e}")
     finally:
         db.close()
