@@ -24,6 +24,10 @@ router = APIRouter(prefix="/api/users", tags=["Users"])
 
 REFRESH_COOKIE_NAME = "lucrum_refresh_token"
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+# Frontend (Vercel) ve backend (Render) farklı domain'lerde barındığı için
+# production'da cross-site cookie gönderimi gerekiyor — bu sadece Secure=true
+# iken (yani zaten https üzerinde) izinli. Yerelde http olduğundan Lax kalır.
+COOKIE_SAMESITE = "none" if COOKIE_SECURE else "lax"
 
 
 def _issue_refresh_cookie(user_id: int, response: Response, db: Session) -> None:
@@ -36,7 +40,7 @@ def _issue_refresh_cookie(user_id: int, response: Response, db: Session) -> None
         value=raw,
         httponly=True,
         secure=COOKIE_SECURE,
-        samesite="lax",
+        samesite=COOKIE_SAMESITE,
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
         path="/api/users",
     )
