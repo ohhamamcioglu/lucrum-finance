@@ -10,6 +10,14 @@ except ImportError:
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
+# Upstash (ve diğer TLS gerektiren yönetilen Redis'ler) rediss:// şeması kullanır.
+# Kombu'nun redis transport'u, ssl_cert_reqs query param'ı URL'de yoksa
+# "A rediss:// URL must have parameter ssl_cert_reqs" hatasıyla patlıyor —
+# kullanıcı bağlantı dizesine bunu eklemeyi unutursa diye burada otomatik ekleniyor.
+if REDIS_URL.startswith("rediss://") and "ssl_cert_reqs" not in REDIS_URL:
+    sep = "&" if "?" in REDIS_URL else "?"
+    REDIS_URL = f"{REDIS_URL}{sep}ssl_cert_reqs=CERT_REQUIRED"
+
 # Celery app configuration
 celery_app = Celery(
     "lucrum_tasks",
