@@ -7,6 +7,9 @@ import twelve_data as td
 from crud import get_or_create_user, get_positions, save_portfolio_snapshot
 from services import calculate_portfolio
 
+from database import get_db_session
+from db_models import DBUser, DBPosition
+
 logger = logging.getLogger("lucrum.scheduler")
 
 scheduler = AsyncIOScheduler(timezone="Europe/Istanbul")
@@ -18,29 +21,36 @@ def _td_symbol(ticker: str, asset_class: str) -> str:
     return ticker
 
 def daily_snapshot_job():
-    """Her gün saat 18:00'de portföy snapshot'ını kaydeder."""
+    """Her gün saat 18:00'de tüm kullanıcıların portföy snapshot'ını kaydeder."""
     try:
-        user = get_or_create_user("default@lucrum.app")
-        user_id = user["id"]
-        portfolio = calculate_portfolio(user_id, bypass_cache=True)
-        save_portfolio_snapshot(user_id, date.today(), portfolio)
-        logger.info(f"[SCHEDULER] Daily snapshot saved — value: {portfolio.get('summary', {}).get('total_value_tly', 0):,.0f} TRY")
+        with get_db_session() as db:
+            users = db.query(DBUser).all()
+            logger.info(f"[SCHEDULER] Running daily portfolio snapshots for {len(users)} users.")
+            for user in users:
+                try:
+                    portfolio = calculate_portfolio(user.id, bypass_cache=True)
+                    save_portfolio_snapshot(user.id, date.today(), portfolio, db=db)
+                    logger.info(f"[SCHEDULER] Saved snapshot for '{user.email}'")
+                except Exception as u_err:
+                    logger.error(f"[SCHEDULER] Failed snapshot for '{user.email}': {u_err}")
     except Exception as e:
         logger.error(f"[SCHEDULER] Daily snapshot failed: {e}")
 
 def enrich_portfolio_holdings_job():
     """Portföydeki sembolleri tarayıcıya ekler."""
     try:
-        positions = get_positions(1)
+        with get_db_session() as db:
+            positions = db.query(DBPosition).all()
         if not positions:
             return
         symbols = []
         asset_classes = {}
         for pos in positions:
-            if pos.get("asset_class") in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
-                td_sym = _td_symbol(pos["ticker"], pos.get("asset_class", ""))
-                symbols.append(td_sym)
-                asset_classes[td_sym] = pos.get("asset_class", "")
+            if pos.asset_class in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
+                td_sym = _td_symbol(pos.ticker, pos.asset_class)
+                if td_sym not in symbols:
+                    symbols.append(td_sym)
+                    asset_classes[td_sym] = pos.asset_class
         if symbols:
             td.crawler.register_symbols(symbols, asset_classes)
             logger.info(f"[SCHEDULER] Registered {len(symbols)} symbols to TwelveDataCrawler for enrichment.")
@@ -52,14 +62,16 @@ def start_scheduler():
     td.crawler.start()
 
     try:
-        positions = get_positions(1)
+        with get_db_session() as db:
+            positions = db.query(DBPosition).all()
         symbols = []
         asset_classes = {}
         for pos in positions:
-            if pos.get("asset_class") in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
-                td_sym = _td_symbol(pos["ticker"], pos.get("asset_class", ""))
-                symbols.append(td_sym)
-                asset_classes[td_sym] = pos.get("asset_class", "")
+            if pos.asset_class in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
+                td_sym = _td_symbol(pos.ticker, pos.asset_class)
+                if td_sym not in symbols:
+                    symbols.append(td_sym)
+                    asset_classes[td_sym] = pos.asset_class
         if symbols:
             td.crawler.register_symbols(symbols, asset_classes)
     except Exception as e:
