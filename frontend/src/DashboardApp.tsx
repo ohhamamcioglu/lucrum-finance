@@ -95,23 +95,31 @@ export default function DashboardApp() {
           category = 'FixedIncome';
         }
 
-        // 1. Calculate purchase price in settings baseCurrency using historical exchange rate.
-        // Backend returns invested_tly which uses the USD/TRY rate at the actual buy date.
-        // This is more accurate than converting with today's rate.
-        let avgBuyPrice: number;
-        if (pos.invested_tly != null && pos.quantity > 0) {
-          const costTRY = pos.invested_tly;
-          avgBuyPrice = settings.baseCurrency === 'TRY'
-            ? costTRY / pos.quantity
-            : convertCurrency(costTRY / pos.quantity, 'TRY', settings.baseCurrency, rates);
-        } else {
-          avgBuyPrice = convertCurrency(pos.buy_price, pos.buy_currency, settings.baseCurrency, rates);
-        }
+        // 1 & 2. Backend artık invested_{try,usd,eur,gbp} ve current_value_{try,usd,eur,gbp}
+        // alanlarını HER para birimi için kendi doğru kuruyla hesaplayıp döndürüyor
+        // (yatırım = alım tarihi kuru, güncel değer = bugünün kuru — bkz. services.py
+        // calculate_portfolio). Burada TL üzerinden bugünün kuruyla ek bir çevrim YAPMIYORUZ;
+        // eskiden bu double-conversion, fiyatı hiç değişmemiş yabancı para pozisyonlarında bile
+        // sahte kâr/zarar üretiyordu. convertCurrency'e sadece backend değeri eksikse (örn. fiyat
+        // hiç çekilememişse) geriye dönük uyumluluk için düşüyoruz.
+        const investedByCurrency: Record<string, number | null | undefined> = {
+          TRY: pos.invested_tly, USD: pos.invested_usd, EUR: pos.invested_eur, GBP: pos.invested_gbp,
+        };
+        const currentValueByCurrency: Record<string, number | null | undefined> = {
+          TRY: pos.current_value_tly, USD: pos.current_value_usd, EUR: pos.current_value_eur, GBP: pos.current_value_gbp,
+        };
 
-        // 2. Calculate current price in settings baseCurrency
-        let currentPrice = 0;
-        if (pos.current_price !== null && pos.current_price !== undefined) {
-          const priceCurrency = pos.asset_class === 'Kripto' ? 'USD' : pos.buy_currency;
+        const investedInBase = investedByCurrency[settings.baseCurrency];
+        const avgBuyPrice = investedInBase != null && pos.quantity > 0
+          ? investedInBase / pos.quantity
+          : convertCurrency(pos.buy_price, pos.buy_currency, settings.baseCurrency, rates);
+
+        const currentValueInBase = currentValueByCurrency[settings.baseCurrency];
+        let currentPrice: number;
+        if (currentValueInBase != null && pos.quantity > 0) {
+          currentPrice = currentValueInBase / pos.quantity;
+        } else if (pos.current_price !== null && pos.current_price !== undefined) {
+          const priceCurrency = pos.price_currency || (pos.asset_class === 'Kripto' ? 'USD' : pos.buy_currency);
           currentPrice = convertCurrency(pos.current_price, priceCurrency, settings.baseCurrency, rates);
         } else {
           currentPrice = avgBuyPrice;
@@ -132,6 +140,7 @@ export default function DashboardApp() {
           // Modül-level cache'den al; yoksa MARKET_ASSETS beta ya da 5.0
           riskScore: _riskCache[pos.ticker] ?? (marketAsset ? marketAsset.beta * 4 : 5.0),
           assetClass: pos.asset_class,
+          buyDate: typeof pos.buy_date === 'string' ? pos.buy_date : String(pos.buy_date),
         };
       });
 
@@ -261,17 +270,21 @@ export default function DashboardApp() {
         buyCurrency = 'GBP';
       }
 
-      const buyPriceInNative = newHolding.category === 'Cash'
-        ? 1.0
-        : convertCurrency(newHolding.avgBuyPrice, settings.baseCurrency, buyCurrency, exchangeRates);
+      // newHolding.avgBuyPrice artık DashboardView'daki form alanından zaten native para
+      // biriminde geliyor (settings.baseCurrency değil) — burada ek bir çevrim YAPILMAZ.
+      // Aksi halde geçmiş bir alım tarihi için bugünün kuruyla yanlış bir native fiyat üretilirdi.
+      const buyPriceInNative = newHolding.category === 'Cash' ? 1.0 : newHolding.avgBuyPrice;
       const todayStr = new Date().toISOString().split('T')[0];
+      // Kullanıcının formda girdiği alım tarihi kullanılır; edit/top-up akışında (handleEditHolding)
+      // orijinal pozisyonun buyDate'i buraya zaten taşınmış olur — yoksa bugüne düşer.
+      const buyDateStr = newHolding.buyDate || todayStr;
 
       await api.addPosition({
         ticker: newHolding.symbol.toUpperCase(),
         asset_class: assetClass,
         quantity: newHolding.shares,
         buy_price: buyPriceInNative,
-        buy_date: todayStr,
+        buy_date: buyDateStr,
         buy_currency: buyCurrency,
       });
 

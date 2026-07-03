@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 import twelve_data as td
 from crud import get_exchange_rate_history
-from services import get_usd_try_rate, get_eur_try_rate, get_gbp_try_rate
+from services import get_usd_try_rate, get_eur_try_rate, get_gbp_try_rate, get_current_price, get_price_currency
 from dependencies import get_current_user_id, get_db
 
 router = APIRouter(prefix="/api/prices", tags=["Prices"])
@@ -74,3 +74,19 @@ def get_ticker_price_history(
         }
         for b in bars if b.get("close") is not None
     ]
+
+@router.get("/{ticker}")
+def get_price(ticker: str, asset_class: Optional[str] = None):
+    """Belirli bir varlığın güncel fiyatını al. `currency` alanı, `price`'ın hangi para
+    biriminde olduğunu açıkça belirtir (TEFAS Fonu / BIST Hissesi → TRY, diğerleri → USD) —
+    frontend bunu asset_class'tan tahmin etmek zorunda kalmasın diye. Bu rota diğer sabit
+    yollardan (/live, /rates, /history/{ticker}) SONRA tanımlanmalı, yoksa onları gölgeler."""
+    try:
+        price = get_current_price(ticker, asset_class or "ABD Hisse/ETF")
+        if price is None:
+            raise HTTPException(status_code=404, detail="Ticker not found")
+        return {"ticker": ticker, "price": price, "currency": get_price_currency(asset_class or "ABD Hisse/ETF")}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

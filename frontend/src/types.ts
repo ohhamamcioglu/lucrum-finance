@@ -11,6 +11,7 @@ export interface Holding {
   currentPrice: number;
   riskScore: number; // 1-10
   assetClass?: string;
+  buyDate?: string; // YYYY-MM-DD — alım tarihi, kur/kâr-zarar hesabı için backend'e gönderilir
 }
 
 export interface Transaction {

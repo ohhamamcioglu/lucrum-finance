@@ -112,6 +112,15 @@ def _coingecko_batch(tickers: List[str]) -> Dict[str, float]:
         print(f"[WARN] CoinGecko batch: {e}")
         return {}
 
+def get_price_currency(asset_class: str) -> str:
+    """get_current_price'ın belirli bir asset_class için döndürdüğü fiyatın hangi para
+    biriminde olduğunu söyler (piyasanın kendi native para birimi — buy_currency değil).
+    TEFAS Fonu ve BIST Hissesi TRY'de fiyatlanır, ABD Hisse/ETF ve Kripto USD'de."""
+    if asset_class in ("TEFAS Fonu", "BIST Hissesi"):
+        return "TRY"
+    return "USD"
+
+
 def get_current_price(ticker: str, asset_class: str) -> Optional[float]:
     """Guncel fiyat al (yfinance / CoinMarketCap / pytefas)"""
     global _tefas_cache, _tefas_cache_date
@@ -481,6 +490,7 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
                     days_held = 0
                 interest_factor = 1.0 + (interest_rate / 100.0) * (days_held / 365.0)
             current_price = buy_price * interest_factor
+            price_currency = buy_currency
         elif asset_type == 'commodity' and commodity_type == 'physical':
             # Physical commodity GOLD / SILVER
             futures_ticker = "GC=F" if ticker in ["GOLD", "XAU"] else "SI=F"
@@ -503,16 +513,23 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
                 current_price = price_usd_val
             elif buy_currency == "EUR":
                 current_price = price_usd_val * (current_usd_try / current_eur_try)
+            price_currency = buy_currency
         else:
             # Stocks, funds, crypto, paper commodities
             current_price = batch_prices.get(ticker)
             if current_price is None:
                 current_price = get_current_price(ticker, asset_class)
+            price_currency = get_price_currency(asset_class)
 
         buy_date_str = buy_date if isinstance(buy_date, str) else str(buy_date)
-        buy_date_usd_try = _buy_usd_rate(buy_date_str) if buy_currency == "USD" else 1.0
-        buy_date_eur_try = _buy_eur_rate(buy_date_str) if buy_currency == "EUR" else 1.0
-        buy_date_gbp_try = _buy_gbp_rate(buy_date_str) if buy_currency == "GBP" else 1.0
+        # Alım tarihindeki kurlar — pozisyon hangi para biriminde alınmış olursa olsun HER ZAMAN
+        # hesaplanır. Böylece "yatırılan tutar" her para birimine KENDİ alım-tarihi paritesiyle
+        # çevrilebilir (TL üzerinden bugünün kuruyla dolaylı çevrim yapılmaz — bu, fiyatı hiç
+        # değişmemiş USD bir pozisyonun sırf TL arada dolaştığı için sahte kâr/zarar göstermesine
+        # yol açan eski hataydı).
+        buy_date_usd_try = _buy_usd_rate(buy_date_str)
+        buy_date_eur_try = _buy_eur_rate(buy_date_str)
+        buy_date_gbp_try = _buy_gbp_rate(buy_date_str)
 
         result = {
             "id": pos['id'],
@@ -524,6 +541,7 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
             "buy_currency": buy_currency,
             "cost_basis_tly": cost_basis_tly,
             "current_price": current_price,
+            "price_currency": price_currency,
             "asset_type": asset_type,
             "interest_rate": interest_rate,
             "maturity_date": maturity_date,
@@ -531,169 +549,131 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
             "unit": unit
         }
 
-        # Calculate values according to currency
+        # 1) Yatırılan tutarı TRY'ye çevir (buy_currency'ye göre, alım tarihi kuruyla).
+        #    cost_basis_tly elle kaydedilmişse (gerçek TL karşılığı biliniyorsa) o esas alınır
+        #    ve o pozisyonun implicit alım-tarihi kuru buna göre geri türetilir.
+        native_invested = quantity * buy_price
         if buy_currency == "TRY":
-            invested_tly = cost_basis_tly if cost_basis_tly is not None else (quantity * buy_price)
-            if current_price is not None:
-                if asset_class == "Kripto":
-                    current_value_tly = quantity * current_price * current_usd_try
-                else:
-                    current_value_tly = quantity * current_price
-                
-                gross_return_tly = current_value_tly - invested_tly
-                gross_return_pct = (gross_return_tly / invested_tly * 100.0) if invested_tly else 0.0
-                result.update({
-                    "invested_tly": round(invested_tly, 2),
-                    "current_value_tly": round(current_value_tly, 2),
-                    "gross_return_tly": round(gross_return_tly, 2),
-                    "gross_return_pct": round(gross_return_pct, 2),
-                    "price_effect_pct": round(gross_return_pct, 2),
-                    "fx_effect_pct": 0.0,
-                })
-            else:
-                result.update({
-                    "invested_tly": round(invested_tly, 2),
-                    "current_value_tly": None,
-                    "gross_return_tly": None,
-                    "gross_return_pct": None,
-                    "price_effect_pct": None,
-                    "fx_effect_pct": None,
-                })
+            invested_try = cost_basis_tly if cost_basis_tly is not None else native_invested
         elif buy_currency == "USD":
-            invested_usd = quantity * buy_price
             if cost_basis_tly is not None:
-                invested_tly_at_buy = cost_basis_tly
-                if invested_usd > 0:
-                    buy_date_usd_try = cost_basis_tly / invested_usd
+                invested_try = cost_basis_tly
+                if native_invested > 0:
+                    buy_date_usd_try = cost_basis_tly / native_invested
             else:
-                invested_tly_at_buy = invested_usd * buy_date_usd_try
-
-            result.update({
-                "invested_usd": invested_usd,
-                "invested_tly": invested_tly_at_buy,
-                "buy_date_usd_try": buy_date_usd_try,
-                "current_usd_try": current_usd_try,
-            })
-
-            if current_price is not None and current_usd_try:
-                current_value_usd = quantity * current_price
-                current_value_tly = current_value_usd * current_usd_try
-
-                gross_return_tly = current_value_tly - invested_tly_at_buy
-                gross_return_pct = (gross_return_tly / invested_tly_at_buy * 100.0) if invested_tly_at_buy else 0.0
-
-                price_return_usd = current_value_usd - invested_usd
-                price_return_pct = (price_return_usd / invested_usd * 100.0) if invested_usd else 0.0
-
-                fx_effect_pct = ((current_usd_try / buy_date_usd_try - 1.0) * 100.0) if buy_date_usd_try else 0.0
-
-                result.update({
-                    "current_value_usd": current_value_usd,
-                    "current_value_tly": current_value_tly,
-                    "gross_return_tly": round(gross_return_tly, 2),
-                    "gross_return_pct": round(gross_return_pct, 2),
-                    "price_effect_pct": round(price_return_pct, 2),
-                    "fx_effect_pct": round(fx_effect_pct, 2),
-                })
-            else:
-                result.update({
-                    "current_value_tly": None,
-                    "gross_return_tly": None,
-                    "gross_return_pct": None,
-                    "price_effect_pct": None,
-                    "fx_effect_pct": None,
-                })
+                invested_try = native_invested * buy_date_usd_try
         elif buy_currency == "EUR":
-            invested_eur = quantity * buy_price
             if cost_basis_tly is not None:
-                invested_tly_at_buy = cost_basis_tly
-                if invested_eur > 0:
-                    buy_date_eur_try = cost_basis_tly / invested_eur
+                invested_try = cost_basis_tly
+                if native_invested > 0:
+                    buy_date_eur_try = cost_basis_tly / native_invested
             else:
-                invested_tly_at_buy = invested_eur * buy_date_eur_try
-
-            result.update({
-                "invested_eur": invested_eur,
-                "invested_tly": invested_tly_at_buy,
-                "buy_date_eur_try": buy_date_eur_try,
-                "current_eur_try": current_eur_try,
-            })
-
-            if current_price is not None and current_eur_try:
-                current_value_eur = quantity * current_price
-                current_value_tly = current_value_eur * current_eur_try
-
-                gross_return_tly = current_value_tly - invested_tly_at_buy
-                gross_return_pct = (gross_return_tly / invested_tly_at_buy * 100.0) if invested_tly_at_buy else 0.0
-
-                price_return_eur = current_value_eur - invested_eur
-                price_return_pct = (price_return_eur / invested_eur * 100.0) if invested_eur else 0.0
-
-                fx_effect_pct = ((current_eur_try / buy_date_eur_try - 1.0) * 100.0) if buy_date_eur_try else 0.0
-
-                result.update({
-                    "current_value_eur": current_value_eur,
-                    "current_value_tly": current_value_tly,
-                    "gross_return_tly": round(gross_return_tly, 2),
-                    "gross_return_pct": round(gross_return_pct, 2),
-                    "price_effect_pct": round(price_return_eur * 100.0 / invested_eur, 2) if invested_eur else 0.0,
-                    "fx_effect_pct": round(fx_effect_pct, 2),
-                })
-            else:
-                result.update({
-                    "current_value_tly": None,
-                    "gross_return_tly": None,
-                    "gross_return_pct": None,
-                    "price_effect_pct": None,
-                    "fx_effect_pct": None,
-                })
-
+                invested_try = native_invested * buy_date_eur_try
         elif buy_currency == "GBP":
-            invested_gbp = quantity * buy_price
             if cost_basis_tly is not None:
-                invested_tly_at_buy = cost_basis_tly
-                if invested_gbp > 0:
-                    buy_date_gbp_try = cost_basis_tly / invested_gbp
+                invested_try = cost_basis_tly
+                if native_invested > 0:
+                    buy_date_gbp_try = cost_basis_tly / native_invested
             else:
-                invested_tly_at_buy = invested_gbp * buy_date_gbp_try
+                invested_try = native_invested * buy_date_gbp_try
+        else:
+            invested_try = cost_basis_tly if cost_basis_tly is not None else native_invested
+
+        # 2) TRY'deki yatırılan tutarı, HER para biriminin kendi alım-tarihi paritesiyle geri çevir.
+        invested_usd = invested_try / buy_date_usd_try if buy_date_usd_try else None
+        invested_eur = invested_try / buy_date_eur_try if buy_date_eur_try else None
+        invested_gbp = invested_try / buy_date_gbp_try if buy_date_gbp_try else None
+
+        result.update({
+            "invested_tly": round(invested_try, 2),
+            "invested_usd": round(invested_usd, 2) if invested_usd is not None else None,
+            "invested_eur": round(invested_eur, 2) if invested_eur is not None else None,
+            "invested_gbp": round(invested_gbp, 2) if invested_gbp is not None else None,
+            "buy_date_usd_try": buy_date_usd_try,
+            "buy_date_eur_try": buy_date_eur_try,
+            "buy_date_gbp_try": buy_date_gbp_try,
+            "current_usd_try": current_usd_try,
+            "current_eur_try": current_eur_try,
+            "current_gbp_try": current_gbp_try,
+        })
+
+        if current_price is None:
+            result.update({
+                "current_value_tly": None, "current_value_usd": None,
+                "current_value_eur": None, "current_value_gbp": None,
+                "gross_return_tly": None, "gross_return_pct": None,
+                "gross_return_usd": None, "gross_return_usd_pct": None,
+                "gross_return_eur": None, "gross_return_eur_pct": None,
+                "gross_return_gbp": None, "gross_return_gbp_pct": None,
+                "price_effect_pct": None, "fx_effect_pct": None,
+            })
+        else:
+            # 3) Güncel değeri TRY'ye çevir (fiyatın kendi native para biriminden, BUGÜNÜN kuruyla).
+            native_value = quantity * current_price
+            if price_currency == "TRY":
+                current_value_try = native_value
+            elif price_currency == "USD":
+                current_value_try = native_value * current_usd_try
+            elif price_currency == "EUR":
+                current_value_try = native_value * current_eur_try
+            elif price_currency == "GBP":
+                current_value_try = native_value * current_gbp_try
+            else:
+                current_value_try = native_value
+
+            current_value_usd = current_value_try / current_usd_try if current_usd_try else None
+            current_value_eur = current_value_try / current_eur_try if current_eur_try else None
+            current_value_gbp = current_value_try / current_gbp_try if current_gbp_try else None
+
+            gross_return_tly = current_value_try - invested_try
+            gross_return_pct = (gross_return_tly / invested_try * 100.0) if invested_try else 0.0
+
+            def _ret(cur, inv):
+                if cur is None or inv is None:
+                    return None, None
+                r = cur - inv
+                pct = (r / inv * 100.0) if inv else 0.0
+                return round(r, 2), round(pct, 2)
+
+            gross_return_usd, gross_return_usd_pct = _ret(current_value_usd, invested_usd)
+            gross_return_eur, gross_return_eur_pct = _ret(current_value_eur, invested_eur)
+            gross_return_gbp, gross_return_gbp_pct = _ret(current_value_gbp, invested_gbp)
+
+            # Geriye dönük uyumluluk: price_effect_pct/fx_effect_pct, pozisyonun KENDİ alım
+            # para biriminde fiyat hareketinin ve kur hareketinin TL getirisine katkısını ayırır.
+            if buy_currency == "TRY":
+                price_effect_pct = round(gross_return_pct, 2)
+                fx_effect_pct = 0.0
+            else:
+                if price_currency == buy_currency and native_invested:
+                    price_effect_pct = round((native_value - native_invested) / native_invested * 100.0, 2)
+                else:
+                    price_effect_pct = None
+                buy_rate = {"USD": buy_date_usd_try, "EUR": buy_date_eur_try, "GBP": buy_date_gbp_try}.get(buy_currency)
+                cur_rate = {"USD": current_usd_try, "EUR": current_eur_try, "GBP": current_gbp_try}.get(buy_currency)
+                fx_effect_pct = round((cur_rate / buy_rate - 1.0) * 100.0, 2) if buy_rate and cur_rate else None
 
             result.update({
-                "invested_gbp": invested_gbp,
-                "invested_tly": invested_tly_at_buy,
-                "buy_date_gbp_try": buy_date_gbp_try,
-                "current_gbp_try": current_gbp_try,
+                "current_value_tly": round(current_value_try, 2),
+                "current_value_usd": round(current_value_usd, 2) if current_value_usd is not None else None,
+                "current_value_eur": round(current_value_eur, 2) if current_value_eur is not None else None,
+                "current_value_gbp": round(current_value_gbp, 2) if current_value_gbp is not None else None,
+                "gross_return_tly": round(gross_return_tly, 2),
+                "gross_return_pct": round(gross_return_pct, 2),
+                "gross_return_usd": gross_return_usd,
+                "gross_return_usd_pct": gross_return_usd_pct,
+                "gross_return_eur": gross_return_eur,
+                "gross_return_eur_pct": gross_return_eur_pct,
+                "gross_return_gbp": gross_return_gbp,
+                "gross_return_gbp_pct": gross_return_gbp_pct,
+                "price_effect_pct": price_effect_pct,
+                "fx_effect_pct": fx_effect_pct,
             })
-
-            if current_price is not None and current_gbp_try:
-                current_value_gbp = quantity * current_price
-                current_value_tly = current_value_gbp * current_gbp_try
-
-                gross_return_tly = current_value_tly - invested_tly_at_buy
-                gross_return_pct = (gross_return_tly / invested_tly_at_buy * 100.0) if invested_tly_at_buy else 0.0
-
-                price_return_gbp = current_value_gbp - invested_gbp
-                fx_effect_pct = ((current_gbp_try / buy_date_gbp_try - 1.0) * 100.0) if buy_date_gbp_try else 0.0
-
-                result.update({
-                    "current_value_gbp": current_value_gbp,
-                    "current_value_tly": current_value_tly,
-                    "gross_return_tly": round(gross_return_tly, 2),
-                    "gross_return_pct": round(gross_return_pct, 2),
-                    "price_effect_pct": round(price_return_gbp * 100.0 / invested_gbp, 2) if invested_gbp else 0.0,
-                    "fx_effect_pct": round(fx_effect_pct, 2),
-                })
-            else:
-                result.update({
-                    "current_value_tly": None,
-                    "gross_return_tly": None,
-                    "gross_return_pct": None,
-                    "price_effect_pct": None,
-                    "fx_effect_pct": None,
-                })
 
         results.append(result)
 
-    # Portfolio özeti
+    # Portfolio özeti — TRY ve ayrıca USD/EUR/GBP cinsinden (her biri kendi alım-tarihi/bugünkü
+    # paritesiyle doğrudan backend'de hesaplanır, frontend ek çevrim yapmaz).
     total_value_tly = sum(
         r.get("current_value_tly") or 0
         for r in results if r.get("current_value_tly") is not None
@@ -706,6 +686,25 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
 
     total_return_tly = total_value_tly - total_invested_tly
     total_return_pct = (total_return_tly / total_invested_tly * 100) if total_invested_tly else 0
+
+    def _totals(currency_key: str):
+        invested = sum(r.get(f"invested_{currency_key}") or 0 for r in results)
+        value = sum(
+            r.get(f"current_value_{currency_key}") or 0
+            for r in results if r.get(f"current_value_{currency_key}") is not None
+        )
+        ret = value - invested
+        pct = (ret / invested * 100) if invested else 0
+        return {
+            "total_invested": round(invested, 2),
+            "total_value": round(value, 2),
+            "total_return": round(ret, 2),
+            "total_return_pct": round(pct, 2),
+        }
+
+    totals_usd = _totals("usd")
+    totals_eur = _totals("eur")
+    totals_gbp = _totals("gbp")
 
     # Varlık sınıfı özeti
     summary_by_class = {}
@@ -740,6 +739,18 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
             "total_value_tly": round(total_value_tly, 2),
             "total_return_tly": round(total_return_tly, 2),
             "total_return_pct": round(total_return_pct, 2),
+            "total_invested_usd": totals_usd["total_invested"],
+            "total_value_usd": totals_usd["total_value"],
+            "total_return_usd": totals_usd["total_return"],
+            "total_return_usd_pct": totals_usd["total_return_pct"],
+            "total_invested_eur": totals_eur["total_invested"],
+            "total_value_eur": totals_eur["total_value"],
+            "total_return_eur": totals_eur["total_return"],
+            "total_return_eur_pct": totals_eur["total_return_pct"],
+            "total_invested_gbp": totals_gbp["total_invested"],
+            "total_value_gbp": totals_gbp["total_value"],
+            "total_return_gbp": totals_gbp["total_return"],
+            "total_return_gbp_pct": totals_gbp["total_return_pct"],
             "by_asset_class": summary_by_class,
         },
         "holdings": results,

@@ -71,6 +71,7 @@ export default function DashboardView({
   const [newShares, setNewShares] = useState(10);
   const [newPrice, setNewPrice] = useState(150);
   const [newRisk, setNewRisk] = useState(5.0);
+  const [newBuyDate, setNewBuyDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Autocomplete suggestions states
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -84,6 +85,12 @@ export default function DashboardView({
   // Asset class tracker
   const [newAssetClass, setNewAssetClass] = useState('ABD Hisse/ETF');
   const symbolBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // "Alım Fiyatı" alanı her zaman varlığın KENDİ native para biriminde girilir (settings.baseCurrency
+  // değil) — geçmiş bir alım tarihi girildiğinde bugünün kuruyla yanlış çevrim yapılmasını önler.
+  const nativeBuyCurrency = newCategory === 'Cash'
+    ? (newSymbol || 'TRY').toUpperCase()
+    : (newAssetClass === 'BIST Hissesi' || newAssetClass === 'TEFAS Fonu') ? 'TRY' : 'USD';
 
   // Category change side-effects
   useEffect(() => {
@@ -178,12 +185,10 @@ export default function DashboardView({
       if (res.ok) {
         const priceData = await res.json();
         if (priceData && priceData.price) {
-          let buyCurrency = 'USD';
-          if (assetClass === 'BIST Hissesi' || assetClass === 'TEFAS Fonu') {
-            buyCurrency = 'TRY';
-          }
-          const priceInBase = convertCurrency(priceData.price, buyCurrency, settings.baseCurrency, exchangeRates);
-          setNewPrice(Number(priceInBase.toFixed(4)));
+          // Fiyat, varlığın KENDİ native para biriminde tutulur (backend'in döndürdüğü currency
+          // alanına göre) — settings.baseCurrency'ye çevrilmez. Aksi halde geçmiş bir alım
+          // tarihi girildiğinde, girilen fiyat bugünün kuruyla yanlış native tutara dönüşür.
+          setNewPrice(Number(priceData.price.toFixed(4)));
         }
       }
     } catch (error) {
@@ -255,12 +260,8 @@ export default function DashboardView({
           if (res.ok) {
             const priceData = await res.json();
             if (priceData && priceData.price) {
-              let buyCurrency = 'USD';
-              if (assetClass === 'BIST Hissesi' || assetClass === 'TEFAS Fonu') {
-                buyCurrency = 'TRY';
-              }
-              const priceInBase = convertCurrency(priceData.price, buyCurrency, settings.baseCurrency, exchangeRates);
-              setNewPrice(Number(priceInBase.toFixed(4)));
+              // Native para biriminde tutulur — bkz. handleSelectSuggestion'daki not.
+              setNewPrice(Number(priceData.price.toFixed(4)));
             }
           }
         } catch (err) {
@@ -378,6 +379,7 @@ export default function DashboardView({
       symbol: editingHolding.symbol, name: editingHolding.name, category: editingHolding.category,
       sector: editingHolding.sector, shares: editingHolding.shares, avgBuyPrice: editingHolding.avgBuyPrice,
       currentPrice: editingHolding.currentPrice, riskScore: editingHolding.riskScore,
+      buyDate: editingHolding.buyDate,
     }, editNewTotal, editNewAvg);
     setEditingHolding(null);
   };
@@ -391,7 +393,8 @@ export default function DashboardView({
     const asset = MARKET_ASSETS.find(a => a.symbol === symbol);
     if (asset) {
       setNewSymbol(asset.symbol); setNewName(asset.name); setNewCategory(asset.category);
-      setNewPrice(convertCurrency(asset.price, 'USD', settings.baseCurrency, exchangeRates));
+      // MARKET_ASSETS fiyatları zaten USD (bu preset'lerin native para birimi) — çevrim yapılmaz.
+      setNewPrice(asset.price);
       if (asset.category === 'Crypto') { setNewSector('Cryptocurrency'); setNewRisk(9.0); }
       else if (asset.category === 'FixedIncome') { setNewSector('Government'); setNewRisk(1.5); }
       else { setNewSector('Technology'); setNewRisk(5.5); }
@@ -400,9 +403,9 @@ export default function DashboardView({
 
   const handleSubmitAdd = (e: FormEvent) => {
     e.preventDefault();
-    if (!newSymbol || !newName || newShares <= 0 || newPrice <= 0) return;
-    onAddHolding({ symbol: newSymbol.toUpperCase(), name: newName, category: newCategory, sector: newSector, shares: Number(newShares), avgBuyPrice: Number(newPrice), currentPrice: Number(newPrice), riskScore: Number(newRisk) });
-    setNewSymbol(''); setNewName(''); setNewShares(10); setNewPrice(150); setShowAddModal(false);
+    if (!newSymbol || !newName || newShares <= 0 || newPrice <= 0 || !newBuyDate) return;
+    onAddHolding({ symbol: newSymbol.toUpperCase(), name: newName, category: newCategory, sector: newSector, shares: Number(newShares), avgBuyPrice: Number(newPrice), currentPrice: Number(newPrice), riskScore: Number(newRisk), buyDate: newBuyDate });
+    setNewSymbol(''); setNewName(''); setNewShares(10); setNewPrice(150); setNewBuyDate(new Date().toISOString().split('T')[0]); setShowAddModal(false);
   };
 
   // ── Performance chart data ────────────────────────────────────────
@@ -1083,6 +1086,11 @@ export default function DashboardView({
                       <input type="number" step="any" required min="0.0001" value={newShares} onChange={e => setNewShares(Number(e.target.value))}
                         className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
                     </div>
+                    <div className="col-span-2">
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5 font-serif">{t.buyDateLabel}</label>
+                      <input type="date" required max={new Date().toISOString().split('T')[0]} value={newBuyDate} onChange={e => setNewBuyDate(e.target.value)}
+                        className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -1160,10 +1168,16 @@ export default function DashboardView({
                           className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5 font-serif">{t.buyPriceAvg}</label>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5 font-serif">{t.buyPriceAvg} ({nativeBuyCurrency})</label>
                         <input type="number" step="any" required min="0.01" value={newPrice} onChange={e => setNewPrice(Number(e.target.value))}
                           className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5 font-serif">{t.buyDateLabel}</label>
+                      <input type="date" required max={new Date().toISOString().split('T')[0]} value={newBuyDate} onChange={e => setNewBuyDate(e.target.value)}
+                        className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
                     </div>
                   </>
                 )}
@@ -1175,7 +1189,7 @@ export default function DashboardView({
                       <div>
                         <span className="text-[10px] font-bold text-[#9E958C] uppercase tracking-wider block">Son Fiyat</span>
                         <div className="text-lg font-mono font-bold text-[#2D2926]">
-                          {formatCurrency(newPrice, settings.baseCurrency)}
+                          {formatCurrency(newPrice, nativeBuyCurrency)}
                         </div>
                       </div>
                       <div className="text-right">
@@ -1244,7 +1258,7 @@ export default function DashboardView({
                 <div className="p-3 bg-[#F1EFE9] rounded-lg border border-[#E8E2D9] text-xs text-[#6B645E]">
                   <div className="flex justify-between font-semibold">
                     <span>{t.estimatedOutlay}</span>
-                    <span className="font-mono text-[#2D2926] font-bold">{formatCurrency(newShares * newPrice, settings.baseCurrency)}</span>
+                    <span className="font-mono text-[#2D2926] font-bold">{formatCurrency(newShares * newPrice, nativeBuyCurrency)}</span>
                   </div>
                 </div>
 

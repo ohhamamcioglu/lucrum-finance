@@ -9,8 +9,15 @@ export interface BackendPosition {
   buy_date: string;
   buy_currency: string;
   current_price?: number;
+  price_currency?: string;
   invested_tly?: number;
-  current_value_tly?: number;
+  invested_usd?: number | null;
+  invested_eur?: number | null;
+  invested_gbp?: number | null;
+  current_value_tly?: number | null;
+  current_value_usd?: number | null;
+  current_value_eur?: number | null;
+  current_value_gbp?: number | null;
 }
 
 export interface PortfolioResponse {
@@ -20,6 +27,18 @@ export interface PortfolioResponse {
     total_value_tly: number;
     total_return_tly: number;
     total_return_pct: number;
+    total_invested_usd?: number;
+    total_value_usd?: number;
+    total_return_usd?: number;
+    total_return_usd_pct?: number;
+    total_invested_eur?: number;
+    total_value_eur?: number;
+    total_return_eur?: number;
+    total_return_eur_pct?: number;
+    total_invested_gbp?: number;
+    total_value_gbp?: number;
+    total_return_gbp?: number;
+    total_return_gbp_pct?: number;
     by_asset_class: Record<string, {
       count: number;
       invested_tly: number;
