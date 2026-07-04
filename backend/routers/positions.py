@@ -29,7 +29,7 @@ def add_position(
 ):
     """Yeni pozisyon ekle"""
     invalidate_twrr_cache()
-    invalidate_portfolio_cache()
+    invalidate_portfolio_cache(user_id)
     return create_position(user_id, pos, db=db)
 
 @router.get("/{position_id}", response_model=Position)
@@ -53,7 +53,7 @@ def update_pos(
 ):
     """Pozisyon güncelle"""
     invalidate_twrr_cache()
-    invalidate_portfolio_cache()
+    invalidate_portfolio_cache(user_id)
     updated = update_position(user_id, position_id, update, db=db)
     if not updated:
         raise HTTPException(status_code=404, detail="Position not found")
@@ -67,7 +67,7 @@ def remove_pos(
 ):
     """Pozisyon sil"""
     invalidate_twrr_cache()
-    invalidate_portfolio_cache()
+    invalidate_portfolio_cache(user_id)
     success = delete_position(user_id, position_id, db=db)
     if not success:
         raise HTTPException(status_code=404, detail="Position not found")
