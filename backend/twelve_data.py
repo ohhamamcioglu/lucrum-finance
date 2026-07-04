@@ -1501,7 +1501,14 @@ class TwelveDataCrawler:
         self.running = False
         self.thread = None
         self.last_api_call = 0
-        self.api_delay = 1.8  # minimum 1.8 seconds delay between any API calls (~33 req/min max)
+        # Crawler ve canlı kullanıcı istekleri (fiyat çekme) AYNI paylaşımlı Twelve Data
+        # rate-limit kotasını (_throttle(), 55 çağrı/60sn) kullanıyor. 1.8sn'de bir (dakikada
+        # ~33 çağrı) crawler TEK BAŞINA kotanın çoğunu tüketebiliyordu — canlıda ölçüldü:
+        # bir kullanıcı giriş yapıp portföyünü çektiği anda crawler'ın arka planda bilanço/
+        # gelir tablosu çekmesi yüzünden kullanıcının TEK istekli toplu fiyat çağrısı bile
+        # 429 (rate limit) hatası alıyordu. Crawler düşük öncelikli bir zenginleştirme
+        # görevi — canlı kullanıcı deneyimini ASLA aç bırakmamalı, bu yüzden çok daha yavaş.
+        self.api_delay = 10.0  # dakikada en fazla ~6 çağrı — kotanın büyük kısmı canlı istekler için kalır
         self.registered_symbols: dict[str, str] = {}  # sym → asset_class
         # ETF'ler/fonlar için "statistics" 403/404 ile kalıcı olarak başarısız olur, ama başarısızlık
         # DB'ye yazılmadığından _is_stale() hep True döner ve crawler her 5sn'lik boş-kuyruk taramasında
