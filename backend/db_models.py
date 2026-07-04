@@ -21,7 +21,11 @@ connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+# pool_pre_ping: Supabase gibi yönetilen Postgres'ler idle bağlantıları arka planda
+# kapatır — bu olmadan SQLAlchemy havuzdan ölü bir bağlantı verip aralıklı,
+# nedeni belirsiz hatalara (örn. kayıt sırasında rastgele 400) yol açıyordu.
+# pool_recycle: bağlantıları 30 dakikada bir yenileyerek aynı sorunu önceden önler.
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True, pool_recycle=1800)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
