@@ -45,6 +45,12 @@ celery_app.conf.update(
             # Every hour
             "schedule": 3600.0,
         },
+        "warm-portfolio-cache": {
+            "task": "tasks.warm_portfolio_cache_task",
+            # 5 dakikalık cache TTL'inden önce, her 4 dakikada bir — kullanıcı asla
+            # soğuk/yavaş bir portföy hesaplamasına denk gelmesin diye.
+            "schedule": 240.0,
+        },
         "downgrade-expired-subscriptions-daily": {
             "task": "tasks.downgrade_expired_subscriptions_task",
             # Every day

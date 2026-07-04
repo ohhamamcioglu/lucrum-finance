@@ -71,6 +71,29 @@ def enrich_portfolio_holdings_task():
         db.close()
 
 @celery_app.task
+def warm_portfolio_cache_task():
+    """Kullanıcı bazlı portföy önbelleğini (5 dk TTL) süresi dolmadan arka planda tazeler.
+    Bunsuz, önbellek her 5 dakikada bir soğuyor ve o an siteye giren kullanıcı fiyat
+    çekme/TEFAS/kripto gecikmesinin TAMAMINI canlı canlı bekliyordu. Bu görev 4 dakikada
+    bir çalışarak önbelleği hep TTL'in içinde tutuyor — kullanıcı asla soğuk yüklemeye
+    denk gelmiyor. Sadece en az bir pozisyonu olan kullanıcılar için çalışır (boşuna
+    API kullanımını önlemek için)."""
+    db = SessionLocal()
+    try:
+        user_ids = [row[0] for row in db.query(DBPosition.user_id).distinct().all()]
+        for user_id in user_ids:
+            try:
+                calculate_portfolio(user_id, bypass_cache=True)
+            except Exception as user_err:
+                logger.error(f"[CELERY] Portfolio cache warm failed for user_id={user_id}: {user_err}")
+        if user_ids:
+            logger.info(f"[CELERY] Warmed portfolio cache for {len(user_ids)} user(s).")
+    except Exception as e:
+        logger.error(f"[CELERY] Portfolio cache warm task failed: {e}")
+    finally:
+        db.close()
+
+@celery_app.task
 def downgrade_expired_subscriptions_task():
     """Süresi dolmuş (subscription_ends_at geçmiş) ücretli abonelikleri FREE'ye düşürür.
     Tek seferlik/dönemsel ödeme modelinde otomatik yenileme olmadığı için bu görev
