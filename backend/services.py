@@ -309,13 +309,17 @@ def get_gbp_try_rate(date_str: Optional[str] = None) -> float:
         return 43.0
 
 
-# In-memory cache for portfolio summary — KULLANICI BAŞINA (dict[user_id]).
-# ÖNEMLİ: eskiden bu tek bir global değişkendi (kullanıcı ayrımı yoktu) — bir
-# kullanıcı portföyünü çektikten sonra 5 dakika içinde gelen HERHANGİ BİR başka
-# kullanıcı da o kullanıcının verisini görüyordu (canlıda bulundu: yeni bir
-# Google hesabıyla giriş yapan kullanıcıya demo hesabının 40 pozisyonu gösterildi).
-_portfolio_cache: dict = {}
-_portfolio_cache_time: dict = {}
+# Portföy özeti önbelleği — Redis üzerinden (finance_cache/_svc_fc), KULLANICI BAŞINA anahtarlı.
+# ÖNEMLİ (iki ayrı hata düzeltildi):
+# 1. Eskiden tek bir global değişkendi (kullanıcı ayrımı yoktu) — bir kullanıcı portföyünü
+#    çektikten sonra 5 dakika içinde gelen HERHANGİ BİR başka kullanıcı da o kullanıcının
+#    verisini görüyordu (canlıda bulundu: yeni bir Google hesabına demo'nun 40 pozisyonu
+#    gösterildi).
+# 2. Sonra user_id ile anahtarlanan bir Python dict'e çevrildi, AMA bu hâlâ her servisin
+#    (api, celery-worker) kendi belleğinde AYRI AYRI tutuluyordu — celery-worker'daki arka
+#    plan ısıtma görevi kendi belleğini dolduruyor, api servisinin gerçek istekleri karşılayan
+#    belleğine hiç yansımıyordu (ısıtma görevi fiilen boşa çalışıyordu). Artık Redis'te
+#    (REDIS_URL varsa) tutuluyor — tüm servisler AYNI önbelleği paylaşıyor.
 CACHE_TTL_SECONDS = 300  # Cache for 5 minutes
 
 # In-memory cache for TWRR/performance
@@ -415,13 +419,13 @@ def batch_fetch_prices(positions: List[Dict]) -> Dict[str, float]:
 
 def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
     """Portföyü hesapla"""
-    global _portfolio_cache, _portfolio_cache_time
+    cache_key = f"portfolio_cache:{user_id}"
 
-    if not bypass_cache and user_id in _portfolio_cache and user_id in _portfolio_cache_time:
-        elapsed = (datetime.now() - _portfolio_cache_time[user_id]).total_seconds()
-        if elapsed < CACHE_TTL_SECONDS:
+    if not bypass_cache:
+        cached = _svc_fc.get(cache_key, CACHE_TTL_SECONDS)
+        if cached is not None:
             print(f"[CACHE] Returning cached portfolio calculations (user_id={user_id})")
-            return _portfolio_cache[user_id]
+            return cached
 
     with get_db_session() as conn:
         positions = get_positions(user_id)
@@ -759,8 +763,7 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
         },
         "holdings": results,
     }
-    _portfolio_cache[user_id] = result
-    _portfolio_cache_time[user_id] = datetime.now()
+    _svc_fc.set(cache_key, result)
     
     # Run price alerts check and rebalance warnings in the background
     try:
@@ -876,11 +879,11 @@ def invalidate_twrr_cache():
 
 def invalidate_portfolio_cache(user_id: Optional[int] = None):
     if user_id is None:
-        _portfolio_cache.clear()
-        _portfolio_cache_time.clear()
-    else:
-        _portfolio_cache.pop(user_id, None)
-        _portfolio_cache_time.pop(user_id, None)
+        # Şu an hiçbir çağıran taraf user_id'siz çağırmıyor (bkz. routers/positions.py) —
+        # Redis'te tüm kullanıcıların anahtarlarını taramak için ayrı bir mekanizma
+        # gerekecek, ihtiyaç olursa eklenir.
+        return
+    _svc_fc.invalidate(f"portfolio_cache:{user_id}")
 
 def calculate_twrr_and_metrics(user_id: int, days: int = 90, currency: str = 'TRY') -> Dict:
     cache_key = f"{user_id}_{days}_{currency}"
