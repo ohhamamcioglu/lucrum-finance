@@ -21,3 +21,4 @@ python-dateutil==2.9.0.post0
 evds==0.4.0
 pykap==0.2.0
 sentry-sdk[fastapi]==2.64.0
+google-auth==2.41.1

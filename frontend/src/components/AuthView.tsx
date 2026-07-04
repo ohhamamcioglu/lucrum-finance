@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mail, Lock, User, Loader2, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 import { api } from '../services/api';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 interface AuthViewProps {
   onAuthSuccess: (token: string) => void;
@@ -18,6 +20,50 @@ export default function AuthView({ onAuthSuccess, initialMode = 'login' }: AuthV
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+
+  const handleGoogleCredential = async (response: { credential: string }) => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.googleLogin(response.credential);
+      localStorage.setItem('lucrum_auth_token', data.access_token);
+      onAuthSuccess(data.access_token);
+    } catch (err: any) {
+      setError(err?.message || (lang === 'tr' ? 'Google ile giriş başarısız.' : 'Google sign-in failed.'));
+      setLoading(false);
+    }
+  };
+
+  // Google Identity Services script'ini yükle ve butonu render et (login/register sekmelerinde).
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || mode === 'forgot' || !googleBtnRef.current) return;
+
+    const renderButton = () => {
+      if (!(window as any).google || !googleBtnRef.current) return;
+      (window as any).google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+      });
+      googleBtnRef.current.innerHTML = '';
+      (window as any).google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline', size: 'large', width: 360, text: 'continue_with', locale: lang,
+      });
+    };
+
+    const existing = document.getElementById('google-identity-script');
+    if (existing) {
+      renderButton();
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'google-identity-script';
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderButton;
+    document.body.appendChild(script);
+  }, [mode, lang]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,6 +200,19 @@ export default function AuthView({ onAuthSuccess, initialMode = 'login' }: AuthV
             >
               {t.registerTab}
             </button>
+          </div>
+        )}
+
+        {mode !== 'forgot' && GOOGLE_CLIENT_ID && (
+          <div className="w-full mb-6">
+            <div ref={googleBtnRef} className="w-full flex justify-center" />
+            <div className="flex items-center gap-3 mt-5">
+              <div className="h-px flex-1 bg-[#8C9A86]/20" />
+              <span className="text-[10px] text-[#9E958C] font-bold uppercase tracking-wider">
+                {lang === 'tr' ? 'veya' : 'or'}
+              </span>
+              <div className="h-px flex-1 bg-[#8C9A86]/20" />
+            </div>
           </div>
         )}
 

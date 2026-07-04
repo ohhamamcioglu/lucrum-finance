@@ -160,6 +160,14 @@ export const api = {
     });
   },
 
+  async googleLogin(credential: string): Promise<{ access_token: string; token_type: string }> {
+    return request(`${BASE_URL}/api/users/google-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential })
+    });
+  },
+
   async getExchangeRates(): Promise<ExchangeRateResponse> {
     return request(`${BASE_URL}/api/prices/rates`);
   },

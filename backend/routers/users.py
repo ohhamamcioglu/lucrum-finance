@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 
 from models import User, UserCreate, UserLogin, Token, ForgotPasswordRequest, ResetPasswordRequest, VerifyEmailRequest
 from crud import (
@@ -21,6 +23,8 @@ from email_service import send_verification_email, send_password_reset_email
 from rate_limit import limiter
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 
 REFRESH_COOKIE_NAME = "lucrum_refresh_token"
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
@@ -123,6 +127,52 @@ def login(
 
     _issue_refresh_cookie(user["id"], response, db)
     access_token = create_access_token(data={"sub": str(user["id"]), "email": user["email"]})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+class GoogleLoginRequest(BaseModel):
+    credential: str
+
+
+@router.post("/google-login", response_model=Token)
+@limiter.limit("10/minute")
+def google_login(
+    request: Request,
+    response: Response,
+    body: GoogleLoginRequest,
+    db: Session = Depends(get_db),
+):
+    """Google Identity Services'ten gelen ID token'ı doğrulayıp giriş/kayıt yapar.
+    Email, Google tarafından zaten doğrulanmış kabul edilir. Aynı email'le daha önce
+    şifreyle kayıt olunmuşsa, o hesaba giriş yapılır (email tekil kimlik olarak kullanılır)."""
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Google ile giriş şu an yapılandırılmamış.")
+
+    try:
+        idinfo = google_id_token.verify_oauth2_token(
+            body.credential, google_requests.Request(), GOOGLE_CLIENT_ID
+        )
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Geçersiz Google kimlik doğrulaması.")
+
+    email = idinfo.get("email")
+    if not email or not idinfo.get("email_verified"):
+        raise HTTPException(status_code=401, detail="Google hesabının e-postası doğrulanmamış.")
+    name = idinfo.get("name") or email.split("@")[0]
+
+    user = get_user_by_email(email, db=db)
+    if not user:
+        user_id = create_user(email=email, name=name, password_hash=None, db=db)
+        mark_email_verified(user_id, db=db)
+    else:
+        if not user.get("is_active", True):
+            raise HTTPException(status_code=403, detail="Hesabınız devre dışı bırakılmıştır.")
+        user_id = user["id"]
+        if not user.get("email_verified"):
+            mark_email_verified(user_id, db=db)
+
+    _issue_refresh_cookie(user_id, response, db)
+    access_token = create_access_token(data={"sub": str(user_id), "email": email})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
