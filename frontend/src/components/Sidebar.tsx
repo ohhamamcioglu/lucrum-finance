@@ -13,7 +13,7 @@ interface SidebarProps {
 
 export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarProps) {
   const t = useT(settings.language);
-  const { isAdmin } = useAuth();
+  const { isAdmin, profile } = useAuth();
 
   const menuItems = [
     { id: 'portfolio', label: t.portfolio, icon: Wallet },
@@ -93,14 +93,17 @@ export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarPr
           className="w-9 h-9 rounded-full object-cover border border-[#D1CABF] bg-[#F1EFE9] shadow-sm"
           referrerPolicy="no-referrer"
           src={settings.userAvatar}
-          alt={settings.userName}
+          alt={profile?.name || settings.userName}
         />
         <div className="overflow-hidden flex flex-col justify-center">
           <span className="text-[#2D2926] text-xs font-semibold truncate block leading-tight">
-            {settings.userName}
+            {profile?.name || settings.userName}
           </span>
-          <span className="text-[10px] text-[#9E958C] uppercase tracking-wider block mt-0.5 font-semibold">
-            {settings.userRole}
+          <span className="text-[10px] text-[#9E958C] truncate block mt-0.5 font-medium">
+            {profile?.email || ''}
+          </span>
+          <span className="text-[10px] text-[#8C9A86] uppercase tracking-wider block mt-0.5 font-bold">
+            {profile?.subscription_tier || settings.userRole}
           </span>
         </div>
       </div>

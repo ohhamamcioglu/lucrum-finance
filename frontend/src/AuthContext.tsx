@@ -1,11 +1,18 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { api } from './services/api';
 
+interface AuthProfile {
+  name: string;
+  email: string;
+  subscription_tier: string;
+}
+
 interface AuthContextValue {
   token: string | null;
   setToken: (token: string | null) => void;
   authChecked: boolean;
   isAdmin: boolean;
+  profile: AuthProfile | null;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -14,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(() => localStorage.getItem('lucrum_auth_token'));
   const [authChecked, setAuthChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [profile, setProfile] = useState<AuthProfile | null>(null);
 
   const setToken = (next: string | null) => {
     if (next) {
@@ -41,25 +49,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setAuthChecked(true));
   }, []);
 
-  // Token değiştikçe is_admin bayrağını profile'dan tazele
+  // Token değiştikçe is_admin bayrağını ve profil bilgisini (isim/email/plan) tazele
   useEffect(() => {
     if (!token) {
       setIsAdmin(false);
+      setProfile(null);
       return;
     }
     let cancelled = false;
     api.getUserProfile()
-      .then((profile) => {
-        if (!cancelled) setIsAdmin(!!profile.is_admin);
+      .then((p) => {
+        if (cancelled) return;
+        setIsAdmin(!!p.is_admin);
+        setProfile({ name: p.name, email: p.email, subscription_tier: p.subscription_tier });
       })
       .catch(() => {
-        if (!cancelled) setIsAdmin(false);
+        if (!cancelled) { setIsAdmin(false); setProfile(null); }
       });
     return () => { cancelled = true; };
   }, [token]);
 
   return (
-    <AuthContext.Provider value={{ token, setToken, authChecked, isAdmin }}>
+    <AuthContext.Provider value={{ token, setToken, authChecked, isAdmin, profile }}>
       {children}
     </AuthContext.Provider>
   );
