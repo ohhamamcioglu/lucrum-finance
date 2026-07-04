@@ -1,5 +1,16 @@
 import os
+import sys
 from celery import Celery
+
+# backend/ dizinini Python arama yoluna MUTLAK bir yol olarak ekle. Celery worker
+# daemonize olurken (veya prefork ile fork ederken) çalışma dizinini (CWD) değiştirebiliyor.
+# services/crud/twelve_data gibi modüller worker açılışında (include=["tasks"] ile) hemen
+# yüklendiği için soruna rastlamıyor, ama twelve_data.py'deki tefas_tools importu SADECE bir
+# TEFAS fonu gerçekten istendiğinde (gecikmeli/lazy import) çalışıyor — o ana kadar CWD
+# değişmişse ve sys.path buna dayanan göreli bir girdi içeriyorsa "No module named
+# 'tefas_tools'" hatası alınıyordu (canlıda celery-worker'da gözlemlendi). Mutlak yol,
+# CWD ne olursa olsun çalışır.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Load env variables if available
 try:
