@@ -39,18 +39,21 @@ def daily_snapshot_job():
 def enrich_portfolio_holdings_job():
     """Portföydeki sembolleri tarayıcıya ekler."""
     try:
-        with get_db_session() as db:
-            positions = db.query(DBPosition).all()
-        if not positions:
-            return
         symbols = []
         asset_classes = {}
-        for pos in positions:
-            if pos.asset_class in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
-                td_sym = _td_symbol(pos.ticker, pos.asset_class)
-                if td_sym not in symbols:
-                    symbols.append(td_sym)
-                    asset_classes[td_sym] = pos.asset_class
+        # DBPosition alanlarına `with` bloğu İÇİNDE erişiyoruz — session commit()
+        # ile nesneleri "expire" ediyor, session kapandıktan SONRA attribute'lara
+        # erişmeye çalışmak "Instance ... is not bound to a Session" hatasına yol
+        # açıyordu ve bu fonksiyon (dolayısıyla crawler'ın sembol kaydı) sessizce
+        # hiç çalışmıyordu — financial_records tablosunun hep boş kalmasının sebebi buydu.
+        with get_db_session() as db:
+            positions = db.query(DBPosition).all()
+            for pos in positions:
+                if pos.asset_class in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
+                    td_sym = _td_symbol(pos.ticker, pos.asset_class)
+                    if td_sym not in symbols:
+                        symbols.append(td_sym)
+                        asset_classes[td_sym] = pos.asset_class
         if symbols:
             td.crawler.register_symbols(symbols, asset_classes)
             logger.info(f"[SCHEDULER] Registered {len(symbols)} symbols to TwelveDataCrawler for enrichment.")
@@ -62,16 +65,17 @@ def start_scheduler():
     td.crawler.start()
 
     try:
-        with get_db_session() as db:
-            positions = db.query(DBPosition).all()
         symbols = []
         asset_classes = {}
-        for pos in positions:
-            if pos.asset_class in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
-                td_sym = _td_symbol(pos.ticker, pos.asset_class)
-                if td_sym not in symbols:
-                    symbols.append(td_sym)
-                    asset_classes[td_sym] = pos.asset_class
+        # bkz. enrich_portfolio_holdings_job'daki not — attribute'lara session açıkken erişiyoruz.
+        with get_db_session() as db:
+            positions = db.query(DBPosition).all()
+            for pos in positions:
+                if pos.asset_class in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
+                    td_sym = _td_symbol(pos.ticker, pos.asset_class)
+                    if td_sym not in symbols:
+                        symbols.append(td_sym)
+                        asset_classes[td_sym] = pos.asset_class
         if symbols:
             td.crawler.register_symbols(symbols, asset_classes)
     except Exception as e:

@@ -25,6 +25,7 @@ socket.setdefaulttimeout(8.0)
 import threading
 import time
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime
 from typing import Any, Optional
 
@@ -176,6 +177,15 @@ def _api(endpoint: str, params: dict, timeout: int = 15) -> dict | list | None:
 
 # ── SQLite Bağlantısı ────────────────────────────────────────────────────────
 _db_lock = threading.Lock()
+
+# TEFAS istekleri için paylaşımlı thread havuzu. ÖNEMLİ: her çağrıda yeni bir
+# `with ThreadPoolExecutor(...) as executor:` açıp future.result(timeout=X) ile
+# zaman aşımına uğratmak İŞE YARAMIYORDU — `with` bloğundan çıkarken örtük
+# executor.shutdown(wait=True) çağrılıyor ve bu, timeout'tan sonra bile arka
+# plandaki yavaş isteğin GERÇEKTEN bitmesini bekliyordu (nominal 6sn yerine
+# TEFAS'ın gerçek yanıt süresi kadar, gözlemlenen: ~60-70sn/fon). Paylaşılan,
+# kapatılmayan bir havuz kullanıp zaman aşımında beklemeden vazgeçiyoruz.
+_tefas_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="tefas")
 
 
 def _conn() -> sqlite3.Connection:
@@ -2606,16 +2616,18 @@ def get_tefas_nav(fund_code: str, start_date: date, end_date: date) -> Any:
                 c_curr = m_start
                 while c_curr <= m_end:
                     c_end = min(c_curr + timedelta(days=27), m_end)
-                    
-                    from concurrent.futures import ThreadPoolExecutor
-                    with ThreadPoolExecutor(max_workers=1) as executor:
-                        future = executor.submit(
-                            _crawler.fetch,
-                            c_curr.isoformat(), c_end.isoformat(),
-                            kind=kind, columns="info", fund_code=code
-                        )
-                        df = future.result(timeout=6.0)
-                    
+
+                    future = _tefas_executor.submit(
+                        _crawler.fetch,
+                        c_curr.isoformat(), c_end.isoformat(),
+                        kind=kind, columns="info", fund_code=code
+                    )
+                    # TimeoutError burada yakalanmıyor — aşağıdaki dıştaki except zaten
+                    # loglayıp bu fonun kalan aralıklarını atlayarak bir sonraki fona geçiyor.
+                    # Arka plandaki yavaş istek pool'da kendi başına bitmeye devam eder,
+                    # sonucu zaten kullanılmayacağı için beklenmiyor.
+                    df = future.result(timeout=6.0)
+
                     if df is not None and not df.empty:
                         db_rows = []
                         for _, row in df.iterrows():

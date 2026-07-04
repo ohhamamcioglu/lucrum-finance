@@ -1,5 +1,10 @@
 FROM python:3.13-slim
 
+# print() çıktısının tamponlanmasını kapatır — aksi halde container loglarındaki
+# zaman damgaları gerçek çalışma sırasını yanıltıyor (loglar dakikalarca gecikmeli
+# görünüyor), bu da canlıdaki performans sorunlarını teşhis etmeyi zorlaştırıyordu.
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 # lxml/psycopg2 gibi paketler için derleme bağımlılıkları
