@@ -32,6 +32,8 @@ import requests as _req
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
 
+from cache import finance_cache as _fc
+
 # ── Konfigürasyon ─────────────────────────────────────────────────────────────
 API_KEY  = os.getenv("TWELVE_DATA_API_KEY", "")
 BASE_URL = "https://api.twelvedata.com"
@@ -1503,6 +1505,15 @@ class TwelveDataCrawler:
             return False
         if sym in self._fundamentals_unavailable:
             return False
+        # Railway gibi ephemeral disk'li ortamlarda her redeploy süreç belleğini sıfırlıyor —
+        # bu, aşağıdaki "kalıcı" cache kontrolü olmadan ETF/fon gibi fundamentals'ı hiç olmayan
+        # sembollerin HER deploy sonrası yeniden keşfedilmesine (onlarca başarısız API çağrısına)
+        # yol açıyordu ve bu çağrılar gerçek kullanıcı isteklerinin (portföy fiyat çekme) paylaştığı
+        # aynı rate-limit kotasını tüketip dakikalarca beklemeye sebep oluyordu. Redis (varsa)
+        # üzerinden kalıcı hale getiriyoruz.
+        if _fc.get(f"td_fund_unavail:{sym}", _fc.TTL_FINANCIALS):
+            self._fundamentals_unavailable.add(sym)
+            return False
         ac = self.registered_symbols.get(sym, "")
         if ac in ("BIST Hissesi", "Kripto"):
             return False
@@ -1552,6 +1563,12 @@ class TwelveDataCrawler:
         self.last_api_call = time.monotonic()
         
     def _run_loop(self):
+        # Deploy sonrası ilk saniyelerde uygulama az önce trafik almaya başlar — crawler'ın
+        # hemen aynı anda API çağrısı bombardımanına başlaması, paylaşılan rate-limit kotasını
+        # gerçek kullanıcı isteklerinden (örn. portföy fiyat çekme) önce tüketip onları dakikalarca
+        # bekletiyordu (canlıda ölçüldü: 3+ dakika). İlk kullanıcı isteklerine öncelik vermek için
+        # kısa bir bekleme payı.
+        time.sleep(45)
         while self.running:
             try:
                 try:
@@ -1649,9 +1666,11 @@ class TwelveDataCrawler:
                     self._enforce_delay()
                     stats_result = get_statistics(symbol)
                     if not stats_result:
-                        # ETF/fon gibi fundamentals'ı olmayan bir sembol — bu süreç boyunca
-                        # bir daha deneme, aksi halde her boş-kuyruk taramasında sonsuza dek yeniden denenir.
+                        # ETF/fon gibi fundamentals'ı olmayan bir sembol — bir daha deneme.
+                        # Redis'e de yazılıyor ki redeploy sonrası süreç belleği sıfırlansa bile
+                        # bu bilgi kalıcı kalsın (bkz. _supports_fundamentals'taki not).
                         self._fundamentals_unavailable.add(symbol)
+                        _fc.set(f"td_fund_unavail:{symbol}", True)
 
                 if target in ("all", "balance"):
                     self._enforce_delay()
