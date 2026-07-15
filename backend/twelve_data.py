@@ -1515,6 +1515,9 @@ class TwelveDataCrawler:
         # aynı sembolü sonsuza dek yeniden dener — API kotasını tüketip gerçek kullanıcı isteklerini
         # (örn. korelasyon matrisi) aç bırakır. Bu sembolleri süreç ömrü boyunca hafızada işaretleyip atla.
         self._fundamentals_unavailable: set[str] = set()
+        # Hangi semboller için Redis'teki "fundamentals_unavailable" bayrağı bu süreç
+        # ömründe ZATEN kontrol edildi — bkz. _supports_fundamentals'taki kritik not.
+        self._fundamentals_redis_checked: set[str] = set()
 
     def _supports_fundamentals(self, sym: str) -> bool:
         """Twelve Data fundamentals (statistics, balance, profile) only work for US stocks."""
@@ -1522,18 +1525,25 @@ class TwelveDataCrawler:
             return False
         if sym in self._fundamentals_unavailable:
             return False
-        # Railway gibi ephemeral disk'li ortamlarda her redeploy süreç belleğini sıfırlıyor —
-        # bu, aşağıdaki "kalıcı" cache kontrolü olmadan ETF/fon gibi fundamentals'ı hiç olmayan
-        # sembollerin HER deploy sonrası yeniden keşfedilmesine (onlarca başarısız API çağrısına)
-        # yol açıyordu ve bu çağrılar gerçek kullanıcı isteklerinin (portföy fiyat çekme) paylaştığı
-        # aynı rate-limit kotasını tüketip dakikalarca beklemeye sebep oluyordu. Redis (varsa)
-        # üzerinden kalıcı hale getiriyoruz.
-        if _fc.get(f"td_fund_unavail:{sym}", _fc.TTL_FINANCIALS):
-            self._fundamentals_unavailable.add(sym)
-            return False
         ac = self.registered_symbols.get(sym, "")
         if ac in ("BIST Hissesi", "Kripto"):
             return False
+        # KRİTİK: bu fonksiyon, boş-kuyruk tarandığında HER 5 SANİYEDE BİR, kayıtlı HER
+        # sembol için çağrılıyor (_crawl_symbol_stale_data). Redis kontrolünü (aşağıda)
+        # her çağrıda yapmak — "fundamentals destekleniyor" olan (yani hiç unavailable
+        # olmayan) semboller için bile — günde yüz binlerce gereksiz Redis isteğine yol
+        # açtı ve Upstash'in aylık kotasını (500.000) birkaç güne tüketti (canlıda
+        # ResponseError: max requests limit exceeded olarak gözlemlendi). Artık Redis'e
+        # süreç ömrü boyunca sembol başına SADECE BİR KEZ soruluyor.
+        if sym not in self._fundamentals_redis_checked:
+            self._fundamentals_redis_checked.add(sym)
+            # Railway gibi ephemeral disk'li ortamlarda her redeploy süreç belleğini
+            # sıfırlıyor — bu Redis kontrolü, ETF/fon gibi fundamentals'ı hiç olmayan
+            # sembollerin HER deploy sonrası yeniden keşfedilmesini (onlarca başarısız
+            # API çağrısını) önlemek için var.
+            if _fc.get(f"td_fund_unavail:{sym}", _fc.TTL_FINANCIALS):
+                self._fundamentals_unavailable.add(sym)
+                return False
         return True
 
     def start(self):
