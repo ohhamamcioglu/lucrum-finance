@@ -611,18 +611,26 @@ def get_price_history(ticker: str, days: int = 90, db: Optional[Session] = None)
 # ============ EXCHANGE RATES ============
 
 def save_exchange_rate(data: ExchangeRateCreate, db: Optional[Session] = None) -> int:
-    """Kur geçmişini kaydet"""
+    """Kur geçmişini kaydet. Sadece dolu gelen kur alanları güncellenir, diğer
+    para birimlerinin daha önce kaydedilmiş değerleri korunur."""
     session, must_close = _get_db(db)
     try:
         rate = session.query(DBExchangeRate).filter(DBExchangeRate.rate_date == data.rate_date).first()
         if rate:
-            rate.usd_try_rate = data.usd_try_rate
+            if data.usd_try_rate is not None:
+                rate.usd_try_rate = data.usd_try_rate
+            if data.eur_try_rate is not None:
+                rate.eur_try_rate = data.eur_try_rate
+            if data.gbp_try_rate is not None:
+                rate.gbp_try_rate = data.gbp_try_rate
             rate.source = data.source
             rate.updated_at = datetime.utcnow()
         else:
             rate = DBExchangeRate(
                 rate_date=data.rate_date,
                 usd_try_rate=data.usd_try_rate,
+                eur_try_rate=data.eur_try_rate,
+                gbp_try_rate=data.gbp_try_rate,
                 source=data.source
             )
             session.add(rate)
@@ -638,11 +646,31 @@ def save_exchange_rate(data: ExchangeRateCreate, db: Optional[Session] = None) -
             session.close()
 
 def get_exchange_rate(rate_date: date, db: Optional[Session] = None) -> Optional[float]:
-    """Belirli tarih için kuru al"""
+    """Belirli tarih için USD/TRY kurunu al"""
     session, must_close = _get_db(db)
     try:
         rate = session.query(DBExchangeRate).filter(DBExchangeRate.rate_date == rate_date).first()
         return rate.usd_try_rate if rate else None
+    finally:
+        if must_close:
+            session.close()
+
+def get_eur_exchange_rate(rate_date: date, db: Optional[Session] = None) -> Optional[float]:
+    """Belirli tarih için EUR/TRY kurunu al"""
+    session, must_close = _get_db(db)
+    try:
+        rate = session.query(DBExchangeRate).filter(DBExchangeRate.rate_date == rate_date).first()
+        return rate.eur_try_rate if rate else None
+    finally:
+        if must_close:
+            session.close()
+
+def get_gbp_exchange_rate(rate_date: date, db: Optional[Session] = None) -> Optional[float]:
+    """Belirli tarih için GBP/TRY kurunu al"""
+    session, must_close = _get_db(db)
+    try:
+        rate = session.query(DBExchangeRate).filter(DBExchangeRate.rate_date == rate_date).first()
+        return rate.gbp_try_rate if rate else None
     finally:
         if must_close:
             session.close()

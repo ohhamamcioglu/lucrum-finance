@@ -5,7 +5,8 @@ from datetime import datetime, timedelta, date
 from typing import Optional, Dict, List
 
 from crud import (
-    get_positions, get_exchange_rate, save_exchange_rate, save_price_history,
+    get_positions, get_exchange_rate, get_eur_exchange_rate, get_gbp_exchange_rate,
+    save_exchange_rate, save_price_history,
     get_transactions, create_notification, get_price_alerts, trigger_price_alert, get_target_allocations
 )
 from models import ExchangeRateCreate, PriceHistoryCreate
@@ -240,11 +241,23 @@ def get_eur_try_rate(date_str: Optional[str] = None) -> float:
             if date_obj > datetime.now().date():
                 return get_eur_try_rate()
 
+            # DB'den kontrol et (kalıcı, geçmiş tarihli kurlar değişmez)
+            cached_db = get_eur_exchange_rate(date_obj)
+            if cached_db:
+                _svc_fc.set(cache_key, cached_db)
+                return cached_db
+
             days_back = (datetime.now().date() - date_obj).days + 5
             series = td.get_time_series("EUR/TRY", days=max(30, min(730, days_back)), interval="1day")
             for item in series:
                 if item.get("date", "")[:10] <= date_str and item.get("close"):
                     rate = float(item["close"])
+                    try:
+                        save_exchange_rate(ExchangeRateCreate(
+                            rate_date=date_obj, eur_try_rate=rate, source="twelve_data"
+                        ))
+                    except Exception:
+                        pass
                     _svc_fc.set(cache_key, rate)
                     return rate
 
@@ -281,11 +294,23 @@ def get_gbp_try_rate(date_str: Optional[str] = None) -> float:
             if date_obj > datetime.now().date():
                 return get_gbp_try_rate()
 
+            # DB'den kontrol et (kalıcı, geçmiş tarihli kurlar değişmez)
+            cached_db = get_gbp_exchange_rate(date_obj)
+            if cached_db:
+                _svc_fc.set(cache_key, cached_db)
+                return cached_db
+
             days_back = (datetime.now().date() - date_obj).days + 5
             series = td.get_time_series("GBP/TRY", days=max(30, min(730, days_back)), interval="1day")
             for item in series:
                 if item.get("date", "")[:10] <= date_str and item.get("close"):
                     rate = float(item["close"])
+                    try:
+                        save_exchange_rate(ExchangeRateCreate(
+                            rate_date=date_obj, gbp_try_rate=rate, source="twelve_data"
+                        ))
+                    except Exception:
+                        pass
                     _svc_fc.set(cache_key, rate)
                     return rate
 

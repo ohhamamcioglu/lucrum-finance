@@ -216,7 +216,9 @@ class PriceHistoryCreate(PriceHistory):
 # Kur Geçmişi
 class ExchangeRateCreate(BaseModel):
     rate_date: date
-    usd_try_rate: float
+    usd_try_rate: Optional[float] = None
+    eur_try_rate: Optional[float] = None
+    gbp_try_rate: Optional[float] = None
     source: str = "yfinance"
 
 class ExchangeRate(ExchangeRateCreate):
