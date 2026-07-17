@@ -272,7 +272,7 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
                   {[
                     { id: 'FREE', title: 'Free', price: '0$', limitPos: '5', limitPosNum: 5, limitAlert: '3' },
                     { id: 'PRO', title: 'Pro', price: '19$', limitPos: '50', limitPosNum: 50, limitAlert: '20' },
-                    { id: 'ENTERPRISE', title: 'Enterprise', price: '99$', limitPos: 'Sınırsız', limitPosNum: null, limitAlert: 'Sınırsız' }
+                    { id: 'ENTERPRISE', title: 'Enterprise', price: '99$', limitPos: t.planUnlimited, limitPosNum: null, limitAlert: t.planUnlimited }
                   ].map((p) => {
                     const isCurrent = profile?.subscription_tier === p.id;
                     const isOverLimit = isCurrent && p.limitPosNum !== null && currentPositionCount > p.limitPosNum;
@@ -285,11 +285,11 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
                         <div>
                           <div className="flex justify-between items-start">
                             <span className="text-xs font-bold text-[#2D2926]">{p.title}</span>
-                            <span className="text-[10px] font-bold text-[#6B645E]">{p.price} / ay</span>
+                            <span className="text-[10px] font-bold text-[#6B645E]">{p.price} {t.planPerMonth}</span>
                           </div>
                           <div className="mt-3 space-y-1.5 text-[10px] text-[#6B645E] font-medium">
                             <div className="flex justify-between items-center">
-                              <span>Pozisyon:</span>
+                              <span>{t.planPositions}</span>
                               {isCurrent ? (
                                 <span className={`font-bold ${isOverLimit ? 'text-[#B5836F]' : 'text-[#2D2926]'}`}>
                                   {currentPositionCount} / {p.limitPos}
@@ -306,7 +306,7 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
                               </div>
                             )}
                             <div className="flex justify-between">
-                              <span>Fiyat Alarmı:</span>
+                              <span>{t.planPriceAlert}</span>
                               <span className="font-bold text-[#2D2926]">{p.limitAlert}</span>
                             </div>
                           </div>
@@ -317,14 +317,14 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
                             disabled
                             className="w-full mt-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#8C9A86]/20 text-[#8C9A86] cursor-not-allowed"
                           >
-                            Aktif
+                            {t.planActive}
                           </button>
                         ) : p.id === 'FREE' ? (
                           <button
                             onClick={handleDowngradeToFree}
                             className="w-full mt-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#8C9A86] hover:bg-[#7A8874] text-white cursor-pointer"
                           >
-                            Seç
+                            {t.planSelect}
                           </button>
                         ) : (
                           <button

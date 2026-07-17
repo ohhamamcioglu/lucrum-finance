@@ -311,7 +311,7 @@ export default function RiskView({ holdings, settings }: RiskViewProps) {
             <div className="overflow-x-auto">
               <div className="min-w-[500px] flex flex-col">
                 <div className="flex border-b border-[#E8E2D9] pb-2">
-                  <div className="w-24 shrink-0 font-bold text-xs text-[#9E958C]">VARLIK</div>
+                  <div className="w-24 shrink-0 font-bold text-xs text-[#9E958C]">{t.assetLabel}</div>
                   {corrData.symbols.map(sym => (
                     <div key={sym} className="flex-1 text-center font-mono font-bold text-xs text-[#6B645E] uppercase">
                       {sym.replace('.IS', '')}
@@ -340,7 +340,7 @@ export default function RiskView({ holdings, settings }: RiskViewProps) {
 
                 {/* Renk açıklaması */}
                 <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[#F1EFE9]">
-                  <span className="text-[10px] text-[#9E958C] font-medium">Korelasyon:</span>
+                  <span className="text-[10px] text-[#9E958C] font-medium">{t.correlationLabel}</span>
                   {[
                     { label: '> 0.6 Yüksek', cls: 'bg-[#B5836F]/25 text-[#B5836F]' },
                     { label: '0.3–0.6 Orta', cls: 'bg-[#B5836F]/15 text-[#B5836F]/80' },

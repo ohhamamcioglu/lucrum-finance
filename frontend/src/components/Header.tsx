@@ -292,7 +292,7 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates }:
                   {newsFeed.length > 0 && (
                     <div className="px-4 py-2 border-t border-[#E8E2D9] bg-[#F9F7F2] text-center">
                       <span className="text-[10px] text-[#9E958C] font-medium">
-                        Son {newsFeed.length} haber · Her 15 dakikada güncellenir
+                        {t.newsFeedFooter(newsFeed.length)}
                       </span>
                     </div>
                   )}

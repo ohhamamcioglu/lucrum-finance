@@ -112,7 +112,7 @@ export default function AnalyticsView({ holdings, totalValue, settings }: Analyt
                   <div key={h.id} className="flex items-center justify-between gap-4 opacity-60">
                     <div className="w-24 shrink-0 text-left">
                       <div className="text-xs font-bold text-[#2D2926]">{h.symbol}</div>
-                      <div className="text-[10px] text-[#6B645E] font-medium">Nakit</div>
+                      <div className="text-[10px] text-[#6B645E] font-medium">{t.cashLabel}</div>
                     </div>
                     <div className="flex-1 h-5 flex items-center relative bg-[#F1EFE9] rounded overflow-hidden px-2 border border-[#E8E2D9]/50">
                       <span className="absolute left-2 text-[10px] font-mono font-semibold text-[#9E958C]">—</span>

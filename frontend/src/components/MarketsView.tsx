@@ -417,7 +417,7 @@ export default function MarketsView({
               <>
                 <div className="flex items-center gap-1.5 px-1 py-1.5">
                   <Star className="w-3 h-3 text-[#D1A86A] fill-[#D1A86A]" />
-                  <span className="text-[9px] font-bold text-[#9E958C] uppercase tracking-wider">İzleme Listesi</span>
+                  <span className="text-[9px] font-bold text-[#9E958C] uppercase tracking-wider">{t.watchlistLabel}</span>
                 </div>
                 {filteredWatch.map(item => {
                   const active = selectedAsset.symbol === item.symbol;
@@ -462,7 +462,7 @@ export default function MarketsView({
                 })}
                 <div className="border-t border-[#F1EFE9] my-2" />
                 <div className="px-1 py-1">
-                  <span className="text-[9px] font-bold text-[#9E958C] uppercase tracking-wider">Popüler</span>
+                  <span className="text-[9px] font-bold text-[#9E958C] uppercase tracking-wider">{t.popularLabel}</span>
                 </div>
               </>
             )}

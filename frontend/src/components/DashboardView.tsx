@@ -786,7 +786,7 @@ export default function DashboardView({
             })() : (
               <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#9E958C]">
                 <div className="w-8 h-8 rounded-full border-2 border-[#E8E2D9] flex items-center justify-center text-lg">—</div>
-                <span className="text-xs font-semibold">Veri biriktirilmiyor</span>
+                <span className="text-xs font-semibold">{t.noDataAccumulated}</span>
               </div>
             )}
           </div>
@@ -1146,7 +1146,7 @@ export default function DashboardView({
                         {showSuggestions && (suggestions.length > 0 || loadingSuggestions) && (
                           <div className="absolute left-0 right-0 mt-1 bg-white border border-[#E8E2D9] rounded-lg shadow-lg z-[60] max-h-60 overflow-y-auto">
                             {loadingSuggestions ? (
-                              <div className="p-3 text-xs text-[#9E958C] italic">Aranıyor...</div>
+                              <div className="p-3 text-xs text-[#9E958C] italic">{t.searching}</div>
                             ) : (
                               suggestions.map((item) => (
                                 <button
@@ -1217,13 +1217,13 @@ export default function DashboardView({
                   <div className="bg-[#F1EFE9]/50 border border-[#E8E2D9] rounded-xl p-4 space-y-3">
                     <div className="flex justify-between items-center">
                       <div>
-                        <span className="text-[10px] font-bold text-[#9E958C] uppercase tracking-wider block">Son Fiyat</span>
+                        <span className="text-[10px] font-bold text-[#9E958C] uppercase tracking-wider block">{t.lastPrice}</span>
                         <div className="text-lg font-mono font-bold text-[#2D2926]">
                           {formatCurrency(newPrice, nativeBuyCurrency)}
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] font-bold text-[#9E958C] uppercase tracking-wider block">Risk Skoru & Sektör</span>
+                        <span className="text-[10px] font-bold text-[#9E958C] uppercase tracking-wider block">{t.riskScoreSector}</span>
                         <span className="text-xs font-semibold text-[#6B645E]">
                           {newSector} (Risk: {newRisk})
                         </span>
@@ -1232,7 +1232,7 @@ export default function DashboardView({
 
                     {/* Chart */}
                     {loadingModalHistory ? (
-                      <div className="h-24 flex items-center justify-center text-xs text-[#6B645E] italic">Geçmiş veriler yükleniyor...</div>
+                      <div className="h-24 flex items-center justify-center text-xs text-[#6B645E] italic">{t.historyLoading}</div>
                     ) : modalHistory && modalHistory.length > 1 ? (
                       <div className="h-24 w-full relative pt-4 flex flex-col justify-between">
                         {(() => {
@@ -1279,7 +1279,7 @@ export default function DashboardView({
                         })()}
                       </div>
                     ) : (
-                      <div className="h-10 flex items-center justify-center text-[10px] text-[#6B645E]/50 italic">Son 30 günlük fiyat geçmişi bulunamadı.</div>
+                      <div className="h-10 flex items-center justify-center text-[10px] text-[#6B645E]/50 italic">{t.noHistory30d}</div>
                     )}
                   </div>
                 )}
@@ -1324,16 +1324,16 @@ export default function DashboardView({
                 {selectedAssetForDetail.category === 'Cash' ? (
                   <div className="space-y-4">
                     <div className="bg-[#F1EFE9] border border-[#E8E2D9] rounded-xl p-5">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-4">Nakit Pozisyon Detayları</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-4">{t.detailCashTitle}</div>
                       <div className="grid grid-cols-2 gap-6">
                         <div className="text-center">
-                          <div className="text-[10px] text-[#9E958C] font-semibold mb-1">Tutar</div>
+                          <div className="text-[10px] text-[#9E958C] font-semibold mb-1">{t.detailAmount}</div>
                           <div className="text-2xl font-mono font-bold text-[#2D2926]">
                             {selectedAssetForDetail.shares.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} {selectedAssetForDetail.symbol}
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className="text-[10px] text-[#9E958C] font-semibold mb-1">Portföydeki Değer</div>
+                          <div className="text-[10px] text-[#9E958C] font-semibold mb-1">{t.detailPortfolioValue}</div>
                           <div className="text-2xl font-mono font-bold text-[#8C9A86]">
                             {formatCurrency(selectedAssetForDetail.value, settings.baseCurrency)}
                           </div>
@@ -1343,7 +1343,7 @@ export default function DashboardView({
                     <div className="bg-white border border-[#E8E2D9] rounded-xl p-4 flex items-center gap-3">
                       <Wallet2 className="w-5 h-5 text-[#9E958C] shrink-0" />
                       <p className="text-xs text-[#6B645E] font-medium leading-relaxed">
-                        Nakit pozisyonlar fiyat değişimine tabi değildir. Kur farkından kaynaklanan değişimler portföy performans hesabına yansıtılır.
+                        {t.detailCashNote}
                       </p>
                     </div>
                   </div>
@@ -1351,22 +1351,22 @@ export default function DashboardView({
                 <>
                 {/* 1. KULLANICI POZİSYON DETAYLARI */}
                 <div className="bg-[#F1EFE9] border border-[#E8E2D9] rounded-xl p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-3">Mevcut Pozisyon Detayları</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-3">{t.detailPositionTitle}</div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                     <div>
-                      <div className="text-[10px] text-[#9E958C] font-semibold">Mevcut Adet</div>
+                      <div className="text-[10px] text-[#9E958C] font-semibold">{t.detailCurrentQty}</div>
                       <div className="text-base font-mono font-bold text-[#2D2926]">{selectedAssetForDetail.shares.toLocaleString('tr-TR', { maximumFractionDigits: 4 })}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-[#9E958C] font-semibold">Ortalama Maliyet</div>
+                      <div className="text-[10px] text-[#9E958C] font-semibold">{t.detailAvgCost}</div>
                       <div className="text-base font-mono font-bold text-[#2D2926]">{formatCurrency(selectedAssetForDetail.avgBuyPrice, settings.baseCurrency)}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-[#9E958C] font-semibold">Güncel Değer</div>
+                      <div className="text-[10px] text-[#9E958C] font-semibold">{t.detailCurrentValue}</div>
                       <div className="text-base font-mono font-bold text-[#2D2926]">{formatCurrency(selectedAssetForDetail.value, settings.baseCurrency)}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-[#9E958C] font-semibold">Kar / Zarar</div>
+                      <div className="text-[10px] text-[#9E958C] font-semibold">{t.detailPL}</div>
                       <span className={`text-base font-mono font-bold block ${selectedAssetForDetail.unrealizedPL >= 0 ? 'text-[#7A8874]' : 'text-[#B5836F]'}`}>
                         {selectedAssetForDetail.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(selectedAssetForDetail.unrealizedPL, settings.baseCurrency)}
                       </span>
@@ -1379,9 +1379,9 @@ export default function DashboardView({
 
                 {/* 2. GEÇMİŞ FİYAT GRAFİĞİ */}
                 <div>
-                  <h4 className="font-serif text-xs font-bold text-[#9E958C] uppercase tracking-wider mb-3">Son 90 Günlük Fiyat Geçmişi</h4>
+                  <h4 className="font-serif text-xs font-bold text-[#9E958C] uppercase tracking-wider mb-3">{t.detailPriceHistoryTitle}</h4>
                   {loadingDetail ? (
-                    <div className="h-40 flex items-center justify-center text-xs text-[#6B645E] font-medium">Grafik verileri yükleniyor...</div>
+                    <div className="h-40 flex items-center justify-center text-xs text-[#6B645E] font-medium">{t.detailChartLoading}</div>
                   ) : detailHistory && detailHistory.length > 1 ? (
                     <div className="h-44 w-full relative bg-[#F1EFE9]/40 border border-[#E8E2D9] rounded-xl p-4 pt-8 flex flex-col justify-between">
                       {(() => {
@@ -1402,10 +1402,10 @@ export default function DashboardView({
                         return (
                           <>
                             <div className="absolute top-2.5 left-4 text-[10px] font-mono font-bold text-[#8C9A86]">
-                              En Yüksek: {formatCurrency(maxP, settings.baseCurrency)}
+                              {t.detailHigh} {formatCurrency(maxP, settings.baseCurrency)}
                             </div>
                             <div className="absolute top-2.5 right-4 text-[10px] font-mono font-bold text-[#B5836F]">
-                              En Düşük: {formatCurrency(minP, settings.baseCurrency)}
+                              {t.detailLow} {formatCurrency(minP, settings.baseCurrency)}
                             </div>
                             <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-[95px] overflow-visible">
                               <polyline
@@ -1426,45 +1426,45 @@ export default function DashboardView({
                       })()}
                     </div>
                   ) : (
-                    <div className="h-40 flex items-center justify-center text-xs text-[#6B645E]/70 font-semibold border border-dashed border-[#E8E2D9] rounded-xl">Bu varlık için grafik verisi bulunamadı.</div>
+                    <div className="h-40 flex items-center justify-center text-xs text-[#6B645E]/70 font-semibold border border-dashed border-[#E8E2D9] rounded-xl">{t.detailNoChartData}</div>
                   )}
                 </div>
 
                 {/* 3. TEMEL ANALİZ VE AÇIKLAMA */}
                 <div>
-                  <h4 className="font-serif text-xs font-bold text-[#9E958C] uppercase tracking-wider mb-3">Temel Analiz & Detaylar</h4>
+                  <h4 className="font-serif text-xs font-bold text-[#9E958C] uppercase tracking-wider mb-3">{t.detailFundamentalsTitle}</h4>
                   {loadingDetail ? (
-                    <div className="py-6 flex items-center justify-center text-xs text-[#6B645E] font-medium">Veriler yükleniyor...</div>
+                    <div className="py-6 flex items-center justify-center text-xs text-[#6B645E] font-medium">{t.detailDataLoading}</div>
                   ) : detailOverview ? (
                     <div className="space-y-4">
                       {detailOverview.type === 'stock' && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-white border border-[#E8E2D9] rounded-xl p-4 text-xs font-medium">
                           <div>
-                            <span className="text-[#9E958C]">Sektör:</span>
+                            <span className="text-[#9E958C]">{t.detailSector}</span>
                             <div className="text-[#2D2926] font-semibold">{detailOverview.sector}</div>
                           </div>
                           <div>
-                            <span className="text-[#9E958C]">Endüstri:</span>
+                            <span className="text-[#9E958C]">{t.detailIndustry}</span>
                             <div className="text-[#2D2926] font-semibold">{detailOverview.industry}</div>
                           </div>
                           <div>
-                            <span className="text-[#9E958C]">Piyasa Değeri:</span>
+                            <span className="text-[#9E958C]">{t.detailMarketCap}</span>
                             <div className="text-[#2D2926] font-semibold font-mono">{detailOverview.market_cap ? formatCurrency(detailOverview.market_cap, settings.baseCurrency) : 'N/A'}</div>
                           </div>
                           <div>
-                            <span className="text-[#9E958C]">F/K Oranı (P/E):</span>
+                            <span className="text-[#9E958C]">{t.detailPE}</span>
                             <div className="text-[#2D2926] font-semibold font-mono">{detailOverview.pe_ratio ? detailOverview.pe_ratio.toFixed(2) : 'N/A'}</div>
                           </div>
                           <div>
-                            <span className="text-[#9E958C]">PD/DD Oranı (P/B):</span>
+                            <span className="text-[#9E958C]">{t.detailPB}</span>
                             <div className="text-[#2D2926] font-semibold font-mono">{detailOverview.pb_ratio ? detailOverview.pb_ratio.toFixed(2) : 'N/A'}</div>
                           </div>
                           <div>
-                            <span className="text-[#9E958C]">Temettü Verimi:</span>
+                            <span className="text-[#9E958C]">{t.detailDivYield}</span>
                             <div className="text-[#2D2926] font-semibold font-mono">{detailOverview.dividend_yield ? `%${(detailOverview.dividend_yield * 100).toFixed(2)}` : 'N/A'}</div>
                           </div>
                           <div className="col-span-2 sm:col-span-3 pt-2 border-t border-[#E8E2D9]/40">
-                            <span className="text-[#9E958C]">52 Haftalık Aralık:</span>
+                            <span className="text-[#9E958C]">{t.detail52wRange}</span>
                             <div className="text-[#2D2926] font-semibold font-mono mt-0.5">
                               {detailOverview.fifty_two_week_low ? formatCurrency(detailOverview.fifty_two_week_low, settings.baseCurrency) : 'N/A'} - {detailOverview.fifty_two_week_high ? formatCurrency(detailOverview.fifty_two_week_high, settings.baseCurrency) : 'N/A'}
                             </div>
@@ -1475,15 +1475,15 @@ export default function DashboardView({
                       {detailOverview.type === 'crypto' && (
                         <div className="grid grid-cols-2 gap-4 bg-white border border-[#E8E2D9] rounded-xl p-4 text-xs font-medium">
                           <div>
-                            <span className="text-[#9E958C]">Piyasa Değeri (USD):</span>
+                            <span className="text-[#9E958C]">{t.detailMarketCapUSD}</span>
                             <div className="text-[#2D2926] font-semibold font-mono">{detailOverview.market_cap ? formatCurrency(detailOverview.market_cap, 'USD') : 'N/A'}</div>
                           </div>
                           <div>
-                            <span className="text-[#9E958C]">24s Hacim:</span>
+                            <span className="text-[#9E958C]">{t.detailVolume24h}</span>
                             <div className="text-[#2D2926] font-semibold font-mono">{detailOverview.volume_24h ? formatCurrency(detailOverview.volume_24h, 'USD') : 'N/A'}</div>
                           </div>
                           <div className="col-span-2 pt-2 border-t border-[#E8E2D9]/40">
-                            <span className="text-[#9E958C]">52 Haftalık Aralık:</span>
+                            <span className="text-[#9E958C]">{t.detail52wRange}</span>
                             <div className="text-[#2D2926] font-semibold font-mono mt-0.5 text-xs">
                               {detailOverview.fifty_two_week_low ? formatCurrency(detailOverview.fifty_two_week_low, 'USD') : 'N/A'} - {detailOverview.fifty_two_week_high ? formatCurrency(detailOverview.fifty_two_week_high, 'USD') : 'N/A'}
                             </div>
@@ -1495,18 +1495,18 @@ export default function DashboardView({
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4 bg-white border border-[#E8E2D9] rounded-xl p-4 text-xs font-medium">
                             <div>
-                              <span className="text-[#9E958C]">Fon Toplam Değeri:</span>
+                              <span className="text-[#9E958C]">{t.detailFundSize}</span>
                               <div className="text-[#2D2926] font-semibold font-mono">{detailOverview.portfolio_size ? formatCurrency(detailOverview.portfolio_size, 'TRY') : 'N/A'}</div>
                             </div>
                             <div>
-                              <span className="text-[#9E958C]">Yatırımcı Sayısı:</span>
+                              <span className="text-[#9E958C]">{t.detailInvestorCount}</span>
                               <div className="text-[#2D2926] font-semibold font-mono">{detailOverview.investor_count ? detailOverview.investor_count.toLocaleString('tr-TR') : 'N/A'}</div>
                             </div>
                           </div>
-                          
+
                           {detailOverview.allocation && detailOverview.allocation.length > 0 && (
                             <div className="bg-white border border-[#E8E2D9] rounded-xl p-4">
-                              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-3">Fon Portföy Dağılımı</span>
+                              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-3">{t.detailFundAllocation}</span>
                               <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
                                 {detailOverview.allocation.map((alloc: any, idx: number) => (
                                   <div key={idx} className="flex justify-between items-center bg-[#F1EFE9]/40 p-2 rounded">
@@ -1522,13 +1522,13 @@ export default function DashboardView({
 
                       {detailOverview.description && (
                         <div className="bg-white border border-[#E8E2D9] rounded-xl p-4">
-                          <span className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-2">Özet Açıklama</span>
+                          <span className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-2">{t.detailSummary}</span>
                           <p className="text-xs text-[#6B645E] leading-relaxed font-medium">{detailOverview.description}</p>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="text-xs text-[#6B645E]/70 font-semibold border border-dashed border-[#E8E2D9] rounded-xl p-4 text-center">Bu varlık için analiz verisi bulunamadı.</div>
+                    <div className="text-xs text-[#6B645E]/70 font-semibold border border-dashed border-[#E8E2D9] rounded-xl p-4 text-center">{t.detailNoAnalysisData}</div>
                   )}
                 </div>
                 </>
@@ -1538,7 +1538,7 @@ export default function DashboardView({
               <div className="px-6 py-4 border-t border-[#E8E2D9] flex justify-end bg-[#F1EFE9]">
                 <button onClick={() => setSelectedAssetForDetail(null)}
                   className="bg-[#8C9A86] hover:bg-[#7A8874] text-white px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all">
-                  Kapat
+                  {t.detailClose}
                 </button>
               </div>
             </motion.div>

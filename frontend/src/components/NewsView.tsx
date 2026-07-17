@@ -95,8 +95,8 @@ function FundMiniCard({ fundCode, isEn }: { fundCode: string; isEn: boolean; key
           >
             <div className="px-4 pb-4 space-y-3 border-t border-[#F1EFE9]">
               <div className="flex justify-between pt-3 text-[10px] text-[#9E958C]">
-                {data.price != null && <span>Fiyat: <b className="text-[#2D2926]">₺{data.price.toFixed(4)}</b></span>}
-                {data.portfolio_size != null && <span>Büyüklük: <b className="text-[#2D2926]">{fmt(data.portfolio_size)}</b></span>}
+                {data.price != null && <span>{isEn ? 'Price: ' : 'Fiyat: '}<b className="text-[#2D2926]">₺{data.price.toFixed(4)}</b></span>}
+                {data.portfolio_size != null && <span>{isEn ? 'Size: ' : 'Büyüklük: '}<b className="text-[#2D2926]">{fmt(data.portfolio_size)}</b></span>}
               </div>
               <div className="space-y-1.5">
                 {data.allocation.slice(0, 6).map((item, i) => (
@@ -109,7 +109,7 @@ function FundMiniCard({ fundCode, isEn }: { fundCode: string; isEn: boolean; key
               </div>
               {disclosures.length > 0 && (
                 <div className="pt-2 border-t border-[#F1EFE9] space-y-1.5">
-                  <p className="text-[10px] font-bold text-[#9E958C] uppercase tracking-wider">KAP Bildirimleri</p>
+                  <p className="text-[10px] font-bold text-[#9E958C] uppercase tracking-wider">{isEn ? 'KAP Disclosures' : 'KAP Bildirimleri'}</p>
                   {disclosures.map((d, i) => (
                     <a key={i} href={d.url} target="_blank" rel="noopener noreferrer"
                       className="flex items-start gap-1.5 group"
