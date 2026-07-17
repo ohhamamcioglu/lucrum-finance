@@ -131,7 +131,7 @@ export const termsContent: LegalContentEntry = {
       {
         heading: '4. Abonelik ve Ödeme',
         body: [
-          'Platform, FREE/PRO/ENTERPRISE olmak üzere farklı abonelik katmanları sunar. ÖNEMLİ: Bu sürümde gerçek bir ödeme altyapısı entegre edilmemiştir; plan değişiklikleri simülasyon (mock) amaçlıdır ve herhangi bir gerçek ücretlendirme yapılmamaktadır. Gerçek faturalama başladığında bu bölüm güncellenecektir.',
+          'Platform, FREE/PRO/ENTERPRISE olmak üzere farklı abonelik katmanları sunar. Ücretli plan yükseltmeleri LemonSqueezy ödeme altyapısı üzerinden gerçek ücretlendirme ile işlenir. Ödeme geçmişinizi Ayarlar sayfasındaki "Ödeme Geçmişi" bölümünden görüntüleyebilirsiniz.',
         ],
       },
       {
@@ -173,7 +173,7 @@ export const termsContent: LegalContentEntry = {
       {
         heading: '4. Subscription and Payment',
         body: [
-          'The platform offers FREE/PRO/ENTERPRISE subscription tiers. IMPORTANT: No real payment infrastructure is integrated in this version; plan changes are simulated (mocked) and no actual billing occurs. This section will be updated once real billing goes live.',
+          'The platform offers FREE/PRO/ENTERPRISE subscription tiers. Paid plan upgrades are processed as real charges through the LemonSqueezy payment infrastructure. You can view your payment history in the "Payment History" section of Settings.',
         ],
       },
       {
