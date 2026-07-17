@@ -188,9 +188,20 @@ export const api = {
     });
   },
 
-  async deletePosition(id: number | string): Promise<{ message: string }> {
-    return request(`${BASE_URL}/api/positions/${id}`, {
+  async deletePosition(id: number | string, sellPrice?: number): Promise<{ message: string }> {
+    const qs = sellPrice != null ? `?sell_price=${sellPrice}` : '';
+    return request(`${BASE_URL}/api/positions/${id}${qs}`, {
       method: 'DELETE'
+    });
+  },
+
+  async updatePosition(id: number | string, update: {
+    quantity?: number; buy_price?: number; delta_quantity?: number; delta_price?: number;
+  }): Promise<BackendPosition> {
+    return request(`${BASE_URL}/api/positions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(update)
     });
   },
 

@@ -38,7 +38,9 @@ interface DashboardViewProps {
     originalId: string,
     originalHolding: Omit<Holding, 'id'>,
     newShares: number,
-    newAvgPrice: number
+    newAvgPrice: number,
+    deltaQuantity: number,
+    deltaPrice: number
   ) => void;
   settings: UserSettings;
   performanceHistory?: any[];
@@ -375,12 +377,16 @@ export default function DashboardView({
   const handleEditSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!editingHolding) return;
+    // deltaQuantity/deltaPrice, bu düzenlemeyi GERÇEK bir işlem (top-up=BUY, azaltma=SELL)
+    // olarak işlem geçmişine ekletmek için — editPrice, artırmada "bu ek payları hangi
+    // fiyattan aldın", azaltmada "bu payları hangi fiyattan sattın" anlamına gelir.
+    const deltaQuantity = editMode === 'increase' ? editQty : -editQty;
     onEditHolding(editingHolding.id, {
       symbol: editingHolding.symbol, name: editingHolding.name, category: editingHolding.category,
       sector: editingHolding.sector, shares: editingHolding.shares, avgBuyPrice: editingHolding.avgBuyPrice,
       currentPrice: editingHolding.currentPrice, riskScore: editingHolding.riskScore,
       buyDate: editingHolding.buyDate,
-    }, editNewTotal, editNewAvg);
+    }, editNewTotal, editNewAvg, deltaQuantity, editPrice);
     setEditingHolding(null);
   };
 

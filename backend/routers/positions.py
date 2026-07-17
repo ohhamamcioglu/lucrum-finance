@@ -62,13 +62,15 @@ def update_pos(
 @router.delete("/{position_id}")
 def remove_pos(
     position_id: int,
+    sell_price: float = None,
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    """Pozisyon sil"""
+    """Pozisyon sil. sell_price verilirse, işlem geçmişine eklenen SELL kaydı gerçek satış
+    fiyatıyla yazılır (verilmezse eski davranış: alım fiyatıyla yazılır, geriye dönük uyum)."""
     invalidate_twrr_cache()
     invalidate_portfolio_cache(user_id)
-    success = delete_position(user_id, position_id, db=db)
+    success = delete_position(user_id, position_id, sell_price=sell_price, db=db)
     if not success:
         raise HTTPException(status_code=404, detail="Position not found")
     return {"message": "Position deleted"}

@@ -309,17 +309,28 @@ export default function DashboardApp() {
 
   const handleEditHolding = async (
     originalId: string,
-    originalHolding: Omit<import('./types').Holding, 'id'>,
+    _originalHolding: Omit<import('./types').Holding, 'id'>,
     newShares: number,
-    newAvgPrice: number
+    newAvgPrice: number,
+    deltaQuantity: number,
+    deltaPrice: number
   ) => {
     try {
-      await api.deletePosition(originalId);
       if (newShares > 0) {
-        await handleAddHolding({ ...originalHolding, shares: newShares, avgBuyPrice: newAvgPrice });
+        // Pozisyonu YERİNDE güncelle (sil+yeniden-ekle DEĞİL) — orijinal alım tarihi ve
+        // mevcut işlem geçmişi korunur. Top-up/kısmi satış, bugünün tarihiyle GERÇEK bir
+        // işlem (BUY/SELL) olarak ayrıca eklenir, eskiler silinmez.
+        await api.updatePosition(originalId, {
+          quantity: newShares,
+          buy_price: newAvgPrice,
+          delta_quantity: deltaQuantity,
+          delta_price: deltaPrice,
+        });
       } else {
-        await loadData();
+        // Pozisyon tamamen kapatılıyor — gerçek çıkış fiyatıyla SELL kaydı bırakılır.
+        await api.deletePosition(originalId, deltaPrice);
       }
+      await loadData();
     } catch (err) {
       console.error('Error editing holding:', err);
     }

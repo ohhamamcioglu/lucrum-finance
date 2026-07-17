@@ -450,17 +450,40 @@ def get_position_by_id(user_id: int, position_id: int, db: Optional[Session] = N
             session.close()
 
 def update_position(user_id: int, position_id: int, update: PositionUpdate, db: Optional[Session] = None) -> Optional[Dict]:
-    """Pozisyon güncelle"""
+    """Pozisyon güncelle (top-up/kısmi satış dahil) — pozisyonu SİLİP YENİDEN EKLEMEZ, işlem
+    geçmişindeki mevcut kayıtlara dokunmaz. Eskiden frontend bunun yerine delete+recreate
+    yapıyordu, bu da orijinal alım tarihini/fiyatını silip bugünün tarihiyle sahte bir
+    BUY/SELL çifti oluşturuyor, TWRR ve zaman çizelgesini bozuyordu."""
     session, must_close = _get_db(db)
     try:
         pos = session.query(DBPosition).filter(DBPosition.id == position_id, DBPosition.user_id == user_id).first()
         if not pos:
             return None
 
+        fields = update.model_dump(exclude_unset=True)
+        delta_quantity = fields.pop("delta_quantity", None)
+        delta_price = fields.pop("delta_price", None)
+
         # Update fields dynamically
-        for key, value in update.model_dump(exclude_unset=True).items():
+        for key, value in fields.items():
             setattr(pos, key, value)
-            
+
+        # Top-up (ekleme) veya kısmi satış (azaltma) GERÇEK bir işlem olarak kaydediliyor —
+        # bugünün tarihiyle, ama mevcut/eski işlemler hiç değiştirilmeden.
+        if delta_quantity and delta_price is not None and delta_quantity != 0:
+            db_txn = DBTransaction(
+                user_id=user_id,
+                position_id=pos.id,
+                ticker=pos.ticker,
+                asset_class=pos.asset_class,
+                transaction_type="BUY" if delta_quantity > 0 else "SELL",
+                quantity=abs(delta_quantity),
+                price=delta_price,
+                currency=pos.buy_currency,
+                transaction_date=date.today(),
+            )
+            session.add(db_txn)
+
         pos.updated_at = datetime.utcnow()
         session.commit()
         session.refresh(pos)
@@ -472,8 +495,10 @@ def update_position(user_id: int, position_id: int, update: PositionUpdate, db: 
         if must_close:
             session.close()
 
-def delete_position(user_id: int, position_id: int, db: Optional[Session] = None) -> bool:
-    """Pozisyon sil"""
+def delete_position(user_id: int, position_id: int, sell_price: Optional[float] = None, db: Optional[Session] = None) -> bool:
+    """Pozisyon sil. sell_price verilmezse (ör. admin/portföy sıfırlama), geriye dönük uyum
+    için alım fiyatı kullanılır — bu durumda kayıt sadece pozisyonun "kapandığını" gösterir,
+    gerçek bir kâr/zarar iması taşımaz."""
     session, must_close = _get_db(db)
     try:
         pos = session.query(DBPosition).filter(DBPosition.id == position_id, DBPosition.user_id == user_id).first()
@@ -488,7 +513,7 @@ def delete_position(user_id: int, position_id: int, db: Optional[Session] = None
             asset_class=pos.asset_class,
             transaction_type="SELL",
             quantity=pos.quantity,
-            price=pos.buy_price,
+            price=sell_price if sell_price is not None else pos.buy_price,
             currency=pos.buy_currency,
             transaction_date=date.today()
         )

@@ -129,6 +129,11 @@ class PositionUpdate(BaseModel):
     maturity_date: Optional[str] = None
     commodity_type: Optional[str] = None
     unit: Optional[str] = None
+    # Bir top-up (ekleme) veya kısmi satış (azaltma) düzenlemesini GERÇEK bir işlem olarak
+    # kaydetmek için — delta_quantity pozitifse BUY, negatifse SELL olarak, bugünün tarihiyle
+    # işlem geçmişine eklenir. Eski/mevcut işlemlere hiç dokunulmaz. Bkz. crud.update_position.
+    delta_quantity: Optional[float] = None
+    delta_price: Optional[float] = None
 
 class Position(PositionBase):
     id: int
