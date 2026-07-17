@@ -26,8 +26,15 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
   const [toastMessage, setToastMessage] = useState("");
   const checkout = useCheckout();
 
+  const [paymentHistory, setPaymentHistory] = useState<Awaited<ReturnType<typeof api.getPaymentHistory>>>([]);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+
   useEffect(() => {
     loadProfile();
+    api.getPaymentHistory()
+      .then(setPaymentHistory)
+      .catch(() => {})
+      .finally(() => setLoadingPayments(false));
   }, []);
 
   useEffect(() => {
@@ -335,11 +342,65 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
 
                 {profile?.subscription_ends_at && profile.subscription_tier !== 'FREE' && (
                   <p className="text-[10px] text-[#9E958C] text-center font-medium italic">
-                    {settings.language === 'tr' 
-                      ? `Aboneliğiniz ${new Date(profile.subscription_ends_at).toLocaleDateString()} tarihine kadar geçerlidir.` 
+                    {settings.language === 'tr'
+                      ? `Aboneliğiniz ${new Date(profile.subscription_ends_at).toLocaleDateString()} tarihine kadar geçerlidir.`
                       : `Your subscription is active until ${new Date(profile.subscription_ends_at).toLocaleDateString()}.`}
                   </p>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* Payment History Card */}
+          <div id="settings-payment-history-card" className="bg-white border border-[#E8E2D9] p-6 rounded-2xl shadow-sm space-y-4">
+            <div>
+              <h3 className="font-sans text-sm font-bold text-[#2D2926] flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-[#8C9A86]" />
+                {t.paymentHistory}
+              </h3>
+              <p className="text-xs text-[#6B645E] font-medium mt-0.5">{t.paymentHistoryDesc}</p>
+            </div>
+
+            {loadingPayments ? (
+              <div className="flex justify-center py-4">
+                <div className="w-5 h-5 border-2 border-[#8C9A86] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : paymentHistory.length === 0 ? (
+              <p className="text-xs text-[#9E958C] text-center py-4 font-medium">{t.paymentHistoryEmpty}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#F1EFE9] border-b border-[#E8E2D9] text-[10px] font-bold uppercase tracking-wider text-[#6B645E]">
+                      <th className="px-3 py-2">{t.paymentHistoryDate}</th>
+                      <th className="px-3 py-2">{t.paymentHistoryPlan}</th>
+                      <th className="px-3 py-2 text-right">{t.paymentHistoryAmount}</th>
+                      <th className="px-3 py-2 text-right">{t.paymentHistoryStatus}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E8E2D9]/40">
+                    {paymentHistory.map(p => (
+                      <tr key={p.id}>
+                        <td className="px-3 py-2 text-xs text-[#2D2926] font-mono">{new Date(p.created_at).toLocaleDateString()}</td>
+                        <td className="px-3 py-2 text-xs text-[#2D2926] font-semibold">{p.plan_tier}</td>
+                        <td className="px-3 py-2 text-xs text-right font-mono font-bold text-[#2D2926]">{p.amount} {p.currency}</td>
+                        <td className="px-3 py-2 text-right">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            p.status === 'completed' ? 'bg-[#8C9A86]/15 text-[#7A8874]' :
+                            p.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                            p.status === 'refunded' ? 'bg-slate-100 text-slate-700' :
+                            'bg-[#B5836F]/15 text-[#B5836F]'
+                          }`}>
+                            {p.status === 'completed' ? t.paymentStatusCompleted :
+                             p.status === 'pending' ? t.paymentStatusPending :
+                             p.status === 'refunded' ? t.paymentStatusRefunded :
+                             t.paymentStatusFailed}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

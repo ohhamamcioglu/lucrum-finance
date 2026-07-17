@@ -4,7 +4,7 @@ import {
   TrendingUp, Bolt, Plus, Trash2, X, Wallet2, AlertCircle,
   Pencil, ChevronUp, ChevronDown, ChevronsUpDown,
 } from 'lucide-react';
-import { Holding, AssetCategory, UserSettings } from '../types';
+import { Holding, AssetCategory, UserSettings, Liability } from '../types';
 import { formatCurrency, MARKET_ASSETS, convertCurrency } from '../utils';
 import { useT } from '../i18n';
 import { api, BASE_URL } from '../services/api';
@@ -48,6 +48,7 @@ interface DashboardViewProps {
   performanceMetrics?: { twrr: number; volatility: number; max_drawdown: number; netAlpha?: number } | null;
   performanceDays?: 90 | 180 | 365 | 730;
   onPerformanceDaysChange?: (days: 90 | 180 | 365 | 730) => void;
+  liabilities?: Liability[];
 }
 
 export default function DashboardView({
@@ -61,6 +62,7 @@ export default function DashboardView({
   performanceMetrics = null,
   performanceDays = 90,
   onPerformanceDaysChange,
+  liabilities = [],
 }: DashboardViewProps) {
   const t = useT(settings.language);
 
@@ -493,6 +495,19 @@ export default function DashboardView({
                     {metrics.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(metrics.unrealizedPL, settings.baseCurrency)}
                   </span>
                 </div>
+                {liabilities.length > 0 && (() => {
+                  const totalLiab = liabilities.reduce(
+                    (sum, l) => sum + convertCurrency(l.amount, l.currency, settings.baseCurrency, exchangeRates), 0
+                  );
+                  const netWorth = metrics.totalValue - totalLiab;
+                  return (
+                    <div className="text-xs text-[#6B645E] mt-1 font-semibold" title={t.netWorthDesc}>
+                      {t.netWorth}:{' '}
+                      <span className="text-[#2D2926] font-bold">{formatCurrency(netWorth, settings.baseCurrency)}</span>
+                      <span className="text-[#9E958C] font-medium"> ({t.totalLiabilities.toLowerCase()}: -{formatCurrency(totalLiab, settings.baseCurrency)})</span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

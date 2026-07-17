@@ -9,8 +9,9 @@ import RiskView from './components/RiskView';
 import MarketsView from './components/MarketsView';
 import SettingsView from './components/SettingsView';
 import NewsView from './components/NewsView';
+import LiabilitiesView from './components/LiabilitiesView';
 
-import { Holding, ActiveTab, UserSettings, AssetCategory } from './types';
+import { Holding, ActiveTab, UserSettings, AssetCategory, Liability } from './types';
 import { INITIAL_SETTINGS, MARKET_ASSETS, calculatePortfolio, convertCurrency } from './utils';
 import { api } from './services/api';
 import { useT } from './i18n';
@@ -69,6 +70,45 @@ export default function DashboardApp() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('portfolio');
   const [selectedSymbolFromSearch, setSelectedSymbolFromSearch] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [liabilities, setLiabilities] = useState<Liability[]>([]);
+
+  const loadLiabilities = async () => {
+    try {
+      const rows = await api.getLiabilities();
+      setLiabilities(rows.map(r => ({
+        id: r.id,
+        name: r.name,
+        liability_type: r.liability_type as Liability['liability_type'],
+        amount: r.amount,
+        currency: r.currency as Liability['currency'],
+        due_date: r.due_date,
+        interest_rate: r.interest_rate,
+      })));
+    } catch (err) {
+      console.error('Error loading liabilities:', err);
+    }
+  };
+
+  const handleAddLiability = async (item: Omit<Liability, 'id'>) => {
+    await api.addLiability(item);
+    await loadLiabilities();
+  };
+
+  const handleEditLiability = async (id: number, item: Omit<Liability, 'id'>) => {
+    await api.updateLiability(id, item);
+    await loadLiabilities();
+  };
+
+  const handleDeleteLiability = async (id: number) => {
+    try {
+      await api.deleteLiability(id);
+      await loadLiabilities();
+    } catch (err: any) {
+      console.error('Error deleting liability:', err);
+      setErrorMessage(err.message || 'İşlem başarısız.');
+      setTimeout(() => setErrorMessage(null), 5000);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -178,6 +218,7 @@ export default function DashboardApp() {
   useEffect(() => {
     if (token) {
       loadData();
+      loadLiabilities();
     }
   }, [token]);
 
@@ -421,6 +462,18 @@ export default function DashboardApp() {
                   performanceMetrics={performanceMetrics}
                   performanceDays={performanceDays}
                   onPerformanceDaysChange={setPerformanceDays}
+                  liabilities={liabilities}
+                />
+              )}
+
+              {activeTab === 'liabilities' && (
+                <LiabilitiesView
+                  liabilities={liabilities}
+                  settings={settings}
+                  exchangeRates={exchangeRates}
+                  onAddLiability={handleAddLiability}
+                  onEditLiability={handleEditLiability}
+                  onDeleteLiability={handleDeleteLiability}
                 />
               )}
 

@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Wallet, BarChart2, ShieldAlert, TrendingUp, Settings, Newspaper, ShieldCheck } from 'lucide-react';
+import { Wallet, BarChart2, ShieldAlert, TrendingUp, Settings, Newspaper, ShieldCheck, Landmark } from 'lucide-react';
 import { ActiveTab, UserSettings } from '../types';
 import { useT } from '../i18n';
 import { useAuth } from '../AuthContext';
@@ -21,6 +21,7 @@ export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarPr
     { id: 'risk', label: t.risk, icon: ShieldAlert },
     { id: 'markets', label: t.markets, icon: TrendingUp },
     { id: 'news', label: t.news, icon: Newspaper },
+    { id: 'liabilities', label: t.liabilities, icon: Landmark },
     { id: 'settings', label: t.settings, icon: Settings },
   ] as const;
 

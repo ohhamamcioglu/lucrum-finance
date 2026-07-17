@@ -35,7 +35,19 @@ export interface UserSettings {
   language: 'tr' | 'en';
 }
 
-export type ActiveTab = 'portfolio' | 'analytics' | 'risk' | 'markets' | 'news' | 'settings';
+export type ActiveTab = 'portfolio' | 'analytics' | 'risk' | 'markets' | 'news' | 'liabilities' | 'settings';
+
+export type LiabilityType = 'Loan' | 'CreditCard' | 'Mortgage' | 'Other';
+
+export interface Liability {
+  id: number;
+  name: string;
+  liability_type: LiabilityType;
+  amount: number;
+  currency: 'TRY' | 'USD' | 'EUR' | 'GBP';
+  due_date?: string | null;
+  interest_rate?: number | null;
+}
 
 export interface NewsArticle {
   ticker: string;

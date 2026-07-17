@@ -20,6 +20,28 @@ export interface BackendPosition {
   current_value_gbp?: number | null;
 }
 
+export interface BackendLiability {
+  id: number;
+  name: string;
+  liability_type: string;
+  amount: number;
+  currency: string;
+  due_date?: string | null;
+  interest_rate?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PaymentHistoryItem {
+  id: number;
+  provider: string;
+  plan_tier: string;
+  amount: number;
+  currency: string;
+  status: string;
+  created_at: string;
+}
+
 export interface PortfolioResponse {
   timestamp: string;
   summary: {
@@ -178,6 +200,38 @@ export const api = {
 
   async getPerformance(days = 90, currency = 'TRY'): Promise<PerformanceResponse> {
     return request(`${BASE_URL}/api/portfolio/performance?days=${days}&currency=${currency}`);
+  },
+
+  async getLiabilities(): Promise<BackendLiability[]> {
+    return request(`${BASE_URL}/api/liabilities`);
+  },
+
+  async addLiability(item: {
+    name: string; liability_type: string; amount: number; currency: string;
+    due_date?: string | null; interest_rate?: number | null;
+  }): Promise<BackendLiability> {
+    return request(`${BASE_URL}/api/liabilities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    });
+  },
+
+  async updateLiability(id: number, item: {
+    name?: string; liability_type?: string; amount?: number; currency?: string;
+    due_date?: string | null; interest_rate?: number | null;
+  }): Promise<BackendLiability> {
+    return request(`${BASE_URL}/api/liabilities/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item)
+    });
+  },
+
+  async deleteLiability(id: number): Promise<{ message: string }> {
+    return request(`${BASE_URL}/api/liabilities/${id}`, {
+      method: 'DELETE'
+    });
   },
 
   async addPosition(pos: Omit<BackendPosition, 'id'>): Promise<BackendPosition> {

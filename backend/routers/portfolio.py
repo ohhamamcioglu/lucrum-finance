@@ -9,7 +9,7 @@ from cache import finance_cache as _fc
 from models import TargetAllocation, TargetAllocationCreate
 from crud import (
     get_positions, get_target_allocations, save_target_allocations,
-    get_portfolio_snapshots, save_portfolio_snapshot
+    save_portfolio_snapshot
 )
 from services import calculate_portfolio, calculate_twrr_and_metrics
 from dependencies import get_current_user_id, get_db
@@ -32,24 +32,6 @@ def get_portfolio(
         pass
 
     return portfolio
-
-@router.get("/history")
-def get_portfolio_history(
-    days: int = Query(90, ge=1, le=365),
-    user_id: int = Depends(get_current_user_id),
-    db: Session = Depends(get_db)
-):
-    """Portföy geçmişini al"""
-    snapshots = get_portfolio_snapshots(user_id, days, db=db)
-    return [
-        {
-            "date": s["snapshot_date"],
-            "value": s["total_value_try"],
-            "invested": s["total_invested_try"],
-            "return_pct": s["total_return_pct"],
-        }
-        for s in snapshots
-    ]
 
 @router.get("/performance")
 def get_performance(
