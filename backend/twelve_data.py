@@ -2776,6 +2776,16 @@ def get_tefas_nav(fund_code: str, start_date: date, end_date: date) -> Any:
     return series
 
 
+def get_tefas_risk_score(fund_code: str) -> Optional[float]:
+    """TEFAS fonunun Fonoloji üzerinden SPK/KAP resmi risk seviyesini (1-7) döner.
+    Anahtar tanımlı değilse veya istek başarısız olursa None — çağıran taraf
+    sabit bir varsayılana düşer."""
+    data = _fonoloji_api(f"/funds/{fund_code.upper().strip()}")
+    fund = (data or {}).get("fund") or {}
+    risk = fund.get("risk_score")
+    return float(risk) if risk is not None else None
+
+
 def get_tefas_current_price(fund_code: str) -> Optional[float]:
     """TEFAS fonunun en güncel fiyatını döner. 1 günlük cache."""
     from datetime import timedelta

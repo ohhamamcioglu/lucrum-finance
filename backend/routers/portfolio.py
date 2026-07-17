@@ -67,7 +67,14 @@ def get_performance(
 def _compute_risk_score(symbol: str, asset_class: str) -> float:
     """
     Beta'dan riskScore hesapla (1-8 arası).
-    US hisseler → Twelve Data beta. BIST/Kripto → yfinance fallback.
+    US hisseler → Twelve Data beta.
+    BIST → yfinance beta (Twelve Data'nın ücretsiz planı XIST beta göstergesini
+    desteklemiyor — her çağrı sessizce başarısız olup varsayılana düşerken
+    paylaşılan 55 istek/dk API kotasını boşuna tüketiyordu).
+    TEFAS → Fonoloji'nin döndürdüğü SPK/KAP resmi risk seviyesi (1-7); eskiden
+    TEFAS fon kodu (örn. "YAS") sanki bir BIST hissesiymiş gibi ".IS" eklenip
+    Twelve Data'ya soruluyordu — var olmayan bir sembol için her zaman
+    başarısız olan, tamamen boşa giden bir API çağrısıydı.
     Formül: riskScore = beta * 4
     """
     ac = (asset_class or '').strip()
@@ -78,6 +85,12 @@ def _compute_risk_score(symbol: str, asset_class: str) -> float:
     if ac == 'Kripto':
         return 7.0
 
+    if ac == 'TEFAS Fonu':
+        risk = td.get_tefas_risk_score(symbol)
+        if risk is not None:
+            return round(max(1.0, min(8.0, risk)), 2)
+        return 4.0
+
     # US hisseler → Twelve Data (DB cache'li, hızlı)
     if ac == 'ABD Hisse/ETF':
         beta = td.get_beta_value(symbol)
@@ -85,11 +98,15 @@ def _compute_risk_score(symbol: str, asset_class: str) -> float:
             return round(max(1.0, min(8.0, beta * 4)), 2)
         return 4.0
 
-    # BIST → Twelve Data beta göstergesi
+    # BIST → yfinance beta
     yf_sym = symbol if symbol.upper().endswith('.IS') else symbol + '.IS'
-    beta = td.get_beta_value(yf_sym)
-    if beta is not None and beta > 0:
-        return round(max(1.0, min(8.0, beta * 4)), 2)
+    try:
+        import yfinance as yf
+        beta = yf.Ticker(yf_sym).info.get('beta')
+        if beta is not None and beta > 0:
+            return round(max(1.0, min(8.0, float(beta) * 4)), 2)
+    except Exception:
+        pass
 
     return 4.0
 
