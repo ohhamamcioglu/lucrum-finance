@@ -1015,6 +1015,45 @@ def calculate_twrr_and_metrics(user_id: int, days: int = 90, currency: str = 'TR
                     fallback_val = fallback_val / rate_d
             return get_rate_on_day(hist, d, fallback_val)
 
+    # SELL işlemlerinde yatırılan sermayeyi (invested capital) SATIŞ FİYATIYLA değil, o ana
+    # kadarki AĞIRLIKLI ORTALAMA ALIM MALİYETİYLE düşmek için ticker başına kronolojik bir
+    # maliyet takibi yapıyoruz. Aksi halde karlı bir satış invested_capital'ı yapay şekilde
+    # (hatta eksiye) düşürüp getiri oranını sonsuza (%inf) sıçratıyordu — örn. 1000 TL'lik bir
+    # pozisyonun yarısı 1000 TL'ye (kâr ederek) satıldığında invested_capital 0'a düşüyordu.
+    sell_cost_try: dict = {}  # transaction id -> bu satışla düşülecek TL cinsinden maliyet bazı
+    _running_qty: dict = {}
+    _running_cost_try: dict = {}
+    for t in sorted(txns, key=lambda x: (x['transaction_date'], x.get('id') or 0)):
+        ticker_ = t['ticker']
+        buy_currency_ = t.get('currency', 'TRY')
+        qty_ = t['quantity']
+        price_ = t['price']
+        t_date_ = t['transaction_date']
+
+        if buy_currency_ == "TRY":
+            native_cost_try = qty_ * price_
+        elif buy_currency_ == "USD":
+            native_cost_try = qty_ * price_ * get_rate_on_day(usd_try_history, t_date_, 35.0)
+        elif buy_currency_ == "EUR":
+            native_cost_try = qty_ * price_ * get_rate_on_day(eur_try_history, t_date_, 38.0)
+        elif buy_currency_ == "GBP":
+            native_cost_try = qty_ * price_ * get_rate_on_day(gbp_try_history, t_date_, 43.0)
+        else:
+            native_cost_try = qty_ * price_
+
+        prev_qty = _running_qty.get(ticker_, 0.0)
+        prev_cost = _running_cost_try.get(ticker_, 0.0)
+
+        if t['transaction_type'] == "BUY":
+            _running_qty[ticker_] = prev_qty + qty_
+            _running_cost_try[ticker_] = prev_cost + native_cost_try
+        elif t['transaction_type'] == "SELL":
+            avg_cost_per_unit = (prev_cost / prev_qty) if prev_qty > 0 else 0.0
+            removed = min(qty_, prev_qty) * avg_cost_per_unit
+            sell_cost_try[t.get('id')] = removed
+            _running_qty[ticker_] = max(0.0, prev_qty - qty_)
+            _running_cost_try[ticker_] = max(0.0, prev_cost - removed)
+
     for d in date_list:
         # Transactions on or before day d
         active_txns = [t for t in txns if t['transaction_date'] <= d]
@@ -1086,7 +1125,9 @@ def calculate_twrr_and_metrics(user_id: int, days: int = 90, currency: str = 'TR
             if t['transaction_type'] == "BUY":
                 total_invested_d += cost
             elif t['transaction_type'] == "SELL":
-                total_invested_d -= cost
+                # Satış fiyatı DEĞİL, yukarıda önceden hesaplanmış ağırlıklı ortalama maliyet
+                # bazı düşülüyor — bkz. sell_cost_try'nin üstündeki not.
+                total_invested_d -= sell_cost_try.get(t.get('id'), cost)
 
         daily_portfolio.append({
             "date": d,
