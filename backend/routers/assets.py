@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from urllib.request import urlopen, Request
 from urllib.parse import quote_plus
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 import requests
 
 import twelve_data as td
@@ -653,53 +653,44 @@ def get_asset_fundamentals(
     if asset_class not in ("ABD Hisse/ETF", "BIST Hissesi"):
         raise HTTPException(status_code=400, detail="Fundamentals yalnızca ABD Hisse/ETF ve BIST Hisseleri için")
 
-    try:
-        with ThreadPoolExecutor(max_workers=13) as ex:
-            f_stats = ex.submit(td.get_statistics, t_code)
-            f_earn  = ex.submit(td.get_earnings,    t_code, 8)
-            f_bal   = ex.submit(td.get_balance_sheet, t_code)
-            f_exec  = ex.submit(td.get_executives,  t_code)
-            f_prof  = ex.submit(td.get_profile,     t_code)
-            f_logo  = ex.submit(td.get_logo,        t_code)
-            f_div   = ex.submit(td.get_dividends,   t_code)
-            f_split = ex.submit(td.get_splits,      t_code)
-            f_pt    = ex.submit(td.get_price_target, t_code)
-            f_rec   = ex.submit(td.get_recommendations, t_code)
-            f_ins   = ex.submit(td.get_insider_transactions, t_code)
-            f_inst  = ex.submit(td.get_institutional_holders, t_code)
-            f_fund  = ex.submit(td.get_fund_holders, t_code)
-
-            stats    = f_stats.result(timeout=20)
-            earnings = f_earn.result(timeout=20)
-            balance  = f_bal.result(timeout=25)
-            execs    = f_exec.result(timeout=15)
-            profile  = f_prof.result(timeout=15)
-            logo     = f_logo.result(timeout=15)
-            dividends= f_div.result(timeout=15)
-            splits   = f_split.result(timeout=15)
-            price_target = f_pt.result(timeout=15)
-            recommendations = f_rec.result(timeout=15)
-            insiders = f_ins.result(timeout=15)
-            institutional = f_inst.result(timeout=15)
-            fund_holders = f_fund.result(timeout=15)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Fundamentals error for {t_code}: {e}")
+    # ÖNEMLİ: eskiden her alt-çağrının sonucu SIRAYLA .result(timeout=X) ile bekleniyordu —
+    # bu, tüm timeout'ların TOPLAMI kadar (13 çağrı × 15-25sn ≈ birkaç dakika) beklenebileceği
+    # anlamına geliyordu ve bir tek alt-çağrı (örn. rate-limit'e takılan Twelve Data isteği)
+    # yavaşladığında "Temel Analiz" sekmesi kullanıcıya sonsuza dek yükleniyormuş gibi
+    # görünüyordu. wait(..., timeout=20) TÜM çağrılar için TEK bir toplam üst sınır koyar;
+    # süre dolduğunda henüz bitmeyenler için None döner (arka planda çalışmaya devam ederler,
+    # sonuçları zaten kullanılmayacağı için beklenmez) — endpoint her zaman ~20sn içinde,
+    # elindeki kısmi veriyle yanıt verir.
+    with ThreadPoolExecutor(max_workers=13) as ex:
+        futures = {
+            "statistics": ex.submit(td.get_statistics, t_code),
+            "earnings": ex.submit(td.get_earnings, t_code, 8),
+            "balance_sheet": ex.submit(td.get_balance_sheet, t_code),
+            "executives": ex.submit(td.get_executives, t_code),
+            "profile": ex.submit(td.get_profile, t_code),
+            "logo": ex.submit(td.get_logo, t_code),
+            "dividends": ex.submit(td.get_dividends, t_code),
+            "splits": ex.submit(td.get_splits, t_code),
+            "price_target": ex.submit(td.get_price_target, t_code),
+            "recommendations": ex.submit(td.get_recommendations, t_code),
+            "insiders": ex.submit(td.get_insider_transactions, t_code),
+            "institutional_holders": ex.submit(td.get_institutional_holders, t_code),
+            "fund_holders": ex.submit(td.get_fund_holders, t_code),
+        }
+        done, _pending = wait(futures.values(), timeout=20)
+        results = {}
+        for key, fut in futures.items():
+            if fut in done:
+                try:
+                    results[key] = fut.result()
+                except Exception:
+                    results[key] = None
+            else:
+                results[key] = None
 
     return {
         "symbol": t_code,
-        "statistics": stats,
-        "earnings": earnings,
-        "balance_sheet": balance,
-        "executives": execs,
-        "profile": profile,
-        "logo": logo,
-        "dividends": dividends,
-        "splits": splits,
-        "price_target": price_target,
-        "recommendations": recommendations,
-        "insiders": insiders,
-        "institutional_holders": institutional,
-        "fund_holders": fund_holders,
+        **results,
     }
 
 @router.get("/assets/{ticker}/indicators")
@@ -714,16 +705,25 @@ def get_asset_indicators(
     if asset_class not in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
         raise HTTPException(status_code=400, detail="Teknik indikatörler yalnızca Hisse, BIST ve Kripto için desteklenmektedir")
 
-    try:
-        with ThreadPoolExecutor(max_workers=3) as ex:
-            f_rsi  = ex.submit(td.get_rsi,    t_code, 14, interval, periods)
-            f_macd = ex.submit(td.get_macd,   t_code, interval, periods)
-            f_bb   = ex.submit(td.get_bbands, t_code, 20, interval, periods)
-            rsi  = f_rsi.result(timeout=20)
-            macd = f_macd.result(timeout=20)
-            bb   = f_bb.result(timeout=20)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
+    # Aynı toplam-üst-sınır mantığı fundamentals uç noktasındaki gibi: sıralı .result(timeout=X)
+    # yerine tek bir wait() ile en fazla 20sn'de yanıt veriyoruz.
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        f_rsi  = ex.submit(td.get_rsi,    t_code, 14, interval, periods)
+        f_macd = ex.submit(td.get_macd,   t_code, interval, periods)
+        f_bb   = ex.submit(td.get_bbands, t_code, 20, interval, periods)
+        done, _pending = wait([f_rsi, f_macd, f_bb], timeout=20)
+
+        def _safe(fut):
+            if fut not in done:
+                return []
+            try:
+                return fut.result()
+            except Exception:
+                return []
+
+        rsi  = _safe(f_rsi)
+        macd = _safe(f_macd)
+        bb   = _safe(f_bb)
 
     return {
         "symbol": t_code,

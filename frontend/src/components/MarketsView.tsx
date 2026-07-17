@@ -93,7 +93,10 @@ export default function MarketsView({
   }, [selectedAsset?.symbol]);
 
   const fetchFundamentals = useCallback(async (symbol: string, assetClass: string) => {
-    if (assetClass !== 'ABD Hisse/ETF') return;
+    // Backend /assets/{ticker}/fundamentals ABD Hisse/ETF ve BIST Hissesi'ni destekliyor —
+    // burada sadece ABD Hisse/ETF'e izin verilmesi BIST hisselerinin Temel Analiz sekmesinin
+    // hiçbir zaman istek bile atmamasına (hep "Veri bulunamadı" göstermesine) yol açıyordu.
+    if (assetClass !== 'ABD Hisse/ETF' && assetClass !== 'BIST Hissesi') return;
     setLoadingFundamentals(true);
     try {
       const data = await api.getAssetFundamentals(symbol, assetClass);
@@ -551,15 +554,18 @@ export default function MarketsView({
             ].map(tab => {
               const isActive = activeDetailTab === tab.id;
               const ac = getAssetClass(selectedAsset);
-              const isUS = ac === 'ABD Hisse/ETF';
+              // Backend /assets/{ticker}/fundamentals ABD Hisse/ETF ve BIST Hissesi'ni destekliyor
+              // — eskiden burada sadece ABD Hisse/ETF'e izin verildiği için BIST hisselerinde
+              // "Temel Analiz" ve "Şirket Kadrosu" sekmeleri hiç tıklanamıyordu (soluk/disabled).
+              const isFundamentalsSupported = ac === 'ABD Hisse/ETF' || ac === 'BIST Hissesi';
               const isIndicatorSupported = ac === 'ABD Hisse/ETF' || ac === 'BIST Hissesi' || ac === 'Kripto';
-              
+
               let disabled = false;
               let titleMsg = '';
               if (tab.id === 'fundamentals' || tab.id === 'profile') {
-                disabled = !isUS;
+                disabled = !isFundamentalsSupported;
                 if (disabled) {
-                  titleMsg = settings.language === 'tr' ? 'Yalnızca ABD Hisse/ETF için geçerli' : 'Only available for US Stocks/ETFs';
+                  titleMsg = settings.language === 'tr' ? 'Yalnızca ABD Hisse/ETF ve BIST için geçerli' : 'Only available for US Stocks/ETFs and BIST';
                 }
               } else if (tab.id === 'indicators') {
                 disabled = !isIndicatorSupported;
@@ -826,7 +832,7 @@ export default function MarketsView({
                             RSI (14)
                           </h4>
                           <span className="font-mono font-bold text-xs text-[#2D2926]">
-                            {indicators.rsi[0]?.v1?.toFixed(1) ?? '—'}
+                            {(indicators.rsi[0]?.rsi ?? indicators.rsi[0]?.v1)?.toFixed(1) ?? '—'}
                           </span>
                         </div>
                         <div className="h-28 bg-[#F1EFE9] border border-[#E8E2D9] rounded-lg p-2 relative overflow-visible">
@@ -835,12 +841,15 @@ export default function MarketsView({
                             const stepX = 380 / Math.max(rsiValues.length - 1, 1);
                             
                             // Convert RSI (0-100) to height (0-90)
-                            const coords = rsiValues.map((pt, idx) => ({
-                              x: idx * stepX,
-                              y: 90 - (pt.v1 / 100) * 80,
-                              val: pt.v1,
-                              date: pt.dt
-                            }));
+                            const coords = rsiValues.map((pt, idx) => {
+                              const rsiVal = pt.rsi ?? pt.v1;
+                              return {
+                                x: idx * stepX,
+                                y: 90 - (rsiVal / 100) * 80,
+                                val: rsiVal,
+                                date: pt.dt
+                              };
+                            });
                             
                             const rsiPath = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
                             
@@ -875,29 +884,36 @@ export default function MarketsView({
                             MACD (12, 26, 9)
                           </h4>
                           <div className="flex gap-3 font-mono text-[9px] font-bold">
-                            <span className="text-[#8C9A86]">MACD: {indicators.macd[0]?.v1?.toFixed(3) ?? '—'}</span>
-                            <span className="text-[#D1A86A]">Signal: {indicators.macd[0]?.v2?.toFixed(3) ?? '—'}</span>
-                            <span className={indicators.macd[0]?.v3 >= 0 ? 'text-[#7A8874]' : 'text-[#B5836F]'}>
-                              Hist: {indicators.macd[0]?.v3?.toFixed(3) ?? '—'}
+                            <span className="text-[#8C9A86]">MACD: {(indicators.macd[0]?.macd ?? indicators.macd[0]?.v1)?.toFixed(3) ?? '—'}</span>
+                            <span className="text-[#D1A86A]">Signal: {(indicators.macd[0]?.macd_signal ?? indicators.macd[0]?.v2)?.toFixed(3) ?? '—'}</span>
+                            <span className={(indicators.macd[0]?.macd_hist ?? indicators.macd[0]?.v3) >= 0 ? 'text-[#7A8874]' : 'text-[#B5836F]'}>
+                              Hist: {(indicators.macd[0]?.macd_hist ?? indicators.macd[0]?.v3)?.toFixed(3) ?? '—'}
                             </span>
                           </div>
                         </div>
                         <div className="h-32 bg-[#F1EFE9] border border-[#E8E2D9] rounded-lg p-2 relative overflow-visible">
                           {(() => {
-                            const macdValues = [...indicators.macd].reverse();
+                            // Backend hem semantik alan adları (macd/macd_signal/macd_hist) hem de
+                            // eski/geriye dönük uyumlu cache satırlarından gelen v1/v2/v3 döndürebiliyor.
+                            const macdValues = [...indicators.macd].reverse().map((pt: any) => ({
+                              dt: pt.dt,
+                              macd: pt.macd ?? pt.v1,
+                              macd_signal: pt.macd_signal ?? pt.v2,
+                              macd_hist: pt.macd_hist ?? pt.v3,
+                            }));
                             const stepX = 380 / Math.max(macdValues.length - 1, 1);
                             
                             // Find absolute max value for MACD lines & histogram to scale properly
-                            const allVals = macdValues.flatMap(d => [d.v1, d.v2, d.v3].filter(v => v != null));
+                            const allVals = macdValues.flatMap(d => [d.macd, d.macd_signal, d.macd_hist].filter(v => v != null));
                             const maxAbs = Math.max(...allVals.map(Math.abs), 0.01) * 1.1;
-                            
+
                             const scaleY = (v: number) => {
                               // Centered around 50 (middle of height 100)
                               return 50 - (v / maxAbs) * 45;
                             };
-                            
-                            const macdCoords = macdValues.map((pt, idx) => ({ x: idx * stepX, y: scaleY(pt.v1) }));
-                            const signalCoords = macdValues.map((pt, idx) => ({ x: idx * stepX, y: scaleY(pt.v2) }));
+
+                            const macdCoords = macdValues.map((pt, idx) => ({ x: idx * stepX, y: scaleY(pt.macd) }));
+                            const signalCoords = macdValues.map((pt, idx) => ({ x: idx * stepX, y: scaleY(pt.macd_signal) }));
                             
                             const macdPath = macdCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
                             const signalPath = signalCoords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
@@ -912,8 +928,8 @@ export default function MarketsView({
                                 {/* MACD Histogram Bars */}
                                 {macdValues.map((pt, idx) => {
                                   const barX = idx * stepX;
-                                  const barY = scaleY(pt.v3);
-                                  const isPos = pt.v3 >= 0;
+                                  const barY = scaleY(pt.macd_hist);
+                                  const isPos = pt.macd_hist >= 0;
                                   return (
                                     <rect
                                       key={idx}
