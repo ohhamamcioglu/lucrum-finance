@@ -921,18 +921,25 @@ export default function DashboardView({
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    {h.symbol !== 'USD' && (
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={() => openEdit(h)} title={t.editPosition}
-                          className="text-[#9E958C]/60 hover:text-[#8C9A86] p-1.5 rounded hover:bg-[#8C9A86]/10 transition-all">
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => onDeleteHolding(h.id)} title={t.deletePosition}
-                          className="text-[#9E958C]/60 hover:text-[#B5836F] p-1.5 rounded hover:bg-[#B5836F]/10 transition-all">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
+                    {/* Sarmalayıcı div koşulsuz render edilir (içindeki butonlar koşullu) — aksi halde
+                        nakit satırlarında hücre tamamen boş kalıp o satırın diğerlerinden daha kısa
+                        görünmesine (satırların hizasız/kaymış gibi görünmesine) yol açıyordu. Ayrıca
+                        eskiden sadece USD nakit hariç tutuluyordu, TRY/EUR/GBP nakit için buton
+                        yanlışlıkla gösteriliyordu — artık tüm nakit pozisyonları tutarlı davranıyor. */}
+                    <div className="flex items-center justify-center gap-1 h-7">
+                      {h.category !== 'Cash' && (
+                        <>
+                          <button onClick={() => openEdit(h)} title={t.editPosition}
+                            className="text-[#9E958C]/60 hover:text-[#8C9A86] p-1.5 rounded hover:bg-[#8C9A86]/10 transition-all">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => onDeleteHolding(h.id)} title={t.deletePosition}
+                            className="text-[#9E958C]/60 hover:text-[#B5836F] p-1.5 rounded hover:bg-[#B5836F]/10 transition-all">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )) : (
@@ -954,7 +961,7 @@ export default function DashboardView({
                   <Pencil className="w-4 h-4 text-[#8C9A86]" />
                   {t.editPosition} — {editingHolding.symbol}
                 </h3>
-                <button onClick={() => setEditingHolding(null)} className="text-[#6B645E] hover:text-[#2D2926] p-1.5 rounded-full hover:bg-[#E8E2D9] transition-colors"><X className="w-4 h-4" /></button>
+                <button onClick={() => setEditingHolding(null)} aria-label={t.detailClose} className="text-[#6B645E] hover:text-[#2D2926] p-1.5 rounded-full hover:bg-[#E8E2D9] transition-colors"><X className="w-4 h-4" /></button>
               </div>
 
               <form onSubmit={handleEditSubmit} className="p-6 space-y-5">
@@ -1061,7 +1068,7 @@ export default function DashboardView({
                 <h3 className="text-xs font-bold text-[#2D2926] uppercase tracking-widest flex items-center gap-2 font-serif">
                   <Wallet2 className="w-4 h-4 text-[#8C9A86]" />{t.logNewAsset}
                 </h3>
-                <button onClick={() => setShowAddModal(false)} className="text-[#6B645E] hover:text-[#2D2926] p-1.5 rounded-full hover:bg-[#E8E2D9] transition-colors"><X className="w-4 h-4" /></button>
+                <button onClick={() => setShowAddModal(false)} aria-label={t.detailClose} className="text-[#6B645E] hover:text-[#2D2926] p-1.5 rounded-full hover:bg-[#E8E2D9] transition-colors"><X className="w-4 h-4" /></button>
               </div>
               <form onSubmit={handleSubmitAdd} className="p-6 space-y-4 overflow-y-auto custom-scrollbar">
                 {/* 1. Category Selector */}
@@ -1318,7 +1325,7 @@ export default function DashboardView({
                   <TrendingUp className="w-4 h-4 text-[#8C9A86]" />
                   {selectedAssetForDetail.name} ({selectedAssetForDetail.symbol})
                 </h3>
-                <button onClick={() => setSelectedAssetForDetail(null)} className="text-[#6B645E] hover:text-[#2D2926] p-1.5 rounded-full hover:bg-[#E8E2D9] transition-colors"><X className="w-4 h-4" /></button>
+                <button onClick={() => setSelectedAssetForDetail(null)} aria-label={t.detailClose} className="text-[#6B645E] hover:text-[#2D2926] p-1.5 rounded-full hover:bg-[#E8E2D9] transition-colors"><X className="w-4 h-4" /></button>
               </div>
 
               <div className="p-6 space-y-6">

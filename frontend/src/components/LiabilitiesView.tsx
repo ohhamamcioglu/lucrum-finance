@@ -175,7 +175,7 @@ export default function LiabilitiesView({
                   <Landmark className="w-4 h-4 text-[#8C9A86]" />
                   {editingId != null ? t.editLiability : t.addLiability}
                 </h3>
-                <button onClick={() => setShowModal(false)} className="text-[#6B645E] hover:text-[#2D2926] p-1.5 rounded-full hover:bg-[#E8E2D9] transition-colors"><X className="w-4 h-4" /></button>
+                <button onClick={() => setShowModal(false)} aria-label={t.detailClose} className="text-[#6B645E] hover:text-[#2D2926] p-1.5 rounded-full hover:bg-[#E8E2D9] transition-colors"><X className="w-4 h-4" /></button>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>

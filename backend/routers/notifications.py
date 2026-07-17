@@ -128,7 +128,21 @@ def get_news_notifications(
                 all_news.extend(future.result())
             except Exception:
                 pass
-                
+
+    # Aynı makale birden fazla portföy sembolü için eşleşebiliyor (örn. hem NVDA hem
+    # NVDA'yı elinde tutan bir ETF'in haberleri sorgulanırken aynı haber iki kez
+    # dönebiliyordu) — url'e göre tekilleştir, ilk görüleni koru.
+    seen_urls = set()
+    deduped_news = []
+    for item in all_news:
+        u = item.get("url")
+        if u and u in seen_urls:
+            continue
+        if u:
+            seen_urls.add(u)
+        deduped_news.append(item)
+    all_news = deduped_news
+
     # Tarihe göre azalan sırala
     # Not: alan adı eskiden "datetime" idi ama makale nesneleri "published_at" kullanıyor —
     # x.get("datetime") her zaman None dönüp sıralama sessizce hiç çalışmıyordu.

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, Bell, Grid, Newspaper, TrendingUp, Loader2 } from 'lucide-react';
+import { Search, Bell, Newspaper, TrendingUp, Loader2 } from 'lucide-react';
 import { UserSettings } from '../types';
 import { formatCurrency, convertCurrency } from '../utils';
 import { useT } from '../i18n';
@@ -300,9 +300,6 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates }:
               )}
             </div>
 
-            <button className="text-[#6B645E] hover:text-[#8C9A86] transition-colors p-1.5 rounded hover:bg-[#F1EFE9]">
-              <Grid className="w-4 h-4" />
-            </button>
           </div>
 
           <div className="h-5 w-[1px] bg-[#E8E2D9]"></div>
