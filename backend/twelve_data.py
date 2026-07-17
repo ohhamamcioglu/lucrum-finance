@@ -40,6 +40,16 @@ API_KEY  = os.getenv("TWELVE_DATA_API_KEY", "")
 BASE_URL = "https://api.twelvedata.com"
 DB_PATH  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "twelve_data.db")
 
+# TEFAS fon verisi için birincil kaynak. pytefas (unofficial scraping) eşzamanlı
+# istek altında TEFAS sunucusunda ciddi yavaşlıyor (gözlemlenen: 8 fon paralel
+# çekildiğinde 33-95sn/fon, 6sn timeout'u fazlasıyla aşıyor). Fonoloji resmi bir
+# API sunuyor, fon verisi (BIST canlı fiyat verisinin aksine) yeniden-dağıtım
+# kısıtına tabi değil, ve karşılaştırmalı testte pytefas ile birebir aynı fiyatı
+# döndürdü. Anahtar yoksa (local dev / henüz ayarlanmamışsa) sessizce pytefas'a
+# düşülür — bkz. get_tefas_current_price / get_tefas_nav.
+FONOLOJI_API_KEY  = os.getenv("FONOLOJI_API_KEY", "")
+FONOLOJI_BASE_URL = "https://fonoloji.com/v1"
+
 # Cache TTL'ler (saniye)
 TTL_QUOTE        =  5 * 60       # 5 dk  — anlık fiyat
 TTL_RATE         =  1 * 3600     # 1 sa  — döviz kuru
@@ -2587,42 +2597,51 @@ def get_market_movers(market: str, direction: str = "gainers") -> list[dict]:
     return []
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# 13. TEFAS FON VERİTABANI ÖNBELLEĞİ
-# ═══════════════════════════════════════════════════════════════════════════
+def _fonoloji_api(path: str, params: dict | None = None, timeout: int = 10) -> dict | None:
+    """Fonoloji.com TEFAS API için basit GET. Anahtar tanımlı değilse veya istek
+    başarısız olursa None döner — çağıran taraf zaten pytefas'a düşüyor."""
+    if not FONOLOJI_API_KEY:
+        return None
+    try:
+        r = _req.get(
+            f"{FONOLOJI_BASE_URL}{path}",
+            headers={"X-API-Key": FONOLOJI_API_KEY},
+            params=params or {},
+            timeout=timeout,
+        )
+        if not r.ok:
+            logging.warning("Fonoloji %s HTTP %s", path, r.status_code)
+            return None
+        return r.json()
+    except Exception as e:
+        logging.warning("Fonoloji %s exception: %s", path, e)
+        return None
 
-def get_tefas_nav(fund_code: str, start_date: date, end_date: date) -> Any:
-    """
-    TEFAS fonunun günlük fiyat (NAV) serisini döner.
-    - Önce veritabanındaki kayıtları tarar.
-    - Eksik tarihler varsa pytefas ile çeker ve veritabanına ekler (Incremental Sync).
-    Returns: pandas.Series (index=DatetimeIndex normalize, values=price)
-    """
-    import pandas as pd
-    from datetime import timedelta
-    
-    code = fund_code.upper().strip()
-    
-    # 1. Veritabanından mevcut kayıtları sorgula
+
+def _save_tefas_nav_rows(code: str, rows: list[tuple]) -> None:
+    if not rows:
+        return
     with _db_lock:
         c = _conn()
-        rows = c.execute(
-            "SELECT dt, price FROM td_tefas_nav WHERE fund_code=? AND dt BETWEEN ? AND ? ORDER BY dt ASC",
-            (code, start_date.isoformat(), end_date.isoformat())
-        ).fetchall()
+        c.executemany("""
+            INSERT OR REPLACE INTO td_tefas_nav
+            (fund_code, dt, price, shares_outstanding, investor_count, portfolio_size, fetched_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, rows)
+        c.commit()
         c.close()
-        
-    db_data = {r["dt"]: r["price"] for r in rows}
-    
-    # Eksik günlerin aralığını belirle
+
+
+def _compute_missing_ranges(db_data: dict, start_date: date, end_date: date) -> list[tuple]:
+    """[start_date, end_date] aralığındaki hafta içi günlerden db_data'da olmayanları,
+    ardışık aralıklar halinde döner."""
+    from datetime import timedelta
     missing_ranges = []
     curr = start_date
     range_start = None
-    
     while curr <= end_date:
         is_weekend = curr.weekday() >= 5
         date_str = curr.isoformat()
-        
         if not is_weekend and date_str not in db_data:
             if range_start is None:
                 range_start = curr
@@ -2631,13 +2650,68 @@ def get_tefas_nav(fund_code: str, start_date: date, end_date: date) -> Any:
                 missing_ranges.append((range_start, curr - timedelta(days=1)))
                 range_start = None
         curr += timedelta(days=1)
-        
     if range_start is not None:
         missing_ranges.append((range_start, end_date))
-        
-    # Eksik verileri pytefas ile çek ve veritabanına kaydet
+    return missing_ranges
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 13. TEFAS FON VERİTABANI ÖNBELLEĞİ
+# ═══════════════════════════════════════════════════════════════════════════
+
+def get_tefas_nav(fund_code: str, start_date: date, end_date: date) -> Any:
+    """
+    TEFAS fonunun günlük fiyat (NAV) serisini döner.
+    - Önce veritabanındaki kayıtları tarar.
+    - Eksik tarihler varsa önce Fonoloji API'den (bkz. FONOLOJI_API_KEY yorumu),
+      hâlâ eksik kalırsa pytefas ile çeker ve veritabanına ekler (Incremental Sync).
+    Returns: pandas.Series (index=DatetimeIndex normalize, values=price)
+    """
+    import pandas as pd
+    from datetime import timedelta
+
+    code = fund_code.upper().strip()
+
+    # 1. Veritabanından mevcut kayıtları sorgula
+    with _db_lock:
+        c = _conn()
+        rows = c.execute(
+            "SELECT dt, price FROM td_tefas_nav WHERE fund_code=? AND dt BETWEEN ? AND ? ORDER BY dt ASC",
+            (code, start_date.isoformat(), end_date.isoformat())
+        ).fetchall()
+        c.close()
+
+    db_data = {r["dt"]: r["price"] for r in rows}
+
+    missing_ranges = _compute_missing_ranges(db_data, start_date, end_date)
+
+    # 2. Eksik varsa önce Fonoloji'den dene — tek çağrıda fonun TÜM geçmişini
+    # döner (pytefas'ın aksine hızlı ve eşzamanlı isteklerde tıkanmıyor).
+    if missing_ranges and FONOLOJI_API_KEY:
+        try:
+            data = _fonoloji_api(f"/funds/{code}/history", {"period": "all"})
+            points = (data or {}).get("points") or []
+            if points:
+                ts = _now()
+                db_rows = []
+                for p in points:
+                    dt_str = p.get("date")
+                    price = p.get("price")
+                    if not dt_str or price is None:
+                        continue
+                    db_data[dt_str] = _f(price)
+                    db_rows.append((
+                        code, dt_str, _f(price), None,
+                        _i(p.get("investor_count")), _f(p.get("total_value")), ts
+                    ))
+                _save_tefas_nav_rows(code, db_rows)
+                missing_ranges = _compute_missing_ranges(db_data, start_date, end_date)
+        except Exception as e:
+            logging.warning("[TEFAS CACHE] Fonoloji fetch failed for %s: %s", code, e)
+
+    # 3. Fonoloji sonrası hâlâ eksik varsa pytefas ile çek ve veritabanına kaydet
     from tefas_tools import _TEFAS_OK, _crawler, _fund_kind
-    
+
     if missing_ranges and _TEFAS_OK and _crawler is not None:
         ts = _now()
         kind = _fund_kind(code)
