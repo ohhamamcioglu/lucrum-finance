@@ -300,6 +300,13 @@ export default function DashboardView({
       return;
     }
 
+    // Hızlı varlık değişiminde (örn. A'ya tıkla, sonuç gelmeden B'ye tıkla) daha yavaş
+    // giden eski istek (ör. TEFAS/BIST) geç dönüp geçerli varlığın grafiğini/analiz
+    // panelini yanlış veriyle eziyordu — bu bayrak, o anki isteğin hâlâ güncel
+    // seçili varlığa mı ait olduğunu kontrol eder, değilse sonucu uygulamaz.
+    let cancelled = false;
+    const requestedSymbol = selectedAssetForDetail.symbol;
+
     const fetchDetailData = async () => {
       // Nakit pozisyonlar için fiyat geçmişi veya analiz çekme
       if (selectedAssetForDetail.category === 'Cash') {
@@ -312,20 +319,22 @@ export default function DashboardView({
       try {
         const assetClass = selectedAssetForDetail.assetClass || 'ABD Hisse/ETF';
         const [history, overview] = await Promise.all([
-          api.getPriceHistory(selectedAssetForDetail.symbol, 90, assetClass),
-          api.getAssetOverview(selectedAssetForDetail.symbol, assetClass),
+          api.getPriceHistory(requestedSymbol, 90, assetClass),
+          api.getAssetOverview(requestedSymbol, assetClass),
         ]);
+        if (cancelled) return;
         setDetailHistory(history);
         setDetailOverview(overview);
       } catch (err) {
-        console.error('Error fetching asset detail:', err);
+        if (!cancelled) console.error('Error fetching asset detail:', err);
       } finally {
-        setLoadingDetail(false);
+        if (!cancelled) setLoadingDetail(false);
       }
     };
 
     fetchDetailData();
-  }, [selectedAssetForDetail]);
+    return () => { cancelled = true; };
+  }, [selectedAssetForDetail?.symbol]);
 
   // ── Filter + Sort ────────────────────────────────────────────────
   const [categoryFilter, setCategoryFilter] = useState<'All' | AssetCategory>('All');
