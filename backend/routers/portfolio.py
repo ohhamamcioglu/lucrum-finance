@@ -92,9 +92,12 @@ def _compute_risk_score(symbol: str, asset_class: str) -> float:
         return 4.0
 
     # US hisseler → Twelve Data (DB cache'li, hızlı)
+    # Not: beta > 0 şartı KALDIRILDI — negatif/sıfıra yakın beta (örn. THYAO.IS
+    # gerçek beta'sı -0.01) geçerli bir veridir, "veri yok" ile karıştırılmamalı.
+    # Alt/üst sınır zaten aşağıdaki clamp (max/min) ile güvence altına alınıyor.
     if ac == 'ABD Hisse/ETF':
         beta = td.get_beta_value(symbol)
-        if beta is not None and beta > 0:
+        if beta is not None:
             return round(max(1.0, min(8.0, beta * 4)), 2)
         return 4.0
 
@@ -103,7 +106,7 @@ def _compute_risk_score(symbol: str, asset_class: str) -> float:
     try:
         import yfinance as yf
         beta = yf.Ticker(yf_sym).info.get('beta')
-        if beta is not None and beta > 0:
+        if beta is not None:
             return round(max(1.0, min(8.0, float(beta) * 4)), 2)
     except Exception:
         pass
