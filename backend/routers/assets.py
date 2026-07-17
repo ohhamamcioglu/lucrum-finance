@@ -242,17 +242,17 @@ def _fetch_google_news_rss(ticker: str, company_name: str = "") -> list[dict]:
     except Exception:
         return []
 
-def _fetch_tefas_news(fund_code: str) -> list[dict]:
-    fund_name = _get_tefas_fund_name(fund_code)
-    articles = _fetch_google_news_rss(fund_code, fund_name)
+def _fetch_google_news_rss_tr(query: str, ticker_label: str) -> list[dict]:
+    """Google News'i Türkçe (hl=tr&gl=TR) arar — İngilizce '+stock' aramasının Türk şirket
+    isimleri/BIST kodları için hiç sonuç getirmediği durumlar için (bkz. _get_news_for_ticker)."""
     try:
-        query_tr = fund_name if fund_name != fund_code else f"{fund_code} fonu"
-        url = f"https://news.google.com/rss/search?q={quote_plus(query_tr)}&hl=tr&gl=TR&ceid=TR:tr"
+        url = f"https://news.google.com/rss/search?q={quote_plus(query)}&hl=tr&gl=TR&ceid=TR:tr"
         req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urlopen(req, timeout=8) as resp:
             raw = resp.read()
         root = ET.fromstring(raw)
         items = root.findall(".//item")
+        result = []
         for item in items[:5]:
             title = (item.findtext("title") or "").strip()
             link = (item.findtext("link") or "").strip()
@@ -260,14 +260,24 @@ def _fetch_tefas_news(fund_code: str) -> list[dict]:
             source_el = item.find("source")
             source = source_el.text if source_el is not None else "Google News"
             if title and link:
-                articles.append({
-                    "ticker": fund_code,
+                result.append({
+                    "ticker": ticker_label,
                     "title": title,
                     "summary": "",
                     "url": link,
                     "source": source or "Google News TR",
                     "published_at": pub,
                 })
+        return result
+    except Exception:
+        return []
+
+def _fetch_tefas_news(fund_code: str) -> list[dict]:
+    fund_name = _get_tefas_fund_name(fund_code)
+    articles = _fetch_google_news_rss(fund_code, fund_name)
+    try:
+        query_tr = fund_name if fund_name != fund_code else f"{fund_code} fonu"
+        articles.extend(_fetch_google_news_rss_tr(query_tr, fund_code))
     except Exception:
         pass
     return articles
@@ -322,15 +332,21 @@ def _get_news_for_ticker(ticker: str, asset_class: str = "") -> list[dict]:
         return cached
 
     t = ticker.upper()
-    is_bist = t.endswith(".IS")
-    is_tefas = asset_class == "TEFAS Fonu" or _is_tefas(t)
+    # asset_class (gerçek pozisyon verisi) önce kontrol edilir — sadece ticker suffix'ine
+    # bakmak, ".IS" uzantısı olmadan kayıtlı gerçek BIST pozisyonlarını (GESAN, ASELS vb.)
+    # hiç yakalamıyordu, KAP/Türkçe haberler asla tetiklenmiyordu.
+    is_bist = asset_class == "BIST Hissesi" or (not asset_class and t.endswith(".IS"))
+    is_tefas = not is_bist and (asset_class == "TEFAS Fonu" or (not asset_class and _is_tefas(t)))
     articles: list[dict] = []
 
     if is_tefas:
         articles += _fetch_tefas_news(t)
     elif is_bist:
+        clean_ticker = t.replace(".IS", "")
         articles += _fetch_kap_news(ticker)
-        articles += _fetch_google_news_rss(ticker, ticker.replace(".IS", ""))
+        # Türkçe arama — İngilizce "+stock" sorgusu Türk hisseleri/BIST kodları için
+        # neredeyse hiç sonuç getirmiyordu.
+        articles += _fetch_google_news_rss_tr(f"{clean_ticker} hisse", clean_ticker)
     else:
         articles += _fetch_yahoo_rss(ticker)
         if len(articles) < 5:
@@ -756,9 +772,24 @@ def get_news(
     positions = get_positions(user_id)
     asset_class_map = {p["ticker"].upper(): p.get("asset_class", "") for p in positions}
 
-    us_tickers = [t for t in ticker_list if not t.endswith(".IS") and not _is_tefas(t) and asset_class_map.get(t) not in ("Nakit", "Cash")]
-    bist_tickers = [t for t in ticker_list if t.endswith(".IS")]
-    tefas_tickers_list = [t for t in ticker_list if _is_tefas(t) and not t.endswith(".IS")]
+    # ÖNEMLİ: gerçek pozisyonlardaki BIST ticker'ları (GESAN, ASELS vb.) veritabanında ".IS"
+    # uzantısı OLMADAN kayıtlı — sadece t.endswith(".IS") kontrolü bu yüzden hiçbir zaman
+    # eşleşmiyor ve BIST haberleri KAP/Türkçe kaynak yerine yanlışlıkla ABD hissesi gibi
+    # Twelve Data'dan aranıyordu (boş/alakasız sonuç). asset_class_map (gerçek pozisyon verisi)
+    # önce kontrol edilir, ticker suffix'i sadece asset_class bilinmediğinde yedek olarak kullanılır.
+    def _classify_ticker(t: str) -> str:
+        ac = asset_class_map.get(t, "")
+        if ac == "BIST Hissesi" or (not ac and t.endswith(".IS")):
+            return "bist"
+        if ac == "TEFAS Fonu" or (not ac and _is_tefas(t) and not t.endswith(".IS")):
+            return "tefas"
+        if ac in ("Nakit", "Cash"):
+            return "cash"
+        return "us"
+
+    us_tickers = [t for t in ticker_list if _classify_ticker(t) == "us"]
+    bist_tickers = [t for t in ticker_list if _classify_ticker(t) == "bist"]
+    tefas_tickers_list = [t for t in ticker_list if _classify_ticker(t) == "tefas"]
 
     all_articles: list[dict] = []
 
