@@ -84,6 +84,11 @@ def get_price(ticker: str, asset_class: Optional[str] = None):
     try:
         price = get_current_price(ticker, asset_class or "ABD Hisse/ETF")
         if price is None:
+            # Twelve Data yakın zamanda rate-limit (429) döndüyse bu ticker'ın
+            # var olmadığı anlamına gelmez — frontend'in "bulunamadı" yerine
+            # "birazdan tekrar dene" göstermesi için 404 yerine 429 dönüyoruz.
+            if td.is_rate_limited():
+                raise HTTPException(status_code=429, detail="Fiyat servisi şu an yoğun, lütfen birazdan tekrar deneyin")
             raise HTTPException(status_code=404, detail="Ticker not found")
         return {"ticker": ticker, "price": price, "currency": get_price_currency(asset_class or "ABD Hisse/ETF")}
     except HTTPException:

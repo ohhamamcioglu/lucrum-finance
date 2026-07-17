@@ -67,6 +67,16 @@ _call_times: deque = deque()
 RATE_LIMIT  = 55
 RATE_WINDOW = 60.0
 
+# Twelve Data'nın "speed limit"/429 döndüğü son an — /api/prices/{ticker} gibi
+# rotaların, gerçekten var olmayan bir ticker (404) ile şu an rate-limit
+# yüzünden geçici olarak veri alınamayan bir ticker'ı (429) ayırt edebilmesi için.
+_last_rate_limit_ts = 0.0
+
+
+def is_rate_limited() -> bool:
+    """Son RATE_WINDOW saniye içinde Twelve Data'dan rate-limit hatası alındıysa True."""
+    return (time.monotonic() - _last_rate_limit_ts) < RATE_WINDOW
+
 
 def _clean_symbol(symbol: str) -> str:
     if not symbol:
@@ -146,6 +156,7 @@ def _throttle():
 
 def _api(endpoint: str, params: dict, timeout: int = 15) -> dict | list | None:
     """Rate-limited, hata-toleranslı GET."""
+    global _last_rate_limit_ts
     if not API_KEY:
         return None
     _throttle()
@@ -155,6 +166,8 @@ def _api(endpoint: str, params: dict, timeout: int = 15) -> dict | list | None:
         if not r.ok:
             sym_hint = params.get("symbol", params.get("symbols", ""))
             logging.warning("TD %s HTTP %s [symbol=%s]", endpoint, r.status_code, sym_hint)
+            if r.status_code == 429:
+                _last_rate_limit_ts = time.monotonic()
             return None
         data = r.json()
         if isinstance(data, dict) and data.get("status") == "error":
@@ -167,6 +180,7 @@ def _api(endpoint: str, params: dict, timeout: int = 15) -> dict | list | None:
                 # bu yüzden dakikalarca "hesaplanıyor" gibi asılı kalırdı. _throttle() zaten
                 # giden istekleri proaktif olarak sınırlıyor; burada sadece logla ve None dön,
                 # çağıran taraf (DB cache / fallback) bunu zaten nazikçe idare ediyor.
+                _last_rate_limit_ts = time.monotonic()
                 logging.warning("[RATE LIMIT] Twelve Data speed limit hit for %s — atlaniyor.", endpoint)
             return None
         return data
