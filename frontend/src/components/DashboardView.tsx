@@ -402,7 +402,9 @@ export default function DashboardView({
   };
 
   const openEdit = (h: EnrichedHolding) => {
-    setEditingHolding(h); setEditMode('increase'); setEditQty(0); setEditPrice(h.currentPrice);
+    // h.currentPrice ham kayan-nokta değeri olabilir (örn. 14.377510000000002) — input'a
+    // doğrudan konursa kullanıcıya çirkin/okunaksız bir ondalık gösteriyordu.
+    setEditingHolding(h); setEditMode('increase'); setEditQty(0); setEditPrice(Number(h.currentPrice.toFixed(4)));
   };
 
   // ── Add modal helpers ────────────────────────────────────────────
