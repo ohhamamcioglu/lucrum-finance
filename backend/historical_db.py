@@ -24,10 +24,13 @@ Depolama:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sqlite3
 import threading
 from datetime import date, datetime, timedelta
+
+logger = logging.getLogger("lucrum.historical_db")
 from typing import Optional
 
 import pandas as pd
@@ -287,8 +290,8 @@ def load_financials(ticker: str, path: str = _DB_PATH) -> list[dict]:
                     except ValueError:
                         pass
             records.append(d)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Ticker '%s' için finansal kayıt (record_json) parse edilemedi, atlanıyor: %s", ticker, e)
     return records
 
 
@@ -390,8 +393,8 @@ def get_historical_snapshot(ticker: str, as_of: date,
                     except ValueError:
                         pass
             financials = d
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Ticker '%s' için as_of=%s finansal kayıt parse edilemedi: %s", ticker, as_of, e)
 
     # Fiyat: as_of veya en yakın önceki işlem günü
     sql_px = """

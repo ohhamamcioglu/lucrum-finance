@@ -18,6 +18,7 @@ Rate limit: KAP ~10 req/dk → istekler arası 2-3 sn bekleme zorunlu.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import time
@@ -26,6 +27,8 @@ from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger("lucrum.kap_scraper")
 
 # ── Sabitler ──────────────────────────────────────────────────────────────────
 _KAP_BASE  = "https://www.kap.org.tr"
@@ -41,7 +44,10 @@ def _kap_cache_load() -> dict:
     try:
         with open(_KAP_CACHE_PATH, encoding="utf-8") as fh:
             return json.load(fh)
-    except Exception:
+    except FileNotFoundError:
+        return {}
+    except Exception as e:
+        logger.warning("KAP cache dosyası (%s) okunamadı, boş cache ile devam ediliyor: %s", _KAP_CACHE_PATH, e)
         return {}
 
 
@@ -49,8 +55,8 @@ def _kap_cache_save(cache: dict) -> None:
     try:
         with open(_KAP_CACHE_PATH, "w", encoding="utf-8") as fh:
             json.dump(cache, fh, ensure_ascii=False, indent=2, default=str)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("KAP cache dosyası (%s) yazılamadı: %s", _KAP_CACHE_PATH, e)
 
 
 def _kap_disk_get(clean: str) -> Optional[tuple[Optional[dict], Optional[dict]]]:
@@ -66,7 +72,8 @@ def _kap_disk_get(clean: str) -> Optional[tuple[Optional[dict], Optional[dict]]]
             return None
         data = entry["data"]
         return (data[0], data[1])
-    except Exception:
+    except Exception as e:
+        logger.warning("KAP disk cache girdisi ('%s') bozuk, atlanıyor: %s", clean, e)
         return None
 
 
@@ -99,7 +106,8 @@ def _get_member_oid(ticker: str) -> Optional[str]:
         clean = ticker.upper().replace(".IS", "")
         info = pykap.get_general_info(clean)
         return info.get("company_id") if info else None
-    except Exception:
+    except Exception as e:
+        logger.debug("pykap.get_general_info('%s') başarısız: %s", ticker, e)
         return None
 
 
@@ -118,8 +126,8 @@ def _get_disclosure_list(ticker: str) -> list[dict]:
         disclosures = company.get_historical_disclosure_list()
         if disclosures:
             return disclosures
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("pykap BISTCompany('%s').get_historical_disclosure_list() başarısız, API fallback'e geçiliyor: %s", clean, e)
 
     time.sleep(_REQ_SLEEP)
 
@@ -155,8 +163,8 @@ def _get_disclosure_list(ticker: str) -> list[dict]:
                 data = r.json()
                 if isinstance(data, list) and data:
                     return data
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("KAP disclosure/byCriteria isteği (subject_list=%s) başarısız: %s", subject_list, e)
         time.sleep(_REQ_SLEEP)
 
     return []
@@ -170,16 +178,16 @@ def _decode_rsc_script(sc: str) -> Optional[str]:
         decoded = json.loads(f'"{sc}"')
         if "<table" in decoded:
             return decoded
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("RSC script decode Yöntem 1 (JSON parse) başarısız: %s", e)
 
     # Yöntem 2: raw_unicode_escape
     try:
         decoded = sc.encode("raw_unicode_escape").decode("unicode_escape")
         if "<table" in decoded:
             return decoded
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("RSC script decode Yöntem 2 (raw_unicode_escape) başarısız: %s", e)
 
     # Yöntem 3: manuel unescape
     try:
@@ -191,8 +199,8 @@ def _decode_rsc_script(sc: str) -> Optional[str]:
         )
         if "<table" in decoded:
             return decoded
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("RSC script decode Yöntem 3 (manuel unescape) başarısız: %s", e)
 
     return None
 
@@ -446,7 +454,8 @@ def get_kap_financials(ticker: str) -> Optional[dict]:
             reverse=True,
         )
         return _fetch_kap_disc(disclosures[0])
-    except Exception:
+    except Exception as e:
+        logger.warning("get_kap_financials('%s') başarısız: %s", ticker, e)
         return None
 
 
@@ -487,8 +496,8 @@ def _get_disclosure_list_extended(ticker: str, days: int = 900) -> list[dict]:
                 data = r.json()
                 if isinstance(data, list) and data:
                     return data
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("KAP genişletilmiş disclosure isteği (subject_list=%s) başarısız: %s", subject_list, e)
         time.sleep(_REQ_SLEEP)
 
     return []
@@ -545,8 +554,8 @@ def get_kap_financials_annual_pair(ticker: str) -> tuple[Optional[dict], Optiona
         curr = _fetch_kap_disc(annuals[0]) if len(annuals) >= 1 else None
         prev = _fetch_kap_disc(annuals[1]) if len(annuals) >= 2 else None
         result = (curr, prev)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("get_kap_financials_annual_pair('%s') başarısız: %s", ticker, e)
 
     _annual_pair_cache[clean] = result
     # Disk cache'e yaz (refresh_kap_data.py ile önceden doldurulabilir)

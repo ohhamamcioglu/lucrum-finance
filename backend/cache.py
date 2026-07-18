@@ -2,12 +2,15 @@
 cache.py — SQLite / Redis Hybrid TTL Cache (LUCRUM Finance SaaS)
 """
 from __future__ import annotations
+import logging
 import os
 import pickle
 import sqlite3
 import threading
 import time
 from typing import Any, Optional
+
+logger = logging.getLogger("lucrum.cache")
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DB_PATH = os.path.join(_HERE, "cache.db")
@@ -36,9 +39,9 @@ class FinanceCache:
                 # Quick connection test
                 self._redis.ping()
                 self._use_redis = True
-                print(f"[CACHE] Connected to Redis cache successfully.")
+                logger.info("Redis cache'e bağlanıldı.")
             except Exception as e:
-                print(f"[CACHE] Redis connection failed, falling back to SQLite cache: {e}")
+                logger.warning("Redis bağlantısı başarısız, SQLite cache'e düşülüyor: %s", e)
                 self._redis = None
                 self._use_redis = False
         
@@ -70,16 +73,18 @@ class FinanceCache:
                 if time.time() - fetched_at > ttl:
                     return None
                 return val
-            except Exception:
+            except Exception as e:
+                logger.debug("Redis get('%s') başarısız: %s", key, e)
                 return None
-                
+
         # SQLite Fallback
         try:
             with self._conn() as conn:
                 row = conn.execute(
                     "SELECT data, fetched_at FROM cache WHERE key=?", (key,)
                 ).fetchone()
-        except Exception:
+        except Exception as e:
+            logger.debug("SQLite cache get('%s') başarısız: %s", key, e)
             return None
         if row is None:
             return None
@@ -88,7 +93,8 @@ class FinanceCache:
             return None
         try:
             return pickle.loads(data_blob)
-        except Exception:
+        except Exception as e:
+            logger.warning("Cache girdisi '%s' unpickle edilemedi (bozuk kayıt olabilir): %s", key, e)
             return None
 
     def set(self, key: str, value: Any) -> None:
@@ -98,10 +104,10 @@ class FinanceCache:
                 blob = pickle.dumps((value, time.time()), protocol=5)
                 # Keep keys alive for at most the max financial TTL (7 days)
                 self._redis.set(key, blob, ex=self.TTL_FINANCIALS)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Redis set('%s') başarısız: %s", key, e)
             return
-            
+
         # SQLite Fallback
         try:
             blob = pickle.dumps(value, protocol=5)
@@ -111,25 +117,25 @@ class FinanceCache:
                         "INSERT OR REPLACE INTO cache(key, data, fetched_at) VALUES(?,?,?)",
                         (key, blob, time.time()),
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("SQLite cache set('%s') başarısız: %s", key, e)
 
     def invalidate(self, key: str) -> None:
         """Belirli bir anahtarı sil."""
         if self._use_redis:
             try:
                 self._redis.delete(key)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Redis invalidate('%s') başarısız: %s", key, e)
             return
-            
+
         # SQLite Fallback
         try:
             with _write_lock:
                 with self._conn() as conn:
                     conn.execute("DELETE FROM cache WHERE key=?", (key,))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("SQLite cache invalidate('%s') başarısız: %s", key, e)
 
     def invalidate_prefix(self, prefix: str) -> int:
         """Belirli bir önek ile başlayan tüm girişleri sil. Silinen sayısını döner."""
@@ -145,9 +151,10 @@ class FinanceCache:
                 if keys:
                     self._redis.delete(*keys)
                 return len(keys)
-            except Exception:
+            except Exception as e:
+                logger.warning("Redis invalidate_prefix('%s') başarısız: %s", prefix, e)
                 return 0
-                
+
         # SQLite Fallback
         try:
             with _write_lock:
@@ -156,7 +163,8 @@ class FinanceCache:
                         "DELETE FROM cache WHERE key LIKE ?", (prefix + "%",)
                     )
                     return cur.rowcount
-        except Exception:
+        except Exception as e:
+            logger.warning("SQLite cache invalidate_prefix('%s') başarısız: %s", prefix, e)
             return 0
 
     def stats(self) -> dict:
@@ -172,6 +180,7 @@ class FinanceCache:
                     "total_keys": self._redis.dbsize(),
                 }
             except Exception as e:
+                logger.warning("Redis stats() başarısız: %s", e)
                 return {"type": "Redis", "error": str(e)}
                 
         # SQLite Fallback
@@ -197,6 +206,7 @@ class FinanceCache:
                 "db_path":           self._db,
             }
         except Exception as e:
+            logger.warning("SQLite cache stats() başarısız: %s", e)
             return {"error": str(e)}
 
     def vacuum(self) -> int:
@@ -216,7 +226,8 @@ class FinanceCache:
                     deleted = cur.rowcount
                     conn.execute("VACUUM")
             return deleted
-        except Exception:
+        except Exception as e:
+            logger.warning("SQLite cache vacuum() başarısız: %s", e)
             return 0
 
 finance_cache = FinanceCache()
