@@ -209,7 +209,8 @@ export default function MarketsView({
             symbol: found.symbol, name: found.name, category: cat, sector: found.sector,
             price, change24h: priceData?.change_pct ?? 0,
             volume24h: '—', marketCap: '—', beta: found.riskScore / 4,
-            sparkline: [price, price], description: `${found.name} · ${found.asset_class}`,
+            sparkline: [price, price], description: found.name,
+            assetClass: found.asset_class,
           };
           setSelectedAsset(asset);
           setLivePrices(prev => ({ ...prev, [sym]: price }));
@@ -219,13 +220,16 @@ export default function MarketsView({
   }, [selectedSymbolFromSearch]);
 
   const getAssetClass = useCallback((asset: MarketAsset): string => {
-    if (asset.description && asset.description.includes(' · ')) {
-      const parts = asset.description.split(' · ');
-      if (parts[1]) return parts[1];
-    }
+    // Backend'in tanıdığı gerçek asset_class — description string'ini parse
+    // etmeye güvenmek yerine artık ayrı, üzerine yazılmayan bir alan (bkz.
+    // types.ts). Eski description-parse yöntemi, asset overview yüklendiğinde
+    // description backend'in düz açıklama metniyle değiştirilince bozuluyor
+    // ve TEFAS/BIST varlıkları yanlış sınıflandırılıp Twelve Data'da alakasız
+    // bir sembolün verisi gösteriliyordu.
+    if (asset.assetClass) return asset.assetClass;
     if (asset.category === 'Crypto') return 'Kripto';
-    if (asset.category === 'FixedIncome') return 'FixedIncome';
-    
+    if (asset.category === 'FixedIncome') return 'TEFAS Fonu';
+
     const sym = asset.symbol.toUpperCase();
     if (sym.endsWith('.IS') || 
         ['THYAO', 'ASELS', 'EREGL', 'GARAN', 'TUPRS', 'KCHOL', 'GESAN', 'PATEK', 'GWIND', 'CWENE', 'SDTTR',
@@ -434,7 +438,8 @@ export default function MarketsView({
                               symbol: item.symbol, name: item.name, category: item.category,
                               sector: item.sector, price: price ?? 0, change24h: 0,
                               volume24h: '—', marketCap: '—', beta: item.riskScore / 4,
-                              sparkline: [price ?? 0, price ?? 0], description: `${item.name} · ${item.assetClass}`,
+                              sparkline: [price ?? 0, price ?? 0], description: item.name,
+                              assetClass: item.assetClass,
                             };
                             setSelectedAsset(a);
                             setSelectedSymbolFromSearch('');

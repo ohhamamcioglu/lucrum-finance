@@ -71,4 +71,12 @@ export interface MarketAsset {
   beta: number;
   sparkline: number[];
   description: string;
+  // Backend'in tanıdığı tam asset_class (ör. "TEFAS Fonu", "BIST Hissesi").
+  // Eskiden description string'ine " · assetClass" olarak gömülüyordu — asset
+  // overview yüklendiğinde description backend'in düz metniyle üzerine
+  // yazılınca bu kodlama bozuluyor ve yanlış varlık sınıfı tahmin ediliyordu
+  // (ör. TEFAS fonu "FixedIncome" sanılıp Twelve Data'da alakasız bir
+  // sembolün fiyatı gösteriliyordu). Artık ayrı, asla üzerine yazılmayan bir
+  // alan.
+  assetClass?: string;
 }
