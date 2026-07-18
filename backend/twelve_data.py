@@ -3009,6 +3009,68 @@ def get_tefas_current_price(fund_code: str) -> Optional[float]:
     return row["price"] if row else None
 
 
+def get_tefas_indicators(fund_code: str, periods: int = 60) -> dict:
+    """TEFAS fonu için RSI(14)/MACD/Bollinger Bands(20) yerel olarak NAV serisinden
+    hesaplanır. Twelve Data TEFAS fonlarını tanımadığı için (get_time_series/get_indicator
+    genel sembol uzayında yok) tek veri kaynağı kendi biriktirdiğimiz td_tefas_nav
+    tablosudur (bkz. get_tefas_nav). Dönen şekil get_rsi/get_macd/get_bbands ile
+    aynı alan adlarını kullanır (rsi / macd,macd_signal,macd_hist / upper_band,
+    middle_band,lower_band) — frontend hiçbir değişiklik gerektirmeden tüketebilsin diye."""
+    import pandas as pd
+    from datetime import timedelta
+
+    code = fund_code.upper().strip()
+    end_date = date.today()
+    # MACD(26,9) ve BBands(20) ısınma payı + istenen periyot kadar işlem günü —
+    # hafta sonları/tatiller yüzünden takvim gününde bolca pay bırakılıyor.
+    start_date = end_date - timedelta(days=int(periods * 2.2) + 90)
+    series = get_tefas_nav(code, start_date, end_date)
+    if series.empty or len(series) < 20:
+        return {"rsi": [], "macd": [], "bbands": []}
+
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1 / 14, min_periods=14, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1 / 14, min_periods=14, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, float("nan"))
+    rsi = (100 - (100 / (1 + rs))).fillna(100)
+
+    ema12 = series.ewm(span=12, adjust=False).mean()
+    ema26 = series.ewm(span=26, adjust=False).mean()
+    macd_line = ema12 - ema26
+    signal_line = macd_line.ewm(span=9, adjust=False).mean()
+    macd_hist = macd_line - signal_line
+
+    sma20 = series.rolling(window=20).mean()
+    std20 = series.rolling(window=20).std()
+    upper_band = sma20 + 2 * std20
+    lower_band = sma20 - 2 * std20
+
+    def _rows(cols: dict) -> list[dict]:
+        out = []
+        for i in range(len(series.index) - 1, -1, -1):
+            row = {"dt": series.index[i].strftime("%Y-%m-%d")}
+            ok = True
+            for key, s in cols.items():
+                v = s.iloc[i]
+                if pd.isna(v):
+                    ok = False
+                    break
+                row[key] = round(float(v), 4)
+            if ok:
+                out.append(row)
+            if len(out) >= periods:
+                break
+        return out
+
+    return {
+        "rsi": _rows({"rsi": rsi}),
+        "macd": _rows({"macd": macd_line, "macd_signal": signal_line, "macd_hist": macd_hist}),
+        "bbands": _rows({"upper_band": upper_band, "middle_band": sma20, "lower_band": lower_band}),
+    }
+
+
 def get_tefas_daily_change_pct(fund_code: str) -> Optional[float]:
     """TEFAS fonunun son iki işlem gününün NAV'ından günlük değişim yüzdesini
     hesaplar (Twelve Data quote'larındaki change_pct ile aynı birim: 2.34 = %2.34).

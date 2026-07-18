@@ -739,10 +739,27 @@ def get_asset_fundamentals(
     ticker: str,
     asset_class: str = Query(...),
 ):
-    """US hisseleri için temel analiz: profil, istatistikler, temettüler, bölünmeler, hedefler, hissedarlar."""
+    """US hisseleri için temel analiz: profil, istatistikler, temettüler, bölünmeler, hedefler, hissedarlar.
+    TEFAS fonları için farklı bir şekil döner (bkz. aşağıdaki erken dönüş) — P/E, bilanço
+    gibi hisse senedi kavramları bir fon için anlamsız; onun yerine get_fund_breakdown'ın
+    zaten hesapladığı AUM/yatırımcı sayısı/portföy dağılımı + SPK risk skoru döner."""
     t_code = ticker.upper()
-    if asset_class not in ("ABD Hisse/ETF", "BIST Hissesi"):
-        raise HTTPException(status_code=400, detail="Fundamentals yalnızca ABD Hisse/ETF ve BIST Hisseleri için")
+    if asset_class not in ("ABD Hisse/ETF", "BIST Hissesi", "TEFAS Fonu"):
+        raise HTTPException(status_code=400, detail="Fundamentals yalnızca ABD Hisse/ETF, BIST Hisseleri ve TEFAS Fonları için")
+
+    if asset_class == "TEFAS Fonu":
+        breakdown = get_fund_breakdown(t_code)
+        return {
+            "symbol": t_code,
+            "asset_class": "TEFAS Fonu",
+            "fund_name": breakdown["fund_name"],
+            "date": breakdown["date"],
+            "price": breakdown["price"],
+            "portfolio_size": breakdown["portfolio_size"],
+            "investor_count": breakdown["investor_count"],
+            "risk_score": td.get_tefas_risk_score(t_code),
+            "allocation": breakdown["allocation"],
+        }
 
     # ÖNEMLİ: eskiden her alt-çağrının sonucu SIRAYLA .result(timeout=X) ile bekleniyordu —
     # bu, tüm timeout'ların TOPLAMI kadar (13 çağrı × 15-25sn ≈ birkaç dakika) beklenebileceği
@@ -793,10 +810,17 @@ def get_asset_indicators(
     interval: str = Query("1day"),
     periods: int = Query(60, ge=10, le=200),
 ):
-    """Teknik indikatörler: RSI(14), MACD, Bollinger Bands(20). (US Hisseleri, BIST ve Kripto destekler)"""
+    """Teknik indikatörler: RSI(14), MACD, Bollinger Bands(20). (US Hisseleri, BIST, Kripto ve TEFAS Fonları destekler)"""
     t_code = ticker.upper()
-    if asset_class not in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto"):
-        raise HTTPException(status_code=400, detail="Teknik indikatörler yalnızca Hisse, BIST ve Kripto için desteklenmektedir")
+    if asset_class not in ("ABD Hisse/ETF", "BIST Hissesi", "Kripto", "TEFAS Fonu"):
+        raise HTTPException(status_code=400, detail="Teknik indikatörler yalnızca Hisse, BIST, Kripto ve TEFAS Fonları için desteklenmektedir")
+
+    if asset_class == "TEFAS Fonu":
+        # Twelve Data TEFAS fonlarını tanımıyor — kendi NAV serimizden yerel hesap
+        # (bkz. get_tefas_indicators notu). Diğer sınıflardaki paralel Twelve Data
+        # çağrılarına gerek yok, tek bir yerel fonksiyon çağrısı yeterli.
+        data = td.get_tefas_indicators(t_code, periods)
+        return {"symbol": t_code, "interval": interval, **data}
 
     # Aynı toplam-üst-sınır mantığı fundamentals uç noktasındaki gibi: sıralı .result(timeout=X)
     # yerine tek bir wait() ile en fazla 20sn'de yanıt veriyoruz.

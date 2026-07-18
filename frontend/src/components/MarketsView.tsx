@@ -16,6 +16,15 @@ interface WatchlistItem {
   riskScore: number;
 }
 
+function formatLargeNum(num: any, locale: 'tr' | 'en' = 'tr'): string {
+  if (num == null || isNaN(num)) return '—';
+  const n = Number(num);
+  if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  return n.toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US');
+}
+
 function loadWatchlist(): WatchlistItem[] {
   try {
     const items = JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '[]');
@@ -62,6 +71,7 @@ interface MarketsViewProps {
   }) => void;
   settings: UserSettings;
   exchangeRates: { usd_rate: number; eur_rate: number; gbp_rate?: number };
+  onError?: (message: string) => void;
 }
 
 const mapToHistoryObjects = (prices: number[], baseDate = new Date()): { date: string; price: number }[] => {
@@ -79,6 +89,7 @@ export default function MarketsView({
   onAddHoldingFromMarket,
   settings,
   exchangeRates,
+  onError,
 }: MarketsViewProps) {
   const t = useT(settings.language);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,10 +119,11 @@ export default function MarketsView({
   }, [selectedAsset?.symbol]);
 
   const fetchFundamentals = useCallback(async (symbol: string, assetClass: string) => {
-    // Backend /assets/{ticker}/fundamentals ABD Hisse/ETF ve BIST Hissesi'ni destekliyor —
-    // burada sadece ABD Hisse/ETF'e izin verilmesi BIST hisselerinin Temel Analiz sekmesinin
-    // hiçbir zaman istek bile atmamasına (hep "Veri bulunamadı" göstermesine) yol açıyordu.
-    if (assetClass !== 'ABD Hisse/ETF' && assetClass !== 'BIST Hissesi') return;
+    // Backend /assets/{ticker}/fundamentals ABD Hisse/ETF, BIST Hissesi ve TEFAS Fonu'nu
+    // destekliyor — burada sadece ABD Hisse/ETF'e izin verilmesi BIST hisselerinin Temel
+    // Analiz sekmesinin hiçbir zaman istek bile atmamasına (hep "Veri bulunamadı" göstermesine)
+    // yol açıyordu.
+    if (assetClass !== 'ABD Hisse/ETF' && assetClass !== 'BIST Hissesi' && assetClass !== 'TEFAS Fonu') return;
     setLoadingFundamentals(true);
     try {
       const data = await api.getAssetFundamentals(symbol, assetClass);
@@ -125,7 +137,7 @@ export default function MarketsView({
   }, []);
 
   const fetchIndicators = useCallback(async (symbol: string, assetClass: string) => {
-    if (assetClass !== 'ABD Hisse/ETF' && assetClass !== 'BIST Hissesi' && assetClass !== 'Kripto') return;
+    if (assetClass !== 'ABD Hisse/ETF' && assetClass !== 'BIST Hissesi' && assetClass !== 'Kripto' && assetClass !== 'TEFAS Fonu') return;
     setLoadingIndicators(true);
     try {
       const data = await api.getAssetIndicators(symbol, assetClass, '1day', 60);
@@ -296,20 +308,11 @@ export default function MarketsView({
 
         if (!overview) return;
 
-        const formatLargeNum = (num: any): string => {
-          if (num == null || isNaN(num)) return '—';
-          const n = Number(num);
-          if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
-          if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
-          if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
-          return n.toLocaleString(settings.language === 'tr' ? 'tr-TR' : 'en-US');
-        };
-
         setSelectedAsset(prev => {
           if (prev.symbol !== symbol) return prev;
 
           let vol = '—';
-          if (overview.volume_24h != null) vol = formatLargeNum(overview.volume_24h);
+          if (overview.volume_24h != null) vol = formatLargeNum(overview.volume_24h, settings.language);
 
           let cap = '—';
           if (overview.market_cap != null) cap = formatLargeNum(overview.market_cap);
@@ -419,6 +422,7 @@ export default function MarketsView({
   const lastVal = safeSparkline[safeSparkline.length - 1]?.price ?? 0;
   const overallChangePct = firstVal !== 0 ? ((lastVal - firstVal) / firstVal) * 100 : 0;
   const isChartUp = overallChangePct >= 0;
+  const detailAssetClass = getAssetClass(selectedAsset);
 
   return (
     <div className="space-y-6">
@@ -586,24 +590,32 @@ export default function MarketsView({
               { id: 'profile', label: settings.language === 'tr' ? 'Şirket Kadrosu' : 'Profile & Executives' },
             ].map(tab => {
               const isActive = activeDetailTab === tab.id;
-              const ac = getAssetClass(selectedAsset);
-              // Backend /assets/{ticker}/fundamentals ABD Hisse/ETF ve BIST Hissesi'ni destekliyor
-              // — eskiden burada sadece ABD Hisse/ETF'e izin verildiği için BIST hisselerinde
-              // "Temel Analiz" ve "Şirket Kadrosu" sekmeleri hiç tıklanamıyordu (soluk/disabled).
-              const isFundamentalsSupported = ac === 'ABD Hisse/ETF' || ac === 'BIST Hissesi';
-              const isIndicatorSupported = ac === 'ABD Hisse/ETF' || ac === 'BIST Hissesi' || ac === 'Kripto';
+              const ac = detailAssetClass;
+              // Backend /assets/{ticker}/fundamentals ABD Hisse/ETF, BIST Hissesi ve TEFAS Fonu'nu
+              // destekliyor — eskiden burada sadece ABD Hisse/ETF'e izin verildiği için BIST
+              // hisselerinde "Temel Analiz" ve "Şirket Kadrosu" sekmeleri hiç tıklanamıyordu
+              // (soluk/disabled). "Şirket Kadrosu" (profile/executives) TEFAS fonları için
+              // anlamsız olduğundan (fonun CEO'su/çalışanı olmaz) ayrı bir destek bayrağı var.
+              const isFundamentalsSupported = ac === 'ABD Hisse/ETF' || ac === 'BIST Hissesi' || ac === 'TEFAS Fonu';
+              const isProfileSupported = ac === 'ABD Hisse/ETF' || ac === 'BIST Hissesi';
+              const isIndicatorSupported = ac === 'ABD Hisse/ETF' || ac === 'BIST Hissesi' || ac === 'Kripto' || ac === 'TEFAS Fonu';
 
               let disabled = false;
               let titleMsg = '';
-              if (tab.id === 'fundamentals' || tab.id === 'profile') {
+              if (tab.id === 'fundamentals') {
                 disabled = !isFundamentalsSupported;
+                if (disabled) {
+                  titleMsg = settings.language === 'tr' ? 'Yalnızca ABD Hisse/ETF, BIST ve TEFAS Fonları için geçerli' : 'Only available for US Stocks/ETFs, BIST, and TEFAS Funds';
+                }
+              } else if (tab.id === 'profile') {
+                disabled = !isProfileSupported;
                 if (disabled) {
                   titleMsg = settings.language === 'tr' ? 'Yalnızca ABD Hisse/ETF ve BIST için geçerli' : 'Only available for US Stocks/ETFs and BIST';
                 }
               } else if (tab.id === 'indicators') {
                 disabled = !isIndicatorSupported;
                 if (disabled) {
-                  titleMsg = settings.language === 'tr' ? 'Yalnızca ABD, BIST ve Kripto için geçerli' : 'Only available for US, BIST, and Crypto';
+                  titleMsg = settings.language === 'tr' ? 'Yalnızca ABD, BIST, Kripto ve TEFAS için geçerli' : 'Only available for US, BIST, Crypto, and TEFAS';
                 }
               }
 
@@ -750,6 +762,44 @@ export default function MarketsView({
                       {settings.language === 'tr' ? 'Finansallar Yükleniyor...' : 'Loading Fundamentals...'}
                     </span>
                   </div>
+                ) : fundamentals && detailAssetClass === 'TEFAS Fonu' ? (
+                  <>
+                    {/* TEFAS Fon Künyesi */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {[
+                        { label: settings.language === 'tr' ? 'Fon Büyüklüğü' : 'Fund Size (AUM)', val: fundamentals.portfolio_size != null ? formatLargeNum(fundamentals.portfolio_size) : null },
+                        { label: settings.language === 'tr' ? 'Yatırımcı Sayısı' : 'Investor Count', val: fundamentals.investor_count != null ? fundamentals.investor_count.toLocaleString() : null },
+                        { label: settings.language === 'tr' ? 'SPK Risk Değeri' : 'SPK Risk Score', val: fundamentals.risk_score != null ? `${fundamentals.risk_score}/7` : null },
+                        { label: settings.language === 'tr' ? 'Fiyat (NAV)' : 'Price (NAV)', val: fundamentals.price != null ? formatCurrency(fundamentals.price, 'TRY') : null },
+                        { label: settings.language === 'tr' ? 'Veri Tarihi' : 'As Of', val: fundamentals.date },
+                      ].map(item => (
+                        <div key={item.label} className="bg-[#F1EFE9] border border-[#E8E2D9] p-2 rounded-lg flex justify-between items-center">
+                          <span className="text-[10px] text-[#9E958C] font-semibold">{item.label}</span>
+                          <span className="font-mono font-bold text-[#2D2926]">{item.val ?? '—'}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Portföy Dağılımı */}
+                    {fundamentals.allocation && fundamentals.allocation.length > 0 && (
+                      <div>
+                        <h4 className="font-bold text-[#2D2926] uppercase tracking-wider text-[10px] mb-2 text-[#8C9A86]">
+                          {settings.language === 'tr' ? 'Portföy Dağılımı' : 'Portfolio Allocation'}
+                        </h4>
+                        <div className="flex flex-col gap-1.5">
+                          {fundamentals.allocation.map((row: any) => (
+                            <div key={row.label} className="flex items-center gap-2">
+                              <span className="text-[10px] text-[#6B645E] font-semibold w-32 shrink-0 truncate">{row.label}</span>
+                              <div className="flex-1 h-2 bg-[#F1EFE9] border border-[#E8E2D9] rounded-full overflow-hidden">
+                                <div className="h-full bg-[#8C9A86]" style={{ width: `${Math.min(100, row.pct)}%` }} />
+                              </div>
+                              <span className="text-[10px] font-mono font-bold text-[#2D2926] w-12 text-right shrink-0">{row.pct.toFixed(1)}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : fundamentals ? (
                   <>
                     {/* Rasyolar Grid */}
