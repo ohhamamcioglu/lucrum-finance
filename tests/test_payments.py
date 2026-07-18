@@ -201,6 +201,132 @@ def test_lemonsqueezy_webhook_idempotent_on_replay(client, monkeypatch):
 # Ödeme geçmişi — tenant isolation
 # ─────────────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────────────
+# order_refunded / subscription_* iptal event'leri (task #37 — eskiden sadece
+# order_created işleniyordu, iade/iptal durumunda kullanıcı süre dolana kadar
+# ücretli limitlerde kalabiliyordu)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _lemonsqueezy_refund_payload(payment_record_id: int, user_id: int) -> bytes:
+    event = {
+        "meta": {
+            "event_name": "order_refunded",
+            "custom_data": {"payment_record_id": str(payment_record_id), "user_id": str(user_id)},
+        },
+        "data": {"type": "orders", "id": "order_" + uuid.uuid4().hex[:10], "attributes": {"status": "refunded"}},
+    }
+    return json.dumps(event).encode("utf-8")
+
+
+def _lemonsqueezy_subscription_event_payload(event_name: str, user_id: int) -> bytes:
+    event = {
+        "meta": {
+            "event_name": event_name,
+            "custom_data": {"user_id": str(user_id)},
+        },
+        "data": {"type": "subscriptions", "id": "sub_" + uuid.uuid4().hex[:10], "attributes": {"status": event_name}},
+    }
+    return json.dumps(event).encode("utf-8")
+
+
+def test_lemonsqueezy_order_refunded_downgrades_user_immediately(client, monkeypatch):
+    monkeypatch.setattr(payments_module, "LEMONSQUEEZY_WEBHOOK_SECRET", "ls_test_secret")
+
+    email = unique_email()
+    register_user(client, email)
+    user_id = _user_id_for(email)
+
+    payment_id = _make_pending_payment(user_id, "PRO", 19.0)
+    payload = _lemonsqueezy_order_payload(payment_id, user_id, "PRO")
+    sig_header = _sign_lemonsqueezy_payload(payload, "ls_test_secret")
+    r1 = client.post("/api/payments/webhooks/lemonsqueezy", content=payload,
+                      headers={"x-signature": sig_header, "content-type": "application/json"})
+    assert r1.status_code == 200
+    assert _get_user(email).subscription_tier == "PRO"
+
+    refund_payload = _lemonsqueezy_refund_payload(payment_id, user_id)
+    refund_sig = _sign_lemonsqueezy_payload(refund_payload, "ls_test_secret")
+    r2 = client.post("/api/payments/webhooks/lemonsqueezy", content=refund_payload,
+                      headers={"x-signature": refund_sig, "content-type": "application/json"})
+    assert r2.status_code == 200
+
+    payment = _get_payment_by_id(payment_id)
+    assert payment.status == "refunded"
+
+    user = _get_user(email)
+    assert user.subscription_tier == "FREE"
+    assert user.subscription_status == "refunded"
+    assert user.subscription_ends_at is None
+
+
+def test_lemonsqueezy_subscription_cancelled_downgrades_user(client, monkeypatch):
+    monkeypatch.setattr(payments_module, "LEMONSQUEEZY_WEBHOOK_SECRET", "ls_test_secret")
+
+    email = unique_email()
+    register_user(client, email)
+    user_id = _user_id_for(email)
+
+    payment_id = _make_pending_payment(user_id, "PRO", 19.0)
+    payload = _lemonsqueezy_order_payload(payment_id, user_id, "PRO")
+    sig_header = _sign_lemonsqueezy_payload(payload, "ls_test_secret")
+    client.post("/api/payments/webhooks/lemonsqueezy", content=payload,
+                headers={"x-signature": sig_header, "content-type": "application/json"})
+    assert _get_user(email).subscription_tier == "PRO"
+
+    cancel_payload = _lemonsqueezy_subscription_event_payload("subscription_cancelled", user_id)
+    cancel_sig = _sign_lemonsqueezy_payload(cancel_payload, "ls_test_secret")
+    resp = client.post("/api/payments/webhooks/lemonsqueezy", content=cancel_payload,
+                        headers={"x-signature": cancel_sig, "content-type": "application/json"})
+    assert resp.status_code == 200
+
+    user = _get_user(email)
+    assert user.subscription_tier == "FREE"
+    assert user.subscription_status == "cancelled"
+
+
+def test_lemonsqueezy_subscription_payment_failed_downgrades_user(client, monkeypatch):
+    monkeypatch.setattr(payments_module, "LEMONSQUEEZY_WEBHOOK_SECRET", "ls_test_secret")
+
+    email = unique_email()
+    register_user(client, email)
+    user_id = _user_id_for(email)
+
+    payment_id = _make_pending_payment(user_id, "ENTERPRISE", 99.0)
+    payload = _lemonsqueezy_order_payload(payment_id, user_id, "ENTERPRISE")
+    sig_header = _sign_lemonsqueezy_payload(payload, "ls_test_secret")
+    client.post("/api/payments/webhooks/lemonsqueezy", content=payload,
+                headers={"x-signature": sig_header, "content-type": "application/json"})
+    assert _get_user(email).subscription_tier == "ENTERPRISE"
+
+    failed_payload = _lemonsqueezy_subscription_event_payload("subscription_payment_failed", user_id)
+    failed_sig = _sign_lemonsqueezy_payload(failed_payload, "ls_test_secret")
+    resp = client.post("/api/payments/webhooks/lemonsqueezy", content=failed_payload,
+                        headers={"x-signature": failed_sig, "content-type": "application/json"})
+    assert resp.status_code == 200
+
+    user = _get_user(email)
+    assert user.subscription_tier == "FREE"
+    assert user.subscription_status == "payment_failed"
+
+
+def test_lemonsqueezy_refund_without_payment_record_id_is_ignored_not_500(client, monkeypatch):
+    """custom_data.payment_record_id eksikse (beklenmeyen payload şekli) endpoint
+    500 patlamak yerine sessizce 200 dönüp loglamalı — webhook'lar tekrar denenmeye
+    devam etmesin diye Lemon Squeezy'e her zaman 200 döneriz."""
+    monkeypatch.setattr(payments_module, "LEMONSQUEEZY_WEBHOOK_SECRET", "ls_test_secret")
+
+    event = {
+        "meta": {"event_name": "order_refunded", "custom_data": {}},
+        "data": {"type": "orders", "id": "order_x", "attributes": {"status": "refunded"}},
+    }
+    payload = json.dumps(event).encode("utf-8")
+    sig_header = _sign_lemonsqueezy_payload(payload, "ls_test_secret")
+
+    resp = client.post("/api/payments/webhooks/lemonsqueezy", content=payload,
+                        headers={"x-signature": sig_header, "content-type": "application/json"})
+    assert resp.status_code == 200
+
+
 def test_payment_history_only_shows_own_payments(client):
     email_a = unique_email()
     data_a = register_user(client, email_a)

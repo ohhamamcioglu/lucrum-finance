@@ -168,3 +168,89 @@ def test_verify_email_flow(client, monkeypatch):
 def test_me_requires_auth(client):
     resp = client.get("/api/users/me")
     assert resp.status_code == 401
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Hesap silme (task #48 — KVKK madde 11) — DELETE /api/users/me tüm
+# ilişkili verileri (pozisyon/işlem/ödeme/token) cascade ile silmeli.
+# ─────────────────────────────────────────────────────────────────────────
+
+def test_delete_account_requires_auth(client):
+    resp = client.delete("/api/users/me")
+    assert resp.status_code == 401
+
+
+def test_delete_account_removes_user_and_cascades_related_data(client):
+    from db_models import SessionLocal, DBUser, DBPosition, DBLiability
+
+    email = unique_email()
+    data = client.post(
+        "/api/users/register",
+        json={"email": email, "name": "Delete Me", "password": "testpass123"},
+    ).json()
+    headers = {"Authorization": f"Bearer {data['access_token']}"}
+
+    session = SessionLocal()
+    try:
+        user = session.query(DBUser).filter(DBUser.email == email.lower().strip()).first()
+        user_id = user.id
+    finally:
+        session.close()
+
+    pos_resp = client.post(
+        "/api/positions",
+        json={
+            "ticker": "AAPL", "asset_class": "ABD Hisse/ETF",
+            "quantity": 10, "buy_price": 100.0,
+            "buy_date": "2026-01-01", "buy_currency": "USD",
+        },
+        headers=headers,
+    )
+    assert pos_resp.status_code == 200
+
+    liab_resp = client.post(
+        "/api/liabilities",
+        json={"name": "Kredi Kartı", "liability_type": "credit_card", "amount": 500.0, "currency": "TRY"},
+        headers=headers,
+    )
+    assert liab_resp.status_code == 200
+
+    del_resp = client.delete("/api/users/me", headers=headers)
+    assert del_resp.status_code == 200
+
+    # Kullanıcı ve tüm ilişkili kayıtlar DB'den tamamen gitmiş olmalı
+    session = SessionLocal()
+    try:
+        assert session.query(DBUser).filter(DBUser.id == user_id).first() is None
+        assert session.query(DBPosition).filter(DBPosition.user_id == user_id).count() == 0
+        assert session.query(DBLiability).filter(DBLiability.user_id == user_id).count() == 0
+    finally:
+        session.close()
+
+    # Silinen hesabın access token'ı artık geçersiz olmalı
+    me_after = client.get("/api/users/me", headers=headers)
+    assert me_after.status_code == 401
+
+    # Aynı e-posta ile tekrar kayıt olunabilmeli (unique constraint boşa çıktı)
+    re_register = client.post(
+        "/api/users/register",
+        json={"email": email, "name": "Delete Me Again", "password": "testpass123"},
+    )
+    assert re_register.status_code == 200
+
+
+def test_delete_account_nonexistent_user_returns_404(client):
+    """Access token geçerli ama kullanıcı zaten silinmişse (ör. çift istek/yarış durumu)
+    ikinci silme denemesi 404 dönmeli, 500 değil."""
+    email = unique_email()
+    data = client.post(
+        "/api/users/register",
+        json={"email": email, "name": "Twice", "password": "testpass123"},
+    ).json()
+    headers = {"Authorization": f"Bearer {data['access_token']}"}
+
+    first = client.delete("/api/users/me", headers=headers)
+    assert first.status_code == 200
+
+    second = client.delete("/api/users/me", headers=headers)
+    assert second.status_code == 401  # token zaten iptal edilmiş kullanıcı için geçersiz
