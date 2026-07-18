@@ -373,40 +373,70 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
             ) : paymentHistory.length === 0 ? (
               <p className="text-xs text-[#9E958C] text-center py-4 font-medium">{t.paymentHistoryEmpty}</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-[#F1EFE9] border-b border-[#E8E2D9] text-[10px] font-bold uppercase tracking-wider text-[#6B645E]">
-                      <th className="px-3 py-2">{t.paymentHistoryDate}</th>
-                      <th className="px-3 py-2">{t.paymentHistoryPlan}</th>
-                      <th className="px-3 py-2 text-right">{t.paymentHistoryAmount}</th>
-                      <th className="px-3 py-2 text-right">{t.paymentHistoryStatus}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E8E2D9]/40">
-                    {paymentHistory.map(p => (
-                      <tr key={p.id}>
-                        <td className="px-3 py-2 text-xs text-[#2D2926] font-mono">{new Date(p.created_at).toLocaleDateString()}</td>
-                        <td className="px-3 py-2 text-xs text-[#2D2926] font-semibold">{p.plan_tier}</td>
-                        <td className="px-3 py-2 text-xs text-right font-mono font-bold text-[#2D2926]">{p.amount} {p.currency}</td>
-                        <td className="px-3 py-2 text-right">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                            p.status === 'completed' ? 'bg-[#8C9A86]/15 text-[#7A8874]' :
-                            p.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                            p.status === 'refunded' ? 'bg-slate-100 text-slate-700' :
-                            'bg-[#B5836F]/15 text-[#B5836F]'
-                          }`}>
-                            {p.status === 'completed' ? t.paymentStatusCompleted :
-                             p.status === 'pending' ? t.paymentStatusPending :
-                             p.status === 'refunded' ? t.paymentStatusRefunded :
-                             t.paymentStatusFailed}
-                          </span>
-                        </td>
+              <>
+                {/* Masaüstü: tam tablo. Mobilde bunun yerine aşağıdaki kart listesi gösterilir
+                    (dar ekranda 4 sütunlu tablo yatay kaydırmayla bile okunaksız oluyordu). */}
+                <div className="overflow-x-auto hidden md:block">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-[#F1EFE9] border-b border-[#E8E2D9] text-[10px] font-bold uppercase tracking-wider text-[#6B645E]">
+                        <th className="px-3 py-2">{t.paymentHistoryDate}</th>
+                        <th className="px-3 py-2">{t.paymentHistoryPlan}</th>
+                        <th className="px-3 py-2 text-right">{t.paymentHistoryAmount}</th>
+                        <th className="px-3 py-2 text-right">{t.paymentHistoryStatus}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-[#E8E2D9]/40">
+                      {paymentHistory.map(p => (
+                        <tr key={p.id}>
+                          <td className="px-3 py-2 text-xs text-[#2D2926] font-mono">{new Date(p.created_at).toLocaleDateString()}</td>
+                          <td className="px-3 py-2 text-xs text-[#2D2926] font-semibold">{p.plan_tier}</td>
+                          <td className="px-3 py-2 text-xs text-right font-mono font-bold text-[#2D2926]">{p.amount} {p.currency}</td>
+                          <td className="px-3 py-2 text-right">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                              p.status === 'completed' ? 'bg-[#8C9A86]/15 text-[#7A8874]' :
+                              p.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                              p.status === 'refunded' ? 'bg-slate-100 text-slate-700' :
+                              'bg-[#B5836F]/15 text-[#B5836F]'
+                            }`}>
+                              {p.status === 'completed' ? t.paymentStatusCompleted :
+                               p.status === 'pending' ? t.paymentStatusPending :
+                               p.status === 'refunded' ? t.paymentStatusRefunded :
+                               t.paymentStatusFailed}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobil: kart listesi */}
+                <div className="md:hidden divide-y divide-[#E8E2D9]/60">
+                  {paymentHistory.map(p => (
+                    <div key={p.id} className="py-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-[#2D2926]">{p.plan_tier}</div>
+                        <div className="text-[10px] text-[#9E958C] font-mono mt-0.5">{new Date(p.created_at).toLocaleDateString()}</div>
+                      </div>
+                      <div className="text-right shrink-0 space-y-1">
+                        <div className="text-xs font-mono font-bold text-[#2D2926]">{p.amount} {p.currency}</div>
+                        <span className={`inline-block text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                          p.status === 'completed' ? 'bg-[#8C9A86]/15 text-[#7A8874]' :
+                          p.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                          p.status === 'refunded' ? 'bg-slate-100 text-slate-700' :
+                          'bg-[#B5836F]/15 text-[#B5836F]'
+                        }`}>
+                          {p.status === 'completed' ? t.paymentStatusCompleted :
+                           p.status === 'pending' ? t.paymentStatusPending :
+                           p.status === 'refunded' ? t.paymentStatusRefunded :
+                           t.paymentStatusFailed}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 

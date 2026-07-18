@@ -146,7 +146,10 @@ export default function AdminPage() {
             <div className="px-4 py-3 bg-red-50 text-red-700 text-xs font-semibold">{error}</div>
           )}
 
-          <div className="overflow-x-auto">
+          {/* Masaüstü: tam tablo. Mobilde bunun yerine aşağıdaki kart listesi gösterilir
+              (dar ekranda 4 sütunlu tablo, içindeki select/buton kontrolleriyle birlikte
+              yatay kaydırmayla bile kullanışsız oluyordu). */}
+          <div className="overflow-x-auto hidden md:block">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-[#9E958C] border-b border-[#8C9A86]/10">
@@ -201,6 +204,51 @@ export default function AdminPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobil: kart listesi — select/toggle kontrolleri bir dokunuş arkasına
+              gizlenmiyor, admin işlemleri her zaman doğrudan erişilebilir kalıyor. */}
+          <div className="md:hidden divide-y divide-[#8C9A86]/10">
+            {loading ? (
+              <div className="px-4 py-8 text-center text-[#9E958C] text-xs">…</div>
+            ) : items.length === 0 ? (
+              <div className="px-4 py-8 text-center text-[#9E958C] text-xs">{t.adminNoResults}</div>
+            ) : (
+              items.map((u) => (
+                <div key={u.id} className="px-4 py-3 space-y-2">
+                  <div className="font-medium text-[#4A443F] text-xs break-all">
+                    {u.email}
+                    {u.is_admin && (
+                      <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#8C9A86]/10 text-[#8C9A86] text-[9px] font-bold uppercase">
+                        <ShieldCheck className="w-2.5 h-2.5" /> {t.adminAdminBadge}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[#6B645E] text-xs">{u.name}</div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={u.subscription_tier}
+                      disabled={busyId === u.id}
+                      onChange={(e) => handleTierChange(u.id, e.target.value)}
+                      className="bg-[#F2EDE4]/50 border border-[#8C9A86]/20 rounded-lg px-2 py-1 text-[10px] font-semibold outline-none cursor-pointer"
+                    >
+                      {TIERS.map((tier) => (
+                        <option key={tier} value={tier}>{tier}</option>
+                      ))}
+                    </select>
+                    <button
+                      disabled={busyId === u.id}
+                      onClick={() => handleToggleActive(u)}
+                      className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all ${
+                        u.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {u.is_active ? t.adminActive : t.adminDisabled}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="px-4 py-3 border-t border-[#8C9A86]/10 flex items-center justify-between">
