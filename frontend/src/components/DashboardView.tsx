@@ -92,6 +92,13 @@ export default function DashboardView({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
+  // Risk skoru kaynağı popover'ları — title niteliği sadece hover'da çalışıyor
+  // (dokunmatik ekranlarda hiç açılmıyor), bu yüzden tıklamayla açılıp kapanan
+  // gerçek bir popover kullanıyoruz.
+  const [showRiskHeaderInfo, setShowRiskHeaderInfo] = useState(false);
+  const [openRiskRowSymbol, setOpenRiskRowSymbol] = useState<string | null>(null);
+  const [showNewRiskInfo, setShowNewRiskInfo] = useState(false);
+
   // Modal chart states
   const [modalHistory, setModalHistory] = useState<Array<{ date: string; price: number }>>([]);
   const [loadingModalHistory, setLoadingModalHistory] = useState(false);
@@ -885,13 +892,25 @@ export default function DashboardView({
                   {t.unrealizedPL}<SortIcon k="pl" />
                 </th>
                 <th className="px-6 py-4 text-right cursor-pointer hover:text-[#2D2926]" onClick={() => handleSort('risk')}>
-                  <span className="inline-flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1 relative">
                     {t.riskScore}<SortIcon k="risk" />
-                    <Info
-                      className="w-3 h-3 text-[#9E958C] cursor-help"
-                      onClick={(e) => e.stopPropagation()}
-                      title={`${t.riskScoreSourceOfficial} ${t.riskScoreSourceBeta}`}
-                    />
+                    <button
+                      type="button"
+                      className="p-0.5 -m-0.5"
+                      onClick={(e) => { e.stopPropagation(); setShowRiskHeaderInfo(v => !v); }}
+                      onBlur={() => setShowRiskHeaderInfo(false)}
+                    >
+                      <Info className="w-3 h-3 text-[#9E958C]" />
+                    </button>
+                    {showRiskHeaderInfo && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute top-full right-0 mt-2 w-64 bg-white border border-[#E8E2D9] rounded-lg shadow-lg p-3 text-[11px] font-normal normal-case text-left text-[#4A443F] z-50 space-y-1.5"
+                      >
+                        <p>{t.riskScoreSourceOfficial}</p>
+                        <p>{t.riskScoreSourceBeta}</p>
+                      </div>
+                    )}
                   </span>
                 </th>
                 <th className="px-6 py-4 text-center">{t.action}</th>
@@ -927,11 +946,26 @@ export default function DashboardView({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end items-center gap-2.5" title={riskScoreSourceLabel(h.assetClass, t)}>
+                    <div className="flex justify-end items-center gap-2.5 relative">
                       <div className="w-16 bg-[#F1EFE9] h-1 rounded-full overflow-hidden shrink-0 hidden sm:block">
                         <div className="h-full rounded-full" style={{ width: `${h.riskScore * 10}%`, backgroundColor: h.riskScore >= 7 ? '#B5836F' : h.riskScore >= 4 ? '#D1CABF' : '#7A8874' }} />
                       </div>
-                      <span className={`text-xs font-mono font-bold cursor-help ${h.riskScore >= 7 ? 'text-[#B5836F]' : h.riskScore >= 4 ? 'text-[#9E958C]' : 'text-[#7A8874]'}`}>{h.riskScore.toFixed(1)}</span>
+                      <button
+                        type="button"
+                        onClick={() => setOpenRiskRowSymbol(v => (v === h.id ? null : h.id))}
+                        onBlur={() => setOpenRiskRowSymbol(null)}
+                        className={`text-xs font-mono font-bold ${h.riskScore >= 7 ? 'text-[#B5836F]' : h.riskScore >= 4 ? 'text-[#9E958C]' : 'text-[#7A8874]'}`}
+                      >
+                        {h.riskScore.toFixed(1)}
+                      </button>
+                      {openRiskRowSymbol === h.id && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute top-full right-0 mt-2 w-64 bg-white border border-[#E8E2D9] rounded-lg shadow-lg p-3 text-[11px] font-normal normal-case text-left text-[#4A443F] z-50"
+                        >
+                          {riskScoreSourceLabel(h.assetClass, t)}
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -1207,11 +1241,25 @@ export default function DashboardView({
                         <input type="text" required value={newSector} onChange={e => setNewSector(e.target.value)}
                           className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-medium" />
                       </div>
-                      <div>
+                      <div className="relative">
                         <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5 font-serif flex items-center gap-1">
                           {t.riskScore110}
-                          <Info className="w-3 h-3 text-[#9E958C] cursor-help" title={riskScoreSourceLabel(newAssetClass, t)} />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewRiskInfo(v => !v)}
+                            onBlur={() => setShowNewRiskInfo(false)}
+                          >
+                            <Info className="w-3 h-3 text-[#9E958C]" />
+                          </button>
                         </label>
+                        {showNewRiskInfo && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute top-full left-0 mt-1 w-64 bg-white border border-[#E8E2D9] rounded-lg shadow-lg p-3 text-[11px] font-normal normal-case text-left text-[#4A443F] z-50"
+                          >
+                            {riskScoreSourceLabel(newAssetClass, t)}
+                          </div>
+                        )}
                         <input type="number" step="0.1" required min="0" max="10" value={newRisk} onChange={e => setNewRisk(Number(e.target.value))}
                           className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
                       </div>
