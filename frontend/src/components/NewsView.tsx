@@ -128,91 +128,8 @@ function FundMiniCard({ fundCode, isEn }: { fundCode: string; isEn: boolean; key
   );
 }
 
-interface AiNewsSummary {
-  sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
-  whatHappened: string;
-  howItAffectsMe: string;
-}
-
-function generateMockAiSummary(title: string, ticker: string, isEn: boolean): AiNewsSummary {
-  const t = ticker.toUpperCase();
-  const lowerTitle = title.toLowerCase();
-  
-  let sentiment: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' = 'NEUTRAL';
-  if (
-    lowerTitle.includes('up') || lowerTitle.includes('rise') || lowerTitle.includes('gain') || 
-    lowerTitle.includes('rekor') || lowerTitle.includes('kazan') || lowerTitle.includes('artış') || 
-    lowerTitle.includes('büyü') || lowerTitle.includes('kar') || lowerTitle.includes('kâr') ||
-    lowerTitle.includes('positive') || lowerTitle.includes('pozitif')
-  ) {
-    sentiment = 'POSITIVE';
-  } else if (
-    lowerTitle.includes('down') || lowerTitle.includes('fall') || lowerTitle.includes('loss') || 
-    lowerTitle.includes('düşüş') || lowerTitle.includes('kayıp') || lowerTitle.includes('zarar') || 
-    lowerTitle.includes('risk') || lowerTitle.includes('negative') || lowerTitle.includes('negatif')
-  ) {
-    sentiment = 'NEGATIVE';
-  }
-  
-  if (isEn) {
-    return {
-      sentiment,
-      whatHappened: `AI Simplified: A major event or earnings update reported for ${t} regarding '${title.slice(0, 55)}...'.`,
-      howItAffectsMe: sentiment === 'POSITIVE'
-        ? `Positive momentum detected for ${t}. This could support short-term price valuation. Holding is recommended.`
-        : sentiment === 'NEGATIVE'
-        ? `Risk factors identified for ${t}. Monitor volatility closely; hedging or review may be beneficial.`
-        : `No direct immediate impact on ${t}. Recommended action: Keep monitoring for macro triggers.`
-    };
-  } else {
-    return {
-      sentiment,
-      whatHappened: `AI Özet: ${t} için '${title.slice(0, 55)}...' konusu hakkında karmaşık terimlerden arındırılmış sadeleştirilmiş özet.`,
-      howItAffectsMe: sentiment === 'POSITIVE'
-        ? `${t} için pozitif momentum tespit edildi. Kısa vadeli fiyatlanmayı destekleyebilir; pozisyonun korunması önerilir.`
-        : sentiment === 'NEGATIVE'
-        ? `${t} için olası olumsuz risk faktörleri tespit edildi. Oynaklık yakından izlenmeli, gerekirse koruma planları değerlendirilmeli.`
-        : `${t} üzerinde ani ve doğrudan bir etki beklenmiyor. Mevcut pozisyon takibine devam edilmesi önerilir.`
-    };
-  }
-}
-
-function ArticleCard({ article, featured = false, isEn }: { article: NewsArticle; featured?: boolean; isEn: boolean }) {
+function ArticleCard({ article, featured = false }: { article: NewsArticle; featured?: boolean }) {
   const accent = sourceAccent(article.source);
-  const [showAiSummary, setShowAiSummary] = useState(false);
-
-  const renderAiSummaryPanel = () => {
-    if (!showAiSummary) return null;
-    const summary = generateMockAiSummary(article.title, article.ticker, isEn);
-    const sentColor = summary.sentiment === 'POSITIVE' 
-      ? 'text-[#7A8874] bg-[#7A8874]/10 border-[#7A8874]/20' 
-      : summary.sentiment === 'NEGATIVE' 
-      ? 'text-[#B5836F] bg-[#B5836F]/10 border-[#B5836F]/20' 
-      : 'text-[#9E958C] bg-[#F1EFE9] border-[#E8E2D9]';
-    const sentText = summary.sentiment === 'POSITIVE' 
-      ? (isEn ? 'POSITIVE' : 'OLUMLU') 
-      : summary.sentiment === 'NEGATIVE' 
-      ? (isEn ? 'NEGATIVE' : 'OLUMSUZ') 
-      : (isEn ? 'NEUTRAL' : 'NÖTR');
-
-    return (
-      <div className="mt-3 bg-[#FBF9F6] border border-[#E8E2D9] rounded-xl p-3 space-y-2 text-left animate-fade-in">
-        <div className="flex items-center justify-between">
-          <span className="text-[9px] font-bold text-[#8A5A36] uppercase tracking-wider">✨ AI INSIGHT</span>
-          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${sentColor}`}>{sentText}</span>
-        </div>
-        <div className="space-y-1.5 text-[10px] leading-relaxed">
-          <p className="text-[#2D2926] font-semibold">
-            <span className="text-[#8C9A86] mr-1">●</span>{summary.whatHappened}
-          </p>
-          <p className="text-[#6B645E]">
-            <span className="text-[#8A5A36] mr-1">●</span>
-            <b>{isEn ? 'Portfolio Impact:' : 'Portföy Etkisi:'}</b> {summary.howItAffectsMe}
-          </p>
-        </div>
-      </div>
-    );
-  };
 
   if (featured) {
     return (
@@ -243,15 +160,7 @@ function ArticleCard({ article, featured = false, isEn }: { article: NewsArticle
           <a href={article.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[10px] font-semibold text-[#8C9A86] hover:text-[#6B7E65] transition-colors">
             Habere git <ExternalLink className="w-3 h-3" />
           </a>
-          <button
-            onClick={() => setShowAiSummary(!showAiSummary)}
-            className="flex items-center gap-1 text-[10px] font-bold text-[#8A5A36] bg-[#8A5A36]/10 px-2.5 py-0.5 rounded-full hover:bg-[#8A5A36]/20 transition-all select-none"
-          >
-            <span>✨ AI {isEn ? 'Summary' : 'Özeti'}</span>
-            {showAiSummary ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
         </div>
-        {renderAiSummaryPanel()}
       </div>
     );
   }
@@ -272,17 +181,9 @@ function ArticleCard({ article, featured = false, isEn }: { article: NewsArticle
             <span className="text-[9px] font-bold text-[#8C9A86] uppercase bg-[#8C9A86]/10 px-1.5 py-0.5 rounded-full">{article.ticker}</span>
             <span className="text-[9px] text-[#B5AFA8] truncate">{article.source}</span>
             <span className="text-[9px] text-[#B5AFA8] ml-auto shrink-0">{timeAgo(article.published_at)}</span>
-            <button
-              onClick={() => setShowAiSummary(!showAiSummary)}
-              className="flex items-center gap-1 text-[9px] font-bold text-[#8A5A36] bg-[#8A5A36]/10 px-2 py-0.5 rounded-full hover:bg-[#8A5A36]/20 transition-all select-none"
-            >
-              <span>✨ AI</span>
-              {showAiSummary ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            </button>
           </div>
         </div>
       </div>
-      {renderAiSummaryPanel()}
     </div>
   );
 }
@@ -566,7 +467,7 @@ export default function NewsView({ holdings, settings }: NewsViewProps) {
                           {/* Featured */}
                           {featuredArticle && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4">
-                              <ArticleCard article={featuredArticle} featured isEn={isEn} />
+                              <ArticleCard article={featuredArticle} featured />
                             </motion.div>
                           )}
 
@@ -579,7 +480,7 @@ export default function NewsView({ holdings, settings }: NewsViewProps) {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.025 }}
                               >
-                                <ArticleCard article={article} isEn={isEn} />
+                                <ArticleCard article={article} />
                               </motion.div>
                             ))}
                           </div>
