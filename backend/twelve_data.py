@@ -3005,6 +3005,27 @@ def get_tefas_current_price(fund_code: str) -> Optional[float]:
     series = get_tefas_nav(code, yesterday, today)
     if not series.empty:
         return float(series.iloc[-1])
-        
+
     return row["price"] if row else None
+
+
+def get_tefas_daily_change_pct(fund_code: str) -> Optional[float]:
+    """TEFAS fonunun son iki işlem gününün NAV'ından günlük değişim yüzdesini
+    hesaplar (Twelve Data quote'larındaki change_pct ile aynı birim: 2.34 = %2.34).
+    Ekstra bir API çağrısı gerektirmez — get_tefas_current_price zaten td_tefas_nav
+    önbelleğini doldurmuş olur, burada sadece son iki satır okunur."""
+    code = fund_code.upper().strip()
+    with _db_lock:
+        c = _conn()
+        rows = c.execute(
+            "SELECT price FROM td_tefas_nav WHERE fund_code=? ORDER BY dt DESC LIMIT 2",
+            (code,)
+        ).fetchall()
+        c.close()
+    if len(rows) < 2:
+        return None
+    latest, prev = rows[0]["price"], rows[1]["price"]
+    if not latest or not prev:
+        return None
+    return round((latest / prev - 1) * 100, 2)
 

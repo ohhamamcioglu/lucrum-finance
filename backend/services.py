@@ -352,9 +352,12 @@ _twrr_cache: dict = {}
 _twrr_cache_time: dict = {}
 TWRR_CACHE_TTL = 1200  # 20 minutes
 
-def batch_fetch_prices(positions: List[Dict]) -> Dict[str, float]:
+def batch_fetch_prices(positions: List[Dict]) -> tuple[Dict[str, float], Dict[str, float]]:
+    """Fiyatları ve (varsa) günlük değişim yüzdelerini birlikte döner.
+    Returns: (prices, changes) — changes içinde veri bulunamayan semboller yer almaz."""
     prices = {}
-    
+    changes: Dict[str, float] = {}
+
     bist_tickers = []
     us_tickers = []
     crypto_tickers = []
@@ -385,6 +388,9 @@ def batch_fetch_prices(positions: List[Dict]) -> Dict[str, float]:
             val = q_data.get("close")
             if val is not None:
                 prices[orig_sym] = float(val)
+            chg = q_data.get("change_pct")
+            if chg is not None:
+                changes[orig_sym] = float(chg)
     except Exception as e:
         print(f"[WARN] Twelve Data batch download failed: {e}")
         
@@ -402,6 +408,11 @@ def batch_fetch_prices(positions: List[Dict]) -> Dict[str, float]:
                     clean_c = orig_sym.replace("-USD", "")
                     prices[clean_c] = val_float
                     prices[orig_sym] = val_float
+                chg = q_data.get("change_pct")
+                if chg is not None:
+                    clean_c = orig_sym.replace("-USD", "")
+                    changes[clean_c] = float(chg)
+                    changes[orig_sym] = float(chg)
         except Exception as e:
             print(f"[WARN] Crypto Twelve Data batch failed: {e}")
             
@@ -429,18 +440,22 @@ def batch_fetch_prices(positions: List[Dict]) -> Dict[str, float]:
         from concurrent.futures import ThreadPoolExecutor
         def _fetch_one_tefas(code):
             try:
-                return code, td.get_tefas_current_price(code)
+                price = td.get_tefas_current_price(code)
+                chg = td.get_tefas_daily_change_pct(code) if price is not None else None
+                return code, price, chg
             except Exception as e:
                 print(f"[WARN] Failed to fetch TEFAS price for {code}: {e}")
-                return code, None
+                return code, None, None
 
         with ThreadPoolExecutor(max_workers=len(unique_tefas)) as executor:
             res = list(executor.map(_fetch_one_tefas, unique_tefas))
-            for code, p in res:
+            for code, p, chg in res:
                 if p is not None:
                     prices[code] = p
-                        
-    return prices
+                if chg is not None:
+                    changes[code] = chg
+
+    return prices, changes
 
 def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
     """Portföyü hesapla"""
@@ -456,7 +471,7 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
         positions = get_positions(user_id)
 
     # Batch fetch all prices at once
-    batch_prices = batch_fetch_prices(positions)
+    batch_prices, batch_changes = batch_fetch_prices(positions)
 
     results = []
     # Get current USDTRY and EURTRY rates from batch prices if available, otherwise fetch
@@ -575,6 +590,7 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
             "cost_basis_tly": cost_basis_tly,
             "current_price": current_price,
             "price_currency": price_currency,
+            "change_pct": batch_changes.get(ticker),
             "asset_type": asset_type,
             "interest_rate": interest_rate,
             "maturity_date": maturity_date,

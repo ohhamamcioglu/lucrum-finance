@@ -10,6 +10,7 @@ export interface BackendPosition {
   buy_currency: string;
   current_price?: number;
   price_currency?: string;
+  change_pct?: number | null;
   invested_tly?: number;
   invested_usd?: number | null;
   invested_eur?: number | null;

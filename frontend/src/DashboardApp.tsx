@@ -184,6 +184,7 @@ export default function DashboardApp() {
           // Modül-level cache'den al; yoksa MARKET_ASSETS beta ya da 5.0
           riskScore: _riskCache[pos.ticker] ?? (marketAsset ? marketAsset.beta * 4 : 5.0),
           assetClass: pos.asset_class,
+          changePct: pos.change_pct ?? null,
           buyDate: typeof pos.buy_date === 'string' ? pos.buy_date : String(pos.buy_date),
         };
       });

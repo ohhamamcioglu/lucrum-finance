@@ -98,6 +98,9 @@ export default function DashboardView({
   const [showRiskHeaderInfo, setShowRiskHeaderInfo] = useState(false);
   const [openRiskRowSymbol, setOpenRiskRowSymbol] = useState<string | null>(null);
   const [showNewRiskInfo, setShowNewRiskInfo] = useState(false);
+  // Mobilde varlıklar tablo yerine kapalı/açılır (accordion) kartlar olarak gösteriliyor —
+  // kapalıyken sadece güncel değer/ağırlık/günlük değişim görünür, tıklanınca detaylar açılır.
+  const [expandedMobileRow, setExpandedMobileRow] = useState<string | null>(null);
 
   // Modal chart states
   const [modalHistory, setModalHistory] = useState<Array<{ date: string; price: number }>>([]);
@@ -853,28 +856,32 @@ export default function DashboardView({
 
       {/* HOLDINGS TABLE */}
       <section className="bg-white border border-[#E8E2D9] rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-[#E8E2D9] flex justify-between items-center flex-wrap gap-4 select-none">
+        <div className="p-6 border-b border-[#E8E2D9] flex flex-col md:flex-row justify-between md:items-center gap-4 select-none">
           <div>
             <h3 className="font-serif text-lg font-bold text-[#2D2926]">{t.currentHoldings}</h3>
             <p className="text-xs text-[#6B645E] font-semibold">{t.holdingsDesc}</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex bg-[#F1EFE9] border border-[#E8E2D9] p-1 rounded-lg gap-1">
+          {/* Dar ekranlarda filtre çubuğu ve "İşlem Ekle" butonu aynı satırda sıkışıp
+              buton görünmez oluyordu — mobilde alt alta, her biri tam genişlikte. */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex bg-[#F1EFE9] border border-[#E8E2D9] p-1 rounded-lg gap-1 overflow-x-auto">
               {(['All', 'Equity', 'Crypto', 'FixedIncome', 'Cash'] as const).map(cat => (
                 <button key={cat} onClick={() => setCategoryFilter(cat)}
-                  className={`px-3 py-1 text-[10px] font-bold rounded cursor-pointer transition-all ${categoryFilter === cat ? 'bg-[#8C9A86] text-white shadow-sm' : 'text-[#6B645E] hover:text-[#2D2926]'}`}>
+                  className={`px-3 py-1 text-[10px] font-bold rounded cursor-pointer transition-all shrink-0 ${categoryFilter === cat ? 'bg-[#8C9A86] text-white shadow-sm' : 'text-[#6B645E] hover:text-[#2D2926]'}`}>
                   {cat === 'All' ? t.all : cat === 'FixedIncome' ? t.bonds : cat === 'Equity' ? t.equity : cat === 'Crypto' ? t.crypto : t.cash}
                 </button>
               ))}
             </div>
             <button onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 bg-[#8C9A86] hover:bg-[#7A8874] text-white px-5 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all shadow-sm">
+              className="flex items-center justify-center gap-1.5 bg-[#8C9A86] hover:bg-[#7A8874] text-white px-5 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all shadow-sm shrink-0">
               <Plus className="w-3.5 h-3.5" />{t.addTransaction}
             </button>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Masaüstü: tam tablo. Mobilde bunun yerine aşağıdaki accordion listesi gösterilir
+            (dar ekranda 7 sütunlu tablo yatay kaydırmayla bile kullanışsız oluyordu). */}
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-left border-collapse select-none">
             <thead>
               <tr className="bg-[#F1EFE9] border-b border-[#E8E2D9] text-[10px] font-bold uppercase tracking-wider text-[#6B645E]">
@@ -995,6 +1002,108 @@ export default function DashboardView({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobil: açılır/kapanır kart listesi */}
+        <div className="md:hidden divide-y divide-[#E8E2D9]/60">
+          {sortedHoldings.length > 0 ? sortedHoldings.map(h => {
+            const isOpen = expandedMobileRow === h.id;
+            const hasChange = h.changePct !== null && h.changePct !== undefined;
+            return (
+              <div key={h.id}>
+                <button
+                  type="button"
+                  onClick={() => setExpandedMobileRow(v => (v === h.id ? null : h.id))}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+                >
+                  <div className={`w-8 h-8 rounded flex items-center justify-center font-mono text-xs font-bold shrink-0 ${getCatBg(h.category)}`}>
+                    {h.symbol.substring(0, 2)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-[#2D2926] truncate">{h.name}</div>
+                    <div className="text-[10px] text-[#6B645E] font-semibold uppercase tracking-wider mt-0.5 flex items-center gap-1.5">
+                      <span>{h.symbol}</span>
+                      <span>•</span>
+                      <span>{h.allocationPercent.toFixed(1)}% {t.allocation}</span>
+                      {hasChange && (
+                        <span className={`font-mono font-bold normal-case ${h.changePct! >= 0 ? 'text-[#7A8874]' : 'text-[#B5836F]'}`}>
+                          {h.changePct! >= 0 ? '+' : ''}{h.changePct!.toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-mono font-bold text-[#2D2926]">{formatCurrency(h.value, settings.baseCurrency)}</div>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-[#9E958C] shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isOpen && (
+                  <div className="px-4 pb-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3 bg-[#F1EFE9] border border-[#E8E2D9] rounded-xl p-3">
+                      <div>
+                        <div className="text-[9px] font-bold uppercase tracking-wider text-[#9E958C]">{t.sharesQty}</div>
+                        <div className="text-xs font-mono font-bold text-[#2D2926] mt-0.5">{h.shares.toLocaleString('tr-TR', { maximumFractionDigits: 4 })}</div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold uppercase tracking-wider text-[#9E958C]">{t.avgLabel}</div>
+                        <div className="text-xs font-mono font-bold text-[#2D2926] mt-0.5">{formatCurrency(h.avgBuyPrice, settings.baseCurrency)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold uppercase tracking-wider text-[#9E958C]">{t.unrealizedPL}</div>
+                        <div className={`text-xs font-mono font-bold mt-0.5 ${h.unrealizedPL >= 0 ? 'text-[#7A8874]' : 'text-[#B5836F]'}`}>
+                          {h.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(h.unrealizedPL, settings.baseCurrency)}
+                          <span className="opacity-80"> ({h.unrealizedPL >= 0 ? '+' : ''}{h.unrealizedPLPercent.toFixed(2)}%)</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] font-bold uppercase tracking-wider text-[#9E958C] flex items-center gap-1">
+                          {t.riskScore}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setOpenRiskRowSymbol(v => (v === h.id ? null : h.id)); }}
+                          >
+                            <Info className="w-2.5 h-2.5 text-[#9E958C]" />
+                          </button>
+                        </div>
+                        <div className={`text-xs font-mono font-bold mt-0.5 ${h.riskScore >= 7 ? 'text-[#B5836F]' : h.riskScore >= 4 ? 'text-[#9E958C]' : 'text-[#7A8874]'}`}>
+                          {h.riskScore.toFixed(1)}
+                        </div>
+                        {openRiskRowSymbol === h.id && (
+                          <div className="mt-1.5 text-[10px] font-normal text-[#4A443F] bg-white border border-[#E8E2D9] rounded-lg p-2">
+                            {riskScoreSourceLabel(h.assetClass, t)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAssetForDetail(h)}
+                        className="flex-1 py-2 rounded-lg bg-white border border-[#E8E2D9] text-[11px] font-bold uppercase tracking-wider text-[#6B645E] hover:text-[#2D2926] hover:bg-[#F1EFE9] transition-all"
+                      >
+                        {t.viewChart}
+                      </button>
+                      {h.category !== 'Cash' && (
+                        <>
+                          <button onClick={() => openEdit(h)} title={t.editPosition}
+                            className="p-2.5 rounded-lg bg-white border border-[#E8E2D9] text-[#9E958C] hover:text-[#8C9A86] hover:bg-[#8C9A86]/10 transition-all">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => onDeleteHolding(h.id)} title={t.deletePosition}
+                            className="p-2.5 rounded-lg bg-white border border-[#E8E2D9] text-[#9E958C] hover:text-[#B5836F] hover:bg-[#B5836F]/10 transition-all">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          }) : (
+            <div className="text-center py-12 text-sm text-[#6B645E]/70 font-semibold">{t.noPositions}</div>
+          )}
         </div>
       </section>
 

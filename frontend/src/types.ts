@@ -11,6 +11,7 @@ export interface Holding {
   currentPrice: number;
   riskScore: number; // 1-10
   assetClass?: string;
+  changePct?: number | null; // günlük değişim yüzdesi (ör. 2.34 = +%2.34), veri yoksa null
   buyDate?: string; // YYYY-MM-DD — alım tarihi, kur/kâr-zarar hesabı için backend'e gönderilir
 }
 
