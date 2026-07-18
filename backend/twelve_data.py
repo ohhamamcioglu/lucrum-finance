@@ -2915,13 +2915,18 @@ def get_tefas_nav(fund_code: str, start_date: date, end_date: date) -> Any:
                 
     if not db_data:
         return pd.Series(dtype=float)
-        
+
     sorted_dates = sorted(db_data.keys())
     series = pd.Series(
         [db_data[d] for d in sorted_dates],
         index=pd.to_datetime(sorted_dates)
     )
-    return series
+    # Fonoloji "period=all" ile fonun TÜM geçmişini döndürüyor (db_data bu yüzden
+    # istenen aralığın dışına taşabiliyor) — çağıranın istediği [start_date, end_date]
+    # sözleşmesini bozmamak için burada kırpılıyor.
+    return series[
+        (series.index >= pd.Timestamp(start_date)) & (series.index <= pd.Timestamp(end_date))
+    ]
 
 
 def get_tefas_risk_score(fund_code: str) -> Optional[float]:

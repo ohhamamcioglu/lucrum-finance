@@ -1,4 +1,5 @@
 from typing import List, Optional
+from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 import twelve_data as td
@@ -60,11 +61,29 @@ def get_ticker_price_history(
     Twelve Data'nın kendi TTL'li time_series cache'inden (td_time_series) besleniyoruz.
     """
     td_symbol = ticker.upper().strip()
-    if (asset_class or "") == "Kripto" and not td_symbol.endswith("-USD") and "/" not in td_symbol:
+    ac = asset_class or ""
+    if ac == "Kripto" and not td_symbol.endswith("-USD") and "/" not in td_symbol:
         td_symbol = f"{td_symbol}-USD"
 
+    if ac == "TEFAS Fonu":
+        # TEFAS fonları Twelve Data'nın genel sembol uzayında yok — "get_time_series"e
+        # düşürülürse aynı koddaki alakasız bir enstrümanın (varsa) verisi gelir. TEFAS
+        # fonları için asıl doğru kaynak (Fonoloji öncelikli) get_tefas_nav.
+        end_date = date.today()
+        start_date = end_date - timedelta(days=days)
+        series = td.get_tefas_nav(td_symbol, start_date, end_date)
+        return [
+            {
+                "date": dt.strftime("%Y-%m-%d"),
+                "price_usd": None,
+                "price_try": float(price),
+                "source": "tefas",
+            }
+            for dt, price in series.items() if price is not None
+        ]
+
     bars = td.get_time_series(td_symbol, days, "1day")
-    is_try_priced = (asset_class or "") in ("BIST Hissesi", "TL Mevduat", "TL Tahvil")
+    is_try_priced = ac in ("BIST Hissesi", "TL Mevduat", "TL Tahvil")
     return [
         {
             "date": b["date"][:10],
