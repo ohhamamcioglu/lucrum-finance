@@ -69,6 +69,7 @@ export default function DashboardApp() {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('portfolio');
   const [selectedSymbolFromSearch, setSelectedSymbolFromSearch] = useState<string>('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Aynı sembolü paylaşan farklı varlık sınıflarını (ör. TEFAS fonu vs ABD ETF'i)
   // ayırt edebilmek için — bkz. MarketsView'daki kullanım notu.
   const [selectedAssetClassFromSearch, setSelectedAssetClassFromSearch] = useState<string>('');
@@ -438,13 +439,20 @@ export default function DashboardApp() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         settings={settings}
+        mobileOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
 
       {/* Global Header Search & notification bar */}
-      <Header onSearchSelectAsset={handleSearchSelectAsset} settings={settings} exchangeRates={exchangeRates} />
+      <Header
+        onSearchSelectAsset={handleSearchSelectAsset}
+        settings={settings}
+        exchangeRates={exchangeRates}
+        onMenuClick={() => setMobileMenuOpen(true)}
+      />
 
       {/* Main viewport area */}
-      <main className="ml-64 mt-16 p-8 h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar">
+      <main className="ml-0 md:ml-64 mt-16 p-4 md:p-8 h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar">
         <div className="max-w-7xl mx-auto">
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div

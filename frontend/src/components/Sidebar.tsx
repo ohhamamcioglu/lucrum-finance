@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Wallet, BarChart2, ShieldAlert, TrendingUp, Settings, Newspaper, ShieldCheck, Landmark } from 'lucide-react';
+import { Wallet, BarChart2, ShieldAlert, TrendingUp, Settings, Newspaper, ShieldCheck, Landmark, X } from 'lucide-react';
 import { ActiveTab, UserSettings } from '../types';
 import { useT } from '../i18n';
 import { useAuth } from '../AuthContext';
@@ -9,9 +9,13 @@ interface SidebarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   settings: UserSettings;
+  // Mobilde menü varsayılan kapalı, hamburger butonuyla açılan off-canvas panel —
+  // masaüstünde (md ve üstü) her zaman açık/sabit kalır.
+  mobileOpen: boolean;
+  onClose: () => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, settings, mobileOpen, onClose }: SidebarProps) {
   const t = useT(settings.language);
   const { isAdmin, profile } = useAuth();
 
@@ -26,22 +30,43 @@ export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarPr
   ] as const;
 
   return (
-    <aside
-      id="sidebar-container"
-      className="bg-[#F1EFE9] text-[#4A443F] w-64 h-screen fixed left-0 top-0 border-r border-[#E8E2D9] flex flex-col justify-between py-6 z-50 select-none"
-    >
+    <>
+      {/* Mobil off-canvas menü açıkken arkayı karartan ve tıklayınca kapatan katman —
+          masaüstünde hiç render edilmiyor. */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      <aside
+        id="sidebar-container"
+        className={`bg-[#F1EFE9] text-[#4A443F] w-64 h-screen fixed left-0 top-0 border-r border-[#E8E2D9] flex flex-col justify-between py-6 z-50 select-none transition-transform duration-200 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0`}
+      >
       <div className="flex flex-col">
         {/* Logo and branding */}
-        <div className="px-6 mb-10 flex flex-col">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 bg-[#8C9A86] rounded-full flex items-center justify-center text-white font-serif text-base font-medium">L</div>
-            <span className="font-serif font-bold text-xl tracking-tight text-[#2D2926] hover:opacity-90 cursor-pointer">
-              LUCRUM
+        <div className="px-6 mb-10 flex items-start justify-between">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-8 h-8 bg-[#8C9A86] rounded-full flex items-center justify-center text-white font-serif text-base font-medium">L</div>
+              <span className="font-serif font-bold text-xl tracking-tight text-[#2D2926] hover:opacity-90 cursor-pointer">
+                LUCRUM
+              </span>
+            </div>
+            <span className="text-[9px] tracking-[0.25em] text-[#9E958C] uppercase font-semibold">
+              {t.institutionalGrade}
             </span>
           </div>
-          <span className="text-[9px] tracking-[0.25em] text-[#9E958C] uppercase font-semibold">
-            {t.institutionalGrade}
-          </span>
+          {/* Mobilde menüyü kapatma butonu — masaüstünde gizli */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="md:hidden p-1 text-[#9E958C] hover:text-[#2D2926]"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Navigation Menu */}
@@ -54,7 +79,7 @@ export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarPr
               <button
                 key={item.id}
                 id={`sidebar-tab-${item.id}`}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => { setActiveTab(item.id); onClose(); }}
                 className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative group overflow-hidden ${
                   isActive
                     ? 'text-[#8C9A86] bg-[#8C9A86]/10 font-bold'
@@ -78,6 +103,7 @@ export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarPr
             <Link
               to="/admin"
               id="sidebar-tab-admin"
+              onClick={onClose}
               className="w-full flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 text-[#6B645E] hover:bg-[#E8E2D9] hover:text-[#2D2926]"
             >
               <ShieldCheck className="w-4 h-4 text-[#9E958C]" />
@@ -108,6 +134,7 @@ export default function Sidebar({ activeTab, setActiveTab, settings }: SidebarPr
           </span>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

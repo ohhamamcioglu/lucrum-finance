@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, Bell, Newspaper, TrendingUp, Loader2 } from 'lucide-react';
+import { Search, Bell, Newspaper, TrendingUp, Loader2, Menu } from 'lucide-react';
 import { UserSettings } from '../types';
 import { formatCurrency, convertCurrency } from '../utils';
 import { useT } from '../i18n';
@@ -19,6 +19,7 @@ interface HeaderProps {
   onSearchSelectAsset: (symbol: string, assetClass: string) => void;
   settings: UserSettings;
   exchangeRates: { usd_rate: number; eur_rate: number };
+  onMenuClick: () => void;
 }
 
 const SEEN_KEY = 'lucrum_seen_news_urls';
@@ -59,7 +60,7 @@ interface SearchResult {
   symbol: string; name: string; category: string; asset_class: string; sector: string; riskScore: number;
 }
 
-export default function Header({ onSearchSelectAsset, settings, exchangeRates }: HeaderProps) {
+export default function Header({ onSearchSelectAsset, settings, exchangeRates, onMenuClick }: HeaderProps) {
   const t = useT(settings.language);
   const [searchQuery, setSearchQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
@@ -138,11 +139,20 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates }:
   }, []);
 
   return (
-    <header className="fixed top-0 right-0 left-64 h-16 bg-[#F9F7F2] border-b border-[#E8E2D9] z-40 select-none">
-      <div className="flex justify-between items-center px-8 h-full">
+    <header className="fixed top-0 right-0 left-0 md:left-64 h-16 bg-[#F9F7F2] border-b border-[#E8E2D9] z-40 select-none">
+      <div className="flex justify-between items-center gap-3 px-4 md:px-8 h-full">
+
+        {/* Hamburger — sadece mobilde görünür, Sidebar'ı off-canvas açar */}
+        <button
+          type="button"
+          onClick={onMenuClick}
+          className="md:hidden shrink-0 p-1.5 -ml-1.5 text-[#4A443F] hover:text-[#8C9A86] rounded hover:bg-[#F1EFE9]"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
 
         {/* Search */}
-        <div ref={searchRef} className="relative w-96">
+        <div ref={searchRef} className="relative flex-1 min-w-0 md:w-96 md:flex-none">
           <div className="relative w-full rounded">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9E958C] w-4 h-4" />
             <input
@@ -192,7 +202,7 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates }:
         </div>
 
         {/* Right */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 md:gap-6 shrink-0">
           <div className="flex items-center gap-4 relative">
 
             {/* Notification Bell */}
@@ -212,7 +222,7 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates }:
 
               {/* Notifications Panel */}
               {showNotifications && (
-                <div className="absolute top-10 right-0 w-96 bg-white border border-[#E8E2D9] rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="absolute top-10 right-0 w-[calc(100vw-2rem)] max-w-96 bg-white border border-[#E8E2D9] rounded-xl shadow-2xl z-50 overflow-hidden">
                   {/* Header */}
                   <div className="px-4 py-3 border-b border-[#E8E2D9] flex justify-between items-center bg-[#F9F7F2]">
                     <div className="flex items-center gap-2">
@@ -302,9 +312,11 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates }:
 
           </div>
 
-          <div className="h-5 w-[1px] bg-[#E8E2D9]"></div>
+          {/* Dar ekranlarda tekrar eden marka yazısı yer kaplamasın diye gizleniyor
+              (zaten hamburger menüsü açıldığında Sidebar'da görünüyor). */}
+          <div className="hidden md:block h-5 w-[1px] bg-[#E8E2D9]"></div>
 
-          <div className="text-[#8C9A86] font-serif font-bold text-sm tracking-wide">
+          <div className="hidden md:block text-[#8C9A86] font-serif font-bold text-sm tracking-wide">
             LUCRUM
           </div>
         </div>
