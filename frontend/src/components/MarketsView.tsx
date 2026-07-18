@@ -239,8 +239,14 @@ export default function MarketsView({
           setSelectedAsset(asset);
           setLivePrices(prev => ({ ...prev, [sym]: price }));
           setPriceCurrencies(prev => ({ ...prev, [sym]: priceCur }));
-        }).catch(() => {});
-    }).catch(() => {});
+        }).catch((err) => {
+          console.error('Error fetching price for searched asset:', err);
+          onError?.(t.assetLoadFailed);
+        });
+    }).catch((err) => {
+      console.error('Error searching for asset:', err);
+      onError?.(t.assetLoadFailed);
+    });
   }, [selectedSymbolFromSearch, selectedAssetClassFromSearch]);
 
   const getAssetClass = useCallback((asset: MarketAsset): string => {

@@ -28,7 +28,7 @@ export default function PricingPage() {
 
   useEffect(() => {
     if (!token) return;
-    api.getUserProfile().then((p) => setCurrentTier(p.subscription_tier)).catch(() => {});
+    api.getUserProfile().then((p) => setCurrentTier(p.subscription_tier)).catch((err) => console.error('Failed to load current tier:', err));
   }, [token]);
 
   // ?payment=success|failed|cancelled — Lemon Squeezy'den geri dönüşte gösterilecek bildirim
@@ -37,7 +37,7 @@ export default function PricingPage() {
     if (!paymentParam) return;
     if (paymentParam === 'success') {
       setToast(t.paymentSuccessToast);
-      api.getUserProfile().then((p) => setCurrentTier(p.subscription_tier)).catch(() => {});
+      api.getUserProfile().then((p) => setCurrentTier(p.subscription_tier)).catch((err) => console.error('Failed to refresh tier after payment:', err));
     } else if (paymentParam === 'failed') {
       setToast(t.paymentFailedToast);
     } else if (paymentParam === 'cancelled') {

@@ -383,6 +383,9 @@ const en = {
   confirmDeleteTitle: 'Are you sure?',
   confirmDeletePositionBody: 'This position and its transaction history will be permanently removed from your portfolio. This cannot be undone.',
   confirmDeleteLiabilityBody: 'This liability will be permanently removed. This cannot be undone.',
+  assetLoadFailed: 'Could not load asset details, please try again.',
+  fundDataLoadFailed: 'Could not load fund data, please try again.',
+  profileLoadFailed: 'Could not load your profile, please try again.',
 };
 
 const tr: typeof en = {
@@ -759,6 +762,9 @@ const tr: typeof en = {
   confirmDeleteTitle: 'Emin misiniz?',
   confirmDeletePositionBody: 'Bu pozisyon ve işlem geçmişi portföyünüzden kalıcı olarak silinecek. Bu işlem geri alınamaz.',
   confirmDeleteLiabilityBody: 'Bu borç kaydı kalıcı olarak silinecek. Bu işlem geri alınamaz.',
+  assetLoadFailed: 'Varlık detayları yüklenemedi, lütfen tekrar deneyin.',
+  fundDataLoadFailed: 'Fon verisi yüklenemedi, lütfen tekrar deneyin.',
+  profileLoadFailed: 'Profiliniz yüklenemedi, lütfen tekrar deneyin.',
 };
 
 export type Translations = typeof en;

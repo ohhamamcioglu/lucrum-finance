@@ -12,9 +12,10 @@ interface SettingsViewProps {
   onResetPortfolio: () => void;
   onLogout: () => void;
   currentPositionCount: number;
+  onError?: (message: string) => void;
 }
 
-export default function SettingsView({ settings, onUpdateSettings, onResetPortfolio, onLogout, currentPositionCount }: SettingsViewProps) {
+export default function SettingsView({ settings, onUpdateSettings, onResetPortfolio, onLogout, currentPositionCount, onError }: SettingsViewProps) {
   const t = useT(settings.language);
   const [userName, setUserName] = useState(settings.userName);
   const [userRole, setUserRole] = useState(settings.userRole);
@@ -33,7 +34,10 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
     loadProfile();
     api.getPaymentHistory()
       .then(setPaymentHistory)
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to load payment history:', err);
+        onError?.(t.profileLoadFailed);
+      })
       .finally(() => setLoadingPayments(false));
   }, []);
 
@@ -52,6 +56,7 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
       setProfile(data);
     } catch (err) {
       console.error("Failed to load user profile:", err);
+      onError?.(t.profileLoadFailed);
     } finally {
       setLoadingProfile(false);
     }

@@ -74,6 +74,10 @@ export default function DashboardApp() {
   // ayırt edebilmek için — bkz. MarketsView'daki kullanım notu.
   const [selectedAssetClassFromSearch, setSelectedAssetClassFromSearch] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const showError = (message: string) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(null), 5000);
+  };
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
 
   const loadLiabilities = async () => {
@@ -109,8 +113,7 @@ export default function DashboardApp() {
       await loadLiabilities();
     } catch (err: any) {
       console.error('Error deleting liability:', err);
-      setErrorMessage(err.message || 'İşlem başarısız.');
-      setTimeout(() => setErrorMessage(null), 5000);
+      showError(err.message || 'İşlem başarısız.');
     }
   };
 
@@ -202,7 +205,7 @@ export default function DashboardApp() {
             return s != null ? { ...h, riskScore: s } : h;
           }));
         })
-        .catch(() => {});
+        .catch((err) => console.warn('Risk score refresh failed:', err));
 
       // Load performance history in background (non-blocking)
       api.getPerformance(performanceDays, settings.baseCurrency)
@@ -337,8 +340,7 @@ export default function DashboardApp() {
       await loadData();
     } catch (err: any) {
       console.error('Error adding holding to backend:', err);
-      setErrorMessage(err.message || 'İşlem başarısız.');
-      setTimeout(() => setErrorMessage(null), 5000);
+      showError(err.message || 'İşlem başarısız.');
     }
   };
 
@@ -348,8 +350,7 @@ export default function DashboardApp() {
       await loadData();
     } catch (err: any) {
       console.error('Error deleting holding from backend:', err);
-      setErrorMessage(err.message || 'İşlem başarısız.');
-      setTimeout(() => setErrorMessage(null), 5000);
+      showError(err.message || 'İşlem başarısız.');
     }
   };
 
@@ -401,7 +402,7 @@ export default function DashboardApp() {
   };
 
   const handleLogout = () => {
-    api.logout().catch(() => {});
+    api.logout().catch((err) => console.warn('Server-side logout failed, continuing with local logout:', err));
     setToken(null);
     setHoldings([]);
     setPerformanceHistory([]);
@@ -533,6 +534,7 @@ export default function DashboardApp() {
                   onAddHoldingFromMarket={handleAddHolding}
                   settings={settings}
                   exchangeRates={exchangeRates}
+                  onError={showError}
                 />
               )}
 
@@ -550,6 +552,7 @@ export default function DashboardApp() {
                   onResetPortfolio={handleResetPortfolio}
                   onLogout={handleLogout}
                   currentPositionCount={portfolioMetrics.holdings.length}
+                  onError={showError}
                 />
               )}
             </motion.div>

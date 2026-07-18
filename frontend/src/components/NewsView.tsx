@@ -63,8 +63,8 @@ function FundMiniCard({ fundCode, isEn }: { fundCode: string; isEn: boolean; key
   const [disclosures, setDisclosures] = useState<{ title: string; publish_date: string; url: string }[]>([]);
 
   useEffect(() => {
-    api.getFundBreakdown(fundCode).then(setData).catch(() => {});
-    api.getFundDisclosures(fundCode).then(r => setDisclosures(r.disclosures?.slice(0,4) || [])).catch(() => {});
+    api.getFundBreakdown(fundCode).then(setData).catch((err) => console.error(`Fund breakdown fetch failed for ${fundCode}:`, err));
+    api.getFundDisclosures(fundCode).then(r => setDisclosures(r.disclosures?.slice(0,4) || [])).catch((err) => console.error(`Fund disclosures fetch failed for ${fundCode}:`, err));
   }, [fundCode]);
 
   if (!data || !data.allocation.length) return null;

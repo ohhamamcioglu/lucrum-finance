@@ -43,7 +43,10 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    api.adminGetStats().then(setStats).catch(() => {});
+    api.adminGetStats().then(setStats).catch((err) => {
+      console.error('Failed to load admin stats:', err);
+      setError(err?.message || 'Failed to load stats.');
+    });
   }, []);
 
   useEffect(() => {
