@@ -13,7 +13,8 @@ export const MARKET_ASSETS: MarketAsset[] = [
     peRatio: 68.4,
     beta: 1.85,
     sparkline: [128, 129, 131, 130, 132, 133, 135],
-    description: 'NVIDIA Corporation designs graphics processing units for the gaming and professional markets, as well as system on a chip units for the mobile computing and automotive market. It is a leading force in AI accelerators.'
+    description: 'NVIDIA Corporation designs graphics processing units for the gaming and professional markets, as well as system on a chip units for the mobile computing and automotive market. It is a leading force in AI accelerators.',
+    assetClass: 'ABD Hisse/ETF'
   },
   {
     symbol: 'BTC',
@@ -26,7 +27,8 @@ export const MARKET_ASSETS: MarketAsset[] = [
     marketCap: '1.28T',
     beta: 2.1,
     sparkline: [62000, 61500, 63000, 64200, 63500, 64800, 65000],
-    description: 'Bitcoin is a decentralized digital currency, without a central bank or single administrator, that can be sent from user to user on the peer-to-peer bitcoin network without the need for intermediaries.'
+    description: 'Bitcoin is a decentralized digital currency, without a central bank or single administrator, that can be sent from user to user on the peer-to-peer bitcoin network without the need for intermediaries.',
+    assetClass: 'Kripto'
   },
   {
     symbol: 'GS',
@@ -40,7 +42,8 @@ export const MARKET_ASSETS: MarketAsset[] = [
     peRatio: 15.2,
     beta: 1.15,
     sparkline: [468, 465, 467, 462, 463, 461, 460],
-    description: 'The Goldman Sachs Group, Inc. is a leading global investment banking, securities and investment management firm that provides a wide range of financial services to a substantial and diversified client base.'
+    description: 'The Goldman Sachs Group, Inc. is a leading global investment banking, securities and investment management firm that provides a wide range of financial services to a substantial and diversified client base.',
+    assetClass: 'ABD Hisse/ETF'
   },
   {
     symbol: 'MSFT',
@@ -54,7 +57,8 @@ export const MARKET_ASSETS: MarketAsset[] = [
     peRatio: 35.8,
     beta: 0.89,
     sparkline: [415, 417, 416, 418, 422, 419, 420],
-    description: 'Microsoft Corporation is an American multinational technology corporation headquarterd in Redmond, Washington. It develops, licenses, and supports software, consumer electronics, personal computers, and services.'
+    description: 'Microsoft Corporation is an American multinational technology corporation headquarterd in Redmond, Washington. It develops, licenses, and supports software, consumer electronics, personal computers, and services.',
+    assetClass: 'ABD Hisse/ETF'
   },
   {
     symbol: 'AAPL',
@@ -68,7 +72,8 @@ export const MARKET_ASSETS: MarketAsset[] = [
     peRatio: 31.2,
     beta: 1.02,
     sparkline: [214, 216, 215, 218, 221, 219, 220],
-    description: 'Apple Inc. is an American multinational technology company headquartered in Cupertino, California. It designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.'
+    description: 'Apple Inc. is an American multinational technology company headquartered in Cupertino, California. It designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.',
+    assetClass: 'ABD Hisse/ETF'
   },
   {
     symbol: 'ETH',
@@ -81,7 +86,8 @@ export const MARKET_ASSETS: MarketAsset[] = [
     marketCap: '414.2B',
     beta: 1.95,
     sparkline: [3300, 3280, 3350, 3420, 3380, 3430, 3450],
-    description: 'Ethereum is a decentralized, open-source blockchain with smart contract functionality. Ether is the native cryptocurrency of the platform, second only to Bitcoin in market capitalization.'
+    description: 'Ethereum is a decentralized, open-source blockchain with smart contract functionality. Ether is the native cryptocurrency of the platform, second only to Bitcoin in market capitalization.',
+    assetClass: 'Kripto'
   },
   {
     symbol: 'US10Y',
@@ -94,7 +100,12 @@ export const MARKET_ASSETS: MarketAsset[] = [
     marketCap: 'N/A',
     beta: 0.1,
     sparkline: [99.8, 99.9, 100.0, 99.95, 100.02, 100.05, 100.0],
-    description: 'The United States 10-Year Treasury Note is a debt obligation issued by the United States government that matures in 10 years. It serves as an essential global financial benchmark.'
+    description: 'The United States 10-Year Treasury Note is a debt obligation issued by the United States government that matures in 10 years. It serves as an essential global financial benchmark.',
+    // Not: category 'FixedIncome' portföy tahsis grubu için, ama bu TEFAS fonu
+    // DEĞİL — sentetik bir gösterge sembolü. assetClass'ı 'ABD Hisse/ETF' olarak
+    // sabitlemek zorunlu, aksi halde getAssetClass kategoriden TEFAS Fonu tahmin
+    // edip backend'i gerçek olmayan bir TEFAS koduna sorguluyordu.
+    assetClass: 'ABD Hisse/ETF'
   },
   {
     symbol: 'TSLA',
@@ -108,7 +119,8 @@ export const MARKET_ASSETS: MarketAsset[] = [
     peRatio: 54.2,
     beta: 2.24,
     sparkline: [195, 192, 189, 186, 188, 184, 185],
-    description: 'Tesla, Inc. designs, develops, manufactures, sells, and leases fully electric vehicles, energy generation and storage systems, and offers services related to its products.'
+    description: 'Tesla, Inc. designs, develops, manufactures, sells, and leases fully electric vehicles, energy generation and storage systems, and offers services related to its products.',
+    assetClass: 'ABD Hisse/ETF'
   },
   {
     symbol: 'GLD',
@@ -121,7 +133,10 @@ export const MARKET_ASSETS: MarketAsset[] = [
     marketCap: '62.4B',
     beta: 0.25,
     sparkline: [212, 213, 214, 213.5, 214.8, 215.2, 215.0],
-    description: 'SPDR Gold Shares is an investment fund incorporated in the USA. The objective of the Trust is for the Shares to reflect the performance of the price of gold bullion.'
+    description: 'SPDR Gold Shares is an investment fund incorporated in the USA. The objective of the Trust is for the Shares to reflect the performance of the price of gold bullion.',
+    // GLD, TEFAS fonu değil — ABD'de (NYSE Arca) işlem gören gerçek bir ETF.
+    // category 'FixedIncome' sadece portföy tahsis grubu içindir, bkz. US10Y notu.
+    assetClass: 'ABD Hisse/ETF'
   },
   {
     symbol: 'JPM',
@@ -135,7 +150,8 @@ export const MARKET_ASSETS: MarketAsset[] = [
     peRatio: 12.1,
     beta: 1.05,
     sparkline: [194, 195, 197, 196, 198, 197.5, 198.0],
-    description: 'JPMorgan Chase & Co. is an American multinational finance corporation. It is the largest bank in the United States and the worlds largest bank by market capitalization.'
+    description: 'JPMorgan Chase & Co. is an American multinational finance corporation. It is the largest bank in the United States and the worlds largest bank by market capitalization.',
+    assetClass: 'ABD Hisse/ETF'
   }
 ];
 

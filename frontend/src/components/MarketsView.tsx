@@ -23,11 +23,21 @@ function loadWatchlist(): WatchlistItem[] {
       const BIST_LIST = ['THYAO', 'ASELS', 'EREGL', 'GARAN', 'TUPRS', 'KCHOL', 'GESAN', 'PATEK', 'GWIND', 'CWENE', 'SDTTR',
         'AKBNK', 'ISCTR', 'SAHOL', 'SISE', 'BIMAS', 'MGROS', 'FROTO', 'TOASO', 'ARCLK', 'TCELL',
         'PGSUS', 'TAVHL', 'EKGYO', 'PETKM', 'YKBNK', 'HALKB', 'VAKBN', 'KOZAL', 'KOZAA', 'ENKAI'];
+      // TEFAS olmayan tek istisnalar (bkz. utils.ts MARKET_ASSETS) — geri kalan tüm
+      // 'FixedIncome' kategorili öğeler TEFAS fonudur.
+      const NON_TEFAS_FIXED_INCOME = ['GLD', 'US10Y'];
       return items.map((item: any) => {
         let ac = item.assetClass;
         const sym = (item.symbol || '').toUpperCase();
         if (ac === 'ABD Hisse/ETF' && (sym.endsWith('.IS') || BIST_LIST.includes(sym))) {
           ac = 'BIST Hissesi';
+        }
+        // Eski bir hatada (description parse edilerek asset_class tahmin ediliyordu)
+        // izleme listesine TEFAS fonları yanlış assetClass'la ("FixedIncome" gibi,
+        // backend'in tanımadığı bir değer) kalıcı olarak kaydedilmiş olabilir —
+        // localStorage'daki bu eski kayıtları burada düzeltiyoruz.
+        if (item.category === 'FixedIncome' && ac !== 'TEFAS Fonu' && !NON_TEFAS_FIXED_INCOME.includes(sym)) {
+          ac = 'TEFAS Fonu';
         }
         return { ...item, assetClass: ac };
       });
@@ -216,10 +226,15 @@ export default function MarketsView({
     // bir sembolün verisi gösteriliyordu.
     if (asset.assetClass) return asset.assetClass;
     if (asset.category === 'Crypto') return 'Kripto';
-    if (asset.category === 'FixedIncome') return 'TEFAS Fonu';
+    // DİKKAT: category 'FixedIncome' TEFAS fonu anlamına gelmez — GLD (ABD ETF'i)
+    // ve US10Y (sentetik gösterge) gibi TEFAS'la hiç ilgisi olmayan varlıklar da
+    // portföy tahsis grubu için bu kategoriyi kullanıyor (bkz. utils.ts). Bu yüzden
+    // burada kategoriden TEFAS Fonu'na sıçramıyoruz; sadece aşağıdaki bilinen TEFAS
+    // kodu listesi veya (assetClass her zaman set edildiği için pratikte hiç
+    // ulaşılmayan) genel varsayılan kullanılıyor.
 
     const sym = asset.symbol.toUpperCase();
-    if (sym.endsWith('.IS') || 
+    if (sym.endsWith('.IS') ||
         ['THYAO', 'ASELS', 'EREGL', 'GARAN', 'TUPRS', 'KCHOL', 'GESAN', 'PATEK', 'GWIND', 'CWENE', 'SDTTR',
          'AKBNK', 'ISCTR', 'SAHOL', 'SISE', 'BIMAS', 'MGROS', 'FROTO', 'TOASO', 'ARCLK', 'TCELL',
          'PGSUS', 'TAVHL', 'EKGYO', 'PETKM', 'YKBNK', 'HALKB', 'VAKBN', 'KOZAL', 'KOZAA', 'ENKAI'].includes(sym)) {
