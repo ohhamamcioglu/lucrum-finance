@@ -2,11 +2,11 @@ import { useState, FormEvent, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   TrendingUp, Bolt, Plus, Trash2, X, Wallet2, AlertCircle,
-  Pencil, ChevronUp, ChevronDown, ChevronsUpDown,
+  Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Info,
 } from 'lucide-react';
 import { Holding, AssetCategory, UserSettings, Liability } from '../types';
 import { formatCurrency, MARKET_ASSETS, convertCurrency } from '../utils';
-import { useT } from '../i18n';
+import { useT, Translations } from '../i18n';
 import { api, BASE_URL } from '../services/api';
 
 type SortKey = 'symbol' | 'allocation' | 'value' | 'pl' | 'plPct' | 'risk';
@@ -49,6 +49,16 @@ interface DashboardViewProps {
   performanceDays?: 90 | 180 | 365 | 730;
   onPerformanceDaysChange?: (days: 90 | 180 | 365 | 730) => void;
   liabilities?: Liability[];
+}
+
+// Risk skorunun kaynağı varlık sınıfına göre değişir — TEFAS fonları için SPK/KAP'ın
+// resmi risk notu, hisse/ETF için beta'dan hesapladığımız bir tahmin, diğerleri için
+// sabit bir kategori. Kullanıcı ikisini "aynı türden resmi bir sayı" sanmasın diye
+// (bkz. kullanıcı geri bildirimi) her satırda kaynağı ayrı belirtiyoruz.
+function riskScoreSourceLabel(assetClass: string | undefined, t: Translations): string {
+  if (assetClass === 'TEFAS Fonu') return t.riskScoreSourceOfficial;
+  if (assetClass === 'ABD Hisse/ETF' || assetClass === 'BIST Hissesi') return t.riskScoreSourceBeta;
+  return t.riskScoreSourceFixed;
 }
 
 export default function DashboardView({
@@ -875,7 +885,14 @@ export default function DashboardView({
                   {t.unrealizedPL}<SortIcon k="pl" />
                 </th>
                 <th className="px-6 py-4 text-right cursor-pointer hover:text-[#2D2926]" onClick={() => handleSort('risk')}>
-                  {t.riskScore}<SortIcon k="risk" />
+                  <span className="inline-flex items-center gap-1">
+                    {t.riskScore}<SortIcon k="risk" />
+                    <Info
+                      className="w-3 h-3 text-[#9E958C] cursor-help"
+                      onClick={(e) => e.stopPropagation()}
+                      title={`${t.riskScoreSourceOfficial} ${t.riskScoreSourceBeta}`}
+                    />
+                  </span>
                 </th>
                 <th className="px-6 py-4 text-center">{t.action}</th>
               </tr>
@@ -910,11 +927,11 @@ export default function DashboardView({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end items-center gap-2.5">
+                    <div className="flex justify-end items-center gap-2.5" title={riskScoreSourceLabel(h.assetClass, t)}>
                       <div className="w-16 bg-[#F1EFE9] h-1 rounded-full overflow-hidden shrink-0 hidden sm:block">
                         <div className="h-full rounded-full" style={{ width: `${h.riskScore * 10}%`, backgroundColor: h.riskScore >= 7 ? '#B5836F' : h.riskScore >= 4 ? '#D1CABF' : '#7A8874' }} />
                       </div>
-                      <span className={`text-xs font-mono font-bold ${h.riskScore >= 7 ? 'text-[#B5836F]' : h.riskScore >= 4 ? 'text-[#9E958C]' : 'text-[#7A8874]'}`}>{h.riskScore.toFixed(1)}</span>
+                      <span className={`text-xs font-mono font-bold cursor-help ${h.riskScore >= 7 ? 'text-[#B5836F]' : h.riskScore >= 4 ? 'text-[#9E958C]' : 'text-[#7A8874]'}`}>{h.riskScore.toFixed(1)}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -1191,7 +1208,10 @@ export default function DashboardView({
                           className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-medium" />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5 font-serif">{t.riskScore110}</label>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5 font-serif flex items-center gap-1">
+                          {t.riskScore110}
+                          <Info className="w-3 h-3 text-[#9E958C] cursor-help" title={riskScoreSourceLabel(newAssetClass, t)} />
+                        </label>
                         <input type="number" step="0.1" required min="0" max="10" value={newRisk} onChange={e => setNewRisk(Number(e.target.value))}
                           className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
                       </div>
