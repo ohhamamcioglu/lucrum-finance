@@ -106,7 +106,9 @@ def list_users_paginated(page: int = 1, page_size: int = 20, search: Optional[st
             session.close()
 
 def update_user_subscription_tier(user_id: int, tier: str, db: Optional[Session] = None) -> Optional[Dict]:
-    """Admin: bir kullanıcının abonelik tier'ını değiştirir (mock — gerçek ödeme yok)."""
+    """Admin: bir kullanıcının abonelik tier'ını manuel olarak değiştirir (ör. destek/promosyon
+    amaçlı) — gerçek bir LemonSqueezy ödemesi TETİKLEMEZ, sadece veritabanı kaydını günceller.
+    Kasıtlı bir admin aracıdır, ödeme akışının mock/eksik olduğu anlamına gelmez."""
     session, must_close = _get_db(db)
     try:
         user = session.query(DBUser).filter(DBUser.id == user_id).first()

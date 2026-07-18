@@ -152,7 +152,14 @@ def save_targets(
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    """Hedef dağılım oranlarını kaydet"""
+    """Hedef dağılım oranlarını kaydet. Toplamın ~%100 olması zorunlu — aksi halde
+    rebalans sapma uyarıları yanlış hesaplanıyordu (eskiden hiç kontrol edilmiyordu)."""
+    total_pct = sum(a.target_pct for a in allocations)
+    if allocations and not (99.0 <= total_pct <= 101.0):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Hedef oranların toplamı %100 olmalı (şu an %{total_pct:.1f})."
+        )
     rows = save_target_allocations(user_id, allocations, db=db)
     return [TargetAllocation(**r) for r in rows]
 

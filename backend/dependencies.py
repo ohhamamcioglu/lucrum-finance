@@ -7,10 +7,16 @@ from database import get_db
 # TokenUrl is points to our login endpoint
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login", auto_error=False)
 
-def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
+def get_current_user_id(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> int:
     """
     HTTP Authorization Bearer token'ını doğrular ve çözerek kullanıcı ID'sini (sub) döner.
     SaaS ortamı için kesin 401 yetkilendirmesi uygular.
+
+    GÜVENLİK DÜZELTMESİ: Eskiden burada sadece JWT decode ediliyordu, kullanıcının hâlâ
+    aktif olup olmadığı veya var olup olmadığı hiç sorulmuyordu — bir kullanıcı askıya
+    alınsa (is_active=False) bile elindeki token'ın süresi dolana kadar (varsayılan 30dk)
+    sisteme erişmeye devam edebiliyordu, hesabı "hemen" kapatmanın bir yolu yoktu. Artık
+    her istekte tek bir ekstra DB sorgusuyla bu kontrol ediliyor.
     """
     if not token:
         raise HTTPException(
@@ -18,7 +24,7 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
             detail="Yetkilendirme token'ı bulunamadı. Lütfen giriş yapın.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     payload = decode_access_token(token)
     if not payload:
         raise HTTPException(
@@ -26,7 +32,7 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
             detail="Geçersiz veya süresi dolmuş yetkilendirme token'ı.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     user_id_str = payload.get("sub")
     if not user_id_str:
         raise HTTPException(
@@ -34,15 +40,26 @@ def get_current_user_id(token: str = Depends(oauth2_scheme)) -> int:
             detail="Token içerisinde kullanıcı kimliği bulunamadı.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     try:
-        return int(user_id_str)
+        user_id = int(user_id_str)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Geçersiz kullanıcı kimlik formatı.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    from db_models import DBUser
+    user = db.query(DBUser.is_active).filter(DBUser.id == user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Hesap bulunamadı veya devre dışı bırakılmış.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user_id
 
 def check_position_limit(user_id: int = Depends(get_current_user_id), db: Session = Depends(get_db)):
     """Kullanıcının üyelik planına göre pozisyon sınırını denetler."""

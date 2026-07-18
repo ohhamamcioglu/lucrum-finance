@@ -104,8 +104,8 @@ class PaymentSummary(BaseModel):
 class PositionBase(BaseModel):
     ticker: str
     asset_class: str
-    quantity: float
-    buy_price: float
+    quantity: float = Field(gt=0)
+    buy_price: float = Field(gt=0)
     buy_date: date
     buy_currency: str = "TRY"
     cost_basis_tly: Optional[float] = None
@@ -119,8 +119,10 @@ class PositionCreate(PositionBase):
     pass
 
 class PositionUpdate(BaseModel):
-    quantity: Optional[float] = None
-    buy_price: Optional[float] = None
+    # gt=0: delta_quantity/delta_price İSTİSNA — top-up/kısmi satış farkını temsil ettikleri
+    # için delta_quantity negatif olabilir (kısmi satış), o yüzden onlara kısıt konmadı.
+    quantity: Optional[float] = Field(default=None, gt=0)
+    buy_price: Optional[float] = Field(default=None, gt=0)
     buy_date: Optional[date] = None
     buy_currency: Optional[str] = None
     cost_basis_tly: Optional[float] = None
@@ -133,7 +135,7 @@ class PositionUpdate(BaseModel):
     # kaydetmek için — delta_quantity pozitifse BUY, negatifse SELL olarak, bugünün tarihiyle
     # işlem geçmişine eklenir. Eski/mevcut işlemlere hiç dokunulmaz. Bkz. crud.update_position.
     delta_quantity: Optional[float] = None
-    delta_price: Optional[float] = None
+    delta_price: Optional[float] = Field(default=None, gt=0)
 
 class Position(PositionBase):
     id: int
@@ -150,8 +152,8 @@ class TransactionBase(BaseModel):
     ticker: str
     asset_class: str
     transaction_type: str  # BUY, SELL, DIVIDEND
-    quantity: float
-    price: float
+    quantity: float = Field(gt=0)
+    price: float = Field(gt=0)
     currency: str = "TRY"
     transaction_date: date
     notes: Optional[str] = None
@@ -231,7 +233,7 @@ class ExchangeRate(ExchangeRateCreate):
 class LiabilityBase(BaseModel):
     name: str
     liability_type: str
-    amount: float
+    amount: float = Field(gt=0)
     currency: str = "TRY"
     due_date: Optional[str] = None
     interest_rate: Optional[float] = None
@@ -242,7 +244,7 @@ class LiabilityCreate(LiabilityBase):
 class LiabilityUpdate(BaseModel):
     name: Optional[str] = None
     liability_type: Optional[str] = None
-    amount: Optional[float] = None
+    amount: Optional[float] = Field(default=None, gt=0)
     currency: Optional[str] = None
     due_date: Optional[str] = None
     interest_rate: Optional[float] = None
@@ -259,7 +261,7 @@ class Liability(LiabilityBase):
 # Hedef Dağılım (Target Allocation)
 class TargetAllocationBase(BaseModel):
     asset_class: str
-    target_pct: float
+    target_pct: float = Field(ge=0, le=100)
 
 class TargetAllocationCreate(TargetAllocationBase):
     pass
