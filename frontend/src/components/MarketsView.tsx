@@ -172,18 +172,6 @@ export default function MarketsView({
     });
   }, [watchlist]);
 
-  // Seçili varlık için sparkline çek
-  const fetchSparkline = useCallback(async (sym: string, assetClass: string, days: number, fallback: number[]) => {
-    try {
-      const history = await api.getPriceHistory(sym, days, assetClass);
-      if (history && history.length >= 2) {
-        setSparkline(history);
-      } else {
-        setSparkline(mapToHistoryObjects(fallback.length >= 2 ? fallback : [fallback[0] ?? 0, fallback[0] ?? 0]));
-      }
-    } catch { setSparkline(mapToHistoryObjects(fallback.length >= 2 ? fallback : [fallback[0] ?? 0, fallback[0] ?? 0])); }
-  }, []);
-
   // Header aramasından gelen sembol
   useEffect(() => {
     if (!selectedSymbolFromSearch) return;
@@ -253,18 +241,32 @@ export default function MarketsView({
     return 'USD';
   }, [priceCurrencies, selectedAsset, getAssetClass]);
 
-  // Varlık detaylarını (hacim, piyasa değeri, f/k, açıklama) arka planda yükle
+  // Varlık detaylarını (grafik + hacim/piyasa değeri/f-k/açıklama) arka planda yükle.
+  // Mevcut Pozisyonlar'daki varlık detay penceresiyle AYNI api.getAssetDetail
+  // fonksiyonunu kullanır (bkz. api.ts) — fiyat/grafik iki ayrı yerde bağımsız
+  // fetch edilmediği için asset_class işleme farkından kaynaklanan sapmalar
+  // (ör. TEFAS fonunun yanlış sembolle eşleşmesi) artık mümkün değil.
   useEffect(() => {
     if (!selectedAsset?.symbol) return;
     if (selectedAsset.category === 'Cash') return;
-    
+
     let cancelled = false;
+    const symbol = selectedAsset.symbol;
     const ac = getAssetClass(selectedAsset);
-    
-    api.getAssetOverview(selectedAsset.symbol, ac)
-      .then(overview => {
-        if (cancelled || !overview) return;
-        
+    const fallback = selectedAsset.sparkline;
+
+    api.getAssetDetail(symbol, ac, timeframe)
+      .then(({ history, overview }) => {
+        if (cancelled) return;
+
+        if (history && history.length >= 2) {
+          setSparkline(history);
+        } else {
+          setSparkline(mapToHistoryObjects(fallback.length >= 2 ? fallback : [fallback[0] ?? 0, fallback[0] ?? 0]));
+        }
+
+        if (!overview) return;
+
         const formatLargeNum = (num: any): string => {
           if (num == null || isNaN(num)) return '—';
           const n = Number(num);
@@ -273,17 +275,17 @@ export default function MarketsView({
           if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
           return n.toLocaleString(settings.language === 'tr' ? 'tr-TR' : 'en-US');
         };
-        
+
         setSelectedAsset(prev => {
-          if (prev.symbol !== selectedAsset.symbol) return prev;
-          
+          if (prev.symbol !== symbol) return prev;
+
           let vol = '—';
           if (overview.volume_24h != null) vol = formatLargeNum(overview.volume_24h);
-          
+
           let cap = '—';
           if (overview.market_cap != null) cap = formatLargeNum(overview.market_cap);
           else if (overview.portfolio_size != null) cap = formatLargeNum(overview.portfolio_size);
-          
+
           return {
             ...prev,
             name: overview.name || prev.name,
@@ -294,25 +296,22 @@ export default function MarketsView({
           };
         });
       })
-      .catch((err) => console.error('Error loading asset details in markets:', err));
-      
-    return () => { cancelled = true; };
-  }, [selectedAsset.symbol, getAssetClass, settings.language]);
+      .catch((err) => {
+        console.error('Error loading asset details in markets:', err);
+        if (!cancelled) {
+          setSparkline(mapToHistoryObjects(fallback.length >= 2 ? fallback : [fallback[0] ?? 0, fallback[0] ?? 0]));
+        }
+      });
 
-  // Seçili varlık değişince sparkline güncelle (izleme listesinden tıklama dahil)
+    return () => { cancelled = true; };
+  }, [selectedAsset.symbol, timeframe, getAssetClass, settings.language]);
+
+  // Seçili varlık değişince: yukarıdaki effect symbol değişimini zaten yakalayıp
+  // grafiği/detayları yeniden çeker, burada sadece seçimi güncellemek yeterli.
   const selectAsset = useCallback((asset: MarketAsset) => {
     setSelectedAsset(asset);
     setSelectedSymbolFromSearch('');
-    const ac = getAssetClass(asset);
-    fetchSparkline(asset.symbol, ac, timeframe, asset.sparkline);
-  }, [fetchSparkline, setSelectedSymbolFromSearch, getAssetClass, timeframe]);
-
-  // Zaman aralığı (timeframe) değiştikçe seçili varlığın grafik geçmişini güncelle
-  useEffect(() => {
-    if (!selectedAsset?.symbol) return;
-    const ac = getAssetClass(selectedAsset);
-    fetchSparkline(selectedAsset.symbol, ac, timeframe, selectedAsset.sparkline);
-  }, [timeframe, selectedAsset.symbol, getAssetClass, fetchSparkline]);
+  }, [setSelectedSymbolFromSearch]);
 
   // İzleme listesi işlemleri
   const isWatched = watchlist.some(w => w.symbol === selectedAsset.symbol);
@@ -443,7 +442,6 @@ export default function MarketsView({
                             };
                             setSelectedAsset(a);
                             setSelectedSymbolFromSearch('');
-                            fetchSparkline(item.symbol, item.assetClass, timeframe, []);
                           }
                         }}
                       >

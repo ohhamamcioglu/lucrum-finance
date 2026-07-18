@@ -313,6 +313,21 @@ export const api = {
     return request(`${BASE_URL}/api/assets/${ticker}/overview?asset_class=${encodeURIComponent(assetClass)}`);
   },
 
+  // Fiyat geçmişi + genel bilgiyi tek çağrıda getirir. Hem Mevcut Pozisyonlar'daki
+  // varlık detay penceresi hem de Piyasalar sayfasındaki grafik/detay paneli AYNI
+  // bu fonksiyonu kullanır — iki ayrı yerde birbirinden bağımsız fetch mantığı
+  // olmadığından asset_class işleme farkı yüzünden aralarında sapma oluşamaz.
+  async getAssetDetail(ticker: string, assetClass: string, days = 90): Promise<{
+    history: { date: string; price: number }[];
+    overview: any;
+  }> {
+    const [history, overview] = await Promise.all([
+      this.getPriceHistory(ticker, days, assetClass),
+      this.getAssetOverview(ticker, assetClass),
+    ]);
+    return { history, overview };
+  },
+
   async getAssetFundamentals(ticker: string, assetClass: string): Promise<any> {
     return request(`${BASE_URL}/api/assets/${ticker}/fundamentals?asset_class=${encodeURIComponent(assetClass)}`);
   },

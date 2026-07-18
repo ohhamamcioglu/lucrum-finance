@@ -318,10 +318,7 @@ export default function DashboardView({
       setLoadingDetail(true);
       try {
         const assetClass = selectedAssetForDetail.assetClass || 'ABD Hisse/ETF';
-        const [history, overview] = await Promise.all([
-          api.getPriceHistory(requestedSymbol, 90, assetClass),
-          api.getAssetOverview(requestedSymbol, assetClass),
-        ]);
+        const { history, overview } = await api.getAssetDetail(requestedSymbol, assetClass, 90);
         if (cancelled) return;
         setDetailHistory(history);
         setDetailOverview(overview);
