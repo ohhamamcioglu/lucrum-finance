@@ -467,6 +467,10 @@ def update_position(user_id: int, position_id: int, update: PositionUpdate, db: 
         if not pos:
             return None
 
+        old_quantity = pos.quantity
+        old_buy_date = pos.buy_date
+        is_interest_bearing = bool(pos.interest_rate and pos.interest_rate > 0)
+
         fields = update.model_dump(exclude_unset=True)
         delta_quantity = fields.pop("delta_quantity", None)
         delta_price = fields.pop("delta_price", None)
@@ -474,6 +478,21 @@ def update_position(user_id: int, position_id: int, update: PositionUpdate, db: 
         # Update fields dynamically
         for key, value in fields.items():
             setattr(pos, key, value)
+
+        # Faizli nakit pozisyona top-up yapılınca, buy_date değişmeden kalırsa yeni eklenen
+        # tutar da eski alım tarihinden beri faiz kazanmış gibi görünüyordu (retroaktif faiz —
+        # bkz. services.py'deki interest_factor hesaplaması, days_held = today - buy_date).
+        # Doğrusal faiz modeli için AĞIRLIKLI ORTALAMA alım tarihi matematiksel olarak tam
+        # isabetli bir düzeltme: yeni_gün = eski_miktar * eski_gün / yeni_toplam_miktar.
+        # Frontend zaten açıkça yeni bir buy_date gönderdiyse (fields içinde varsa) dokunulmaz.
+        if (
+            is_interest_bearing and delta_quantity and delta_quantity > 0
+            and "buy_date" not in fields and old_buy_date and old_quantity and pos.quantity
+        ):
+            old_days_held = (date.today() - old_buy_date).days
+            if old_days_held > 0:
+                avg_days_held = max(0, round(old_quantity * old_days_held / pos.quantity))
+                pos.buy_date = date.today() - timedelta(days=avg_days_held)
 
         # Top-up (ekleme) veya kısmi satış (azaltma) GERÇEK bir işlem olarak kaydediliyor —
         # bugünün tarihiyle, ama mevcut/eski işlemler hiç değiştirilmeden.

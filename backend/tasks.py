@@ -15,6 +15,18 @@ def _td_symbol(ticker: str, asset_class: str) -> str:
     return ticker
 
 @celery_app.task
+def check_price_alerts_and_rebalancing_task(user_id: int, portfolio: dict):
+    """calculate_portfolio içindeki fiyat alarmı/rebalans-sapma kontrolünü gerçekten arka
+    planda çalıştırır. Eskiden bu kontrol GET /api/portfolio isteği içinde SENKRON
+    çalışıyordu (cache soğukken) — dashboard yüklemesini yavaşlatıyor ve idempotent olması
+    gereken bir GET isteğini DB yazması yapan bir işleme çeviriyordu."""
+    from services import check_price_alerts_and_rebalancing
+    try:
+        check_price_alerts_and_rebalancing(user_id, portfolio)
+    except Exception as e:
+        logger.error(f"[CELERY] Price alert/rebalance check failed for user_id={user_id}: {e}")
+
+@celery_app.task
 def daily_snapshot_task():
     """Her gün tüm SaaS kullanıcılarının portföy snapshot'larını kaydeder (Çoklu kiracılık)."""
     db = SessionLocal()

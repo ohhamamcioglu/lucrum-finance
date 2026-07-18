@@ -1,3 +1,4 @@
+import os
 import twelve_data as td
 import requests
 import json
@@ -844,11 +845,21 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
     }
     _svc_fc.set(cache_key, result)
     
-    # Run price alerts check and rebalance warnings in the background
+    # Fiyat alarmı/rebalans kontrolü — GERÇEKTEN arka planda (Celery/Redis varsa).
+    # ESKİDEN buradaki yorum "arka planda" diyordu ama check_price_alerts_and_rebalancing
+    # doğrudan, SENKRON çağrılıyordu — her GET /api/portfolio isteği (cache soğukken) bu
+    # DB yazmalarının bitmesini bekliyordu, dashboard yüklemesini yavaşlatıyor ve GET'i
+    # idempotent olmaktan çıkarıyordu. Artık Redis/Celery varsa gerçek bir arka plan
+    # görevine devrediliyor; yoksa (yerel geliştirme) eskisi gibi senkron çalışmaya devam
+    # eder — hiç uyarı/rebalans kontrolü hiç çalışmamasındansa bu daha güvenli.
     try:
-        check_price_alerts_and_rebalancing(user_id, result)
+        if os.getenv("REDIS_URL"):
+            from tasks import check_price_alerts_and_rebalancing_task
+            check_price_alerts_and_rebalancing_task.delay(user_id, result)
+        else:
+            check_price_alerts_and_rebalancing(user_id, result)
     except Exception as ex:
-        print(f"[WARN] Alerts check failed: {ex}")
+        print(f"[WARN] Alerts check failed/could not be queued: {ex}")
 
     return result
 
