@@ -1025,15 +1025,15 @@ export default function DashboardView({
                       <span>{h.symbol}</span>
                       <span>•</span>
                       <span>{h.allocationPercent.toFixed(1)}% {t.allocation}</span>
-                      {hasChange && (
-                        <span className={`font-mono font-bold normal-case ${h.changePct! >= 0 ? 'text-[#7A8874]' : 'text-[#B5836F]'}`}>
-                          {h.changePct! >= 0 ? '+' : ''}{h.changePct!.toFixed(2)}%
-                        </span>
-                      )}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-sm font-mono font-bold text-[#2D2926]">{formatCurrency(h.value, settings.baseCurrency)}</div>
+                    {hasChange && (
+                      <div className={`text-[10px] font-mono font-bold mt-0.5 ${h.changePct! >= 0 ? 'text-[#7A8874]' : 'text-[#B5836F]'}`}>
+                        {h.changePct! >= 0 ? '+' : ''}{h.changePct!.toFixed(2)}%
+                      </div>
+                    )}
                   </div>
                   <ChevronDown className={`w-4 h-4 text-[#9E958C] shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
