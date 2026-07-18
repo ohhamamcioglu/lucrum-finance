@@ -66,6 +66,12 @@ celery_app.conf.update(
             "task": "tasks.downgrade_expired_subscriptions_task",
             # Every day
             "schedule": 86400.0,
+        },
+        "refresh-instrument-catalog-weekly": {
+            "task": "tasks.refresh_instrument_catalog_task",
+            # Haftada bir — TTL 14 gün olsa da yeni listelenen hisse/fonları
+            # daha hızlı yakalamak için
+            "schedule": 604800.0,
         }
     }
 )

@@ -1,4 +1,5 @@
 import logging
+import threading
 from datetime import date
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -80,6 +81,10 @@ def start_scheduler():
             td.crawler.register_symbols(symbols, asset_classes)
     except Exception as e:
         logger.warning(f"[CRAWLER] Startup symbol registration failed: {e}")
+
+    # Arama kataloğunu (BIST/NASDAQ/NYSE/Kripto/TEFAS) arka planda tazele — app
+    # başlangıcını bloklamaz, sadece kataloğun 14 günlük TTL'i dolmuşsa ağa gider.
+    threading.Thread(target=td.refresh_instrument_catalog, daemon=True, name="catalog-seed").start()
 
     # If Redis is configured, delegate periodic cron jobs to Celery Beat
     import os

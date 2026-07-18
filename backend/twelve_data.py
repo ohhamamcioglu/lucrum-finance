@@ -555,6 +555,13 @@ def init_db():
         except Exception:
             pass  # Zaten varsa ignore
 
+        try:
+            # TEFAS fonları için Fonoloji'nin resmi SPK/KAP risk skoru (1-7)
+            c.execute("ALTER TABLE td_instruments ADD COLUMN risk_score REAL")
+            c.commit()
+        except Exception:
+            pass  # Zaten varsa ignore
+
         c.close()
     logging.info("TD DB hazır: %s", DB_PATH)
 
@@ -618,15 +625,156 @@ def get_bist_instruments() -> list[dict]:
     return fetch_instruments("XIST")
 
 
-def search_instruments(query: str) -> list[dict]:
-    q = f"%{query.upper()}%"
+def search_instruments(query: str, limit: int = 40) -> list[dict]:
+    qu = query.upper()
+    like = f"%{qu}%"
+    prefix = f"{qu}%"
     with _db_lock:
         c = _conn()
-        rows = c.execute(
-            "SELECT * FROM td_instruments WHERE symbol LIKE ? OR name LIKE ? LIMIT 20", (q, q)
-        ).fetchall()
+        # Sembolü sorguyla BAŞLAYAN eşleşmeleri (ör. "BTC" -> "BTC/USD") önce getir,
+        # sonra kısa sembolleri öne al — aksi halde binlerce kripto çapraz-paritesi
+        # (ör. "ADX/BTC") gerçek eşleşmeyi LIMIT'in dışına itebiliyordu.
+        rows = c.execute("""
+            SELECT * FROM td_instruments
+            WHERE symbol LIKE ? OR name LIKE ?
+            ORDER BY (symbol LIKE ?) DESC, LENGTH(symbol) ASC
+            LIMIT ?
+        """, (like, like, prefix, limit)).fetchall()
         c.close()
     return [dict(r) for r in rows]
+
+
+def _seed_crypto_catalog() -> int:
+    """Twelve Data kripto para listesini td_instruments'a kaydeder (TTL: 14 gün)."""
+    with _db_lock:
+        c = _conn()
+        row = c.execute(
+            "SELECT MAX(fetched_at) fa FROM td_instruments WHERE exchange='Digital Currency'"
+        ).fetchone()
+        c.close()
+    if _fresh(row["fa"] if row else None, TTL_INSTRUMENTS):
+        return 0
+    data = _api("cryptocurrencies", {})
+    items = (data or {}).get("data") or []
+    if not items:
+        return 0
+    ts = _now()
+    rows = [
+        (
+            item["symbol"], "Digital Currency",
+            item.get("name"), item.get("currency_base"),
+            "Digital Currency", "", "", "", ts
+        )
+        for item in items
+    ]
+    with _db_lock:
+        c = _conn()
+        c.executemany("""
+            INSERT OR REPLACE INTO td_instruments
+            (symbol,exchange,name,currency,type,country,mic_code,figi_code,fetched_at)
+            VALUES (?,?,?,?,?,?,?,?,?)
+        """, rows)
+        c.commit()
+        c.close()
+    return len(rows)
+
+
+def seed_tefas_fund_catalog() -> int:
+    """TEFAS fon kodu/adı kataloğunu td_instruments'a kaydeder (arama için).
+    Birincil kaynak Fonoloji'nin /funds listesi (temiz UTF-8 isimler, sayfalanmış
+    tam liste, trading_status ile aktif/pasif ayrımı). FONOLOJI_API_KEY tanımlı
+    değilse veya istek başarısız olursa pytefas tabanlı
+    tefas_tools._get_all_funds_snapshot'a düşülür (YAT+EMK+BYF, GYF/GSYF hariç;
+    fon adlarında bilinen bir encoding kusuru var)."""
+    with _db_lock:
+        c = _conn()
+        row = c.execute(
+            "SELECT MAX(fetched_at) fa FROM td_instruments WHERE exchange='TEFAS'"
+        ).fetchone()
+        c.close()
+    if _fresh(row["fa"] if row else None, TTL_INSTRUMENTS):
+        return 0
+
+    ts = _now()
+    rows: list[tuple] = []
+
+    if FONOLOJI_API_KEY:
+        offset, page_size, total = 0, 1000, None
+        while total is None or offset < total:
+            data = _fonoloji_api("/funds", {"limit": page_size, "offset": offset})
+            if not data:
+                break
+            items = data.get("items") or []
+            total = data.get("total", 0)
+            for it in items:
+                if it.get("trading_status") != "AKTİF":
+                    continue
+                code = (it.get("code") or "").upper().strip()
+                if not code:
+                    continue
+                rows.append((
+                    code, "TEFAS", it.get("name") or code, "TRY",
+                    it.get("type") or "Fund", "TR", "", "", ts, it.get("risk_score")
+                ))
+            offset += page_size
+            if not items:
+                break
+        if not rows:
+            logging.warning("[CATALOG] Fonoloji /funds boş/başarısız döndü, pytefas'a düşülüyor.")
+
+    if not rows:
+        try:
+            from tefas_tools import _get_all_funds_snapshot
+            from datetime import timedelta as _timedelta
+            # Tek günlük pencere hafta sonuna denk gelip boş dönebiliyor; 6 günlük
+            # pencere (dünle biten) en az birkaç iş gününü garantiler.
+            snap = _get_all_funds_snapshot(date.today() - _timedelta(days=7))
+        except Exception as e:
+            logging.warning("[CATALOG] TEFAS fon listesi çekilemedi: %s", e)
+            snap = None
+        if snap is not None and not snap.empty:
+            rows = [
+                (
+                    str(r["fund_code"]).upper(), "TEFAS",
+                    r.get("fund_name") or str(r["fund_code"]), "TRY",
+                    "Fund", "TR", "", "", ts, None
+                )
+                for _, r in snap.iterrows()
+            ]
+
+    if not rows:
+        return 0
+    with _db_lock:
+        c = _conn()
+        c.executemany("""
+            INSERT OR REPLACE INTO td_instruments
+            (symbol,exchange,name,currency,type,country,mic_code,figi_code,fetched_at,risk_score)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+        """, rows)
+        c.commit()
+        c.close()
+    return len(rows)
+
+
+def refresh_instrument_catalog() -> dict:
+    """BIST, NASDAQ, NYSE, Kripto ve TEFAS arama kataloğunu tazeler.
+    Her kaynak kendi TTL'ine göre (14 gün) ağa gerçek istek atar; taze olan
+    kaynaklar için hiçbir API çağrısı yapılmaz."""
+    counts: dict[str, int] = {}
+    for label, fn in (
+        ("XIST", lambda: len(get_bist_instruments())),
+        ("NASDAQ", lambda: len(fetch_instruments("NASDAQ"))),
+        ("NYSE", lambda: len(fetch_instruments("NYSE"))),
+        ("CRYPTO", _seed_crypto_catalog),
+        ("TEFAS", seed_tefas_fund_catalog),
+    ):
+        try:
+            counts[label] = fn()
+        except Exception as e:
+            logging.warning("[CATALOG] %s tohumlama başarısız: %s", label, e)
+            counts[label] = -1
+    logging.info("[CATALOG] Enstrüman kataloğu tazelendi: %s", counts)
+    return counts
 
 
 # ═══════════════════════════════════════════════════════════════════════════

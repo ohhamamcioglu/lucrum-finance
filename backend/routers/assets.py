@@ -414,13 +414,65 @@ def _fetch_twelve_data_news(us_tickers: list[str]) -> list[dict]:
     return all_articles
 
 
+# Twelve Data'nın enstrüman listesindeki (exchange, type) değerlerini uygulamanın
+# kendi asset_class taksonomisine eşler. Kapsam dışı borsalar (Forex, Physical
+# Currency, endeksler vb.) None döner ve arama sonuçlarına dahil edilmez —
+# uygulama sadece bu 4 varlık sınıfını pozisyon olarak destekliyor.
+def _catalog_row_to_asset(row: dict) -> Optional[dict]:
+    exch = (row.get("exchange") or "").upper()
+    sym = (row.get("symbol") or "").upper().split(":")[0].replace(".IS", "")
+    name = row.get("name") or sym
+
+    if exch == "XIST":
+        metadata = universe.BIST_100_METADATA.get(sym)
+        sector = metadata["sector"] if metadata else "BIST"
+        return {
+            "symbol": sym, "name": name, "category": "Equity",
+            "asset_class": "BIST Hissesi", "sector": sector, "riskScore": 5.5,
+        }
+    if exch in ("NASDAQ", "NYSE", "AMEX"):
+        return {
+            "symbol": sym, "name": name, "category": "Equity",
+            "asset_class": "ABD Hisse/ETF", "sector": row.get("type") or exch, "riskScore": 5.5,
+        }
+    if exch == "DIGITAL CURRENCY":
+        # Twelve Data binlerce çapraz parite döndürüyor (ör. "ADX/BTC"); uygulama
+        # kriptoyu her zaman USD karşılığıyla takip ediyor, o yüzden sadece /USD
+        # paritelerini göster.
+        if not sym.endswith("/USD"):
+            return None
+        sym = sym.replace("/USD", "")
+        return {
+            "symbol": sym, "name": name, "category": "Crypto",
+            "asset_class": "Kripto", "sector": "Cryptocurrency", "riskScore": 9.0,
+        }
+    if exch == "TEFAS":
+        risk = row.get("risk_score")
+        return {
+            "symbol": sym, "name": name, "category": "FixedIncome",
+            "asset_class": "TEFAS Fonu", "sector": "TEFAS",
+            "riskScore": float(risk) if risk is not None else 2.5,
+        }
+    return None
+
+
 # Routes
 @router.get("/assets/search")
 def search_assets(query: str = Query(..., min_length=1)):
     """Arama sorgusuna uyan varliklari listele"""
     q = query.upper().strip()
     results = []
-    
+
+    # 0. Yerel enstrüman kataloğu (Twelve Data: BIST/NASDAQ/NYSE/Kripto tam listesi
+    # + TEFAS fon kataloğu — bkz. twelve_data.refresh_instrument_catalog). Sadece
+    # BIST 100 / SP500 / elle listelenmiş fonlarla sınırlı kalmadan tüm borsalardaki
+    # enstrümanları arayabilmek için asıl kaynak budur; aşağıdaki sabit listeler
+    # (ETF'ler gibi farklı borsalarda işlem görenler için) tamamlayıcı olarak kalır.
+    for row in td.search_instruments(q):
+        mapped = _catalog_row_to_asset(row)
+        if mapped:
+            results.append(mapped)
+
     # 1. BIST 100 search
     for ticker in universe.BIST_100:
         clean_ticker = ticker.replace(".IS", "")
@@ -515,7 +567,7 @@ def search_assets(query: str = Query(..., min_length=1)):
         if r["symbol"] not in seen:
             seen.add(r["symbol"])
             unique_results.append(r)
-            if len(unique_results) >= 15:
+            if len(unique_results) >= 20:
                 break
     return unique_results
 

@@ -94,6 +94,17 @@ def warm_portfolio_cache_task():
         db.close()
 
 @celery_app.task
+def refresh_instrument_catalog_task():
+    """BIST, NASDAQ, NYSE, Kripto ve TEFAS arama kataloğunu periyodik tazeler
+    (bkz. twelve_data.refresh_instrument_catalog — her kaynağın kendi 14 günlük
+    TTL'i var, taze olanlar için ağa istek atılmaz)."""
+    try:
+        counts = td.refresh_instrument_catalog()
+        logger.info(f"[CELERY] Instrument catalog refreshed: {counts}")
+    except Exception as e:
+        logger.error(f"[CELERY] Instrument catalog refresh failed: {e}")
+
+@celery_app.task
 def downgrade_expired_subscriptions_task():
     """Süresi dolmuş (subscription_ends_at geçmiş) ücretli abonelikleri FREE'ye düşürür.
     Tek seferlik/dönemsel ödeme modelinde otomatik yenileme olmadığı için bu görev
