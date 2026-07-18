@@ -209,6 +209,19 @@ def get_usd_try_rate(date_str: Optional[str] = None) -> float:
                     _svc_fc.set(cache_key, rate)
                     return rate
 
+            # İstenen tarih 730 günden eskiyse (days_back sınırı yüzünden) yukarıdaki döngü
+            # hiç eşleşme bulamıyordu ve kod sessizce BUGÜNÜN kuruna düşüyordu — 3 yıl önceki
+            # bir alım için bugünün kurunu kullanmak yatırım maliyetini/TWRR'yi tamamen
+            # bozuyordu. Artık bugünün kuru yerine, çekilen serideki EN ESKİ (elimizdeki en
+            # yakın) kur kullanılıyor — yine tam isabet değil ama bugünün kurundan çok daha
+            # doğru bir yaklaşıklık.
+            if series:
+                oldest = min(series, key=lambda x: x.get("date", ""))
+                if oldest.get("close"):
+                    print(f"[WARN] USD/TRY için {date_str} tarihli kur bulunamadı (730 günlük sınır), "
+                          f"en eski mevcut kur ({oldest.get('date')}) kullanılıyor.")
+                    return float(oldest["close"])
+
         # Güncel kur — önce hızlı servis
         fast = _fetch_current_rates_fast()
         if fast:
@@ -260,6 +273,15 @@ def get_eur_try_rate(date_str: Optional[str] = None) -> float:
                         pass
                     _svc_fc.set(cache_key, rate)
                     return rate
+
+            # bkz. get_usd_try_rate'teki not — 730 günden eski tarihler için bugünün kuruna
+            # sessizce düşmek yerine elimizdeki en eski kuru kullan.
+            if series:
+                oldest = min(series, key=lambda x: x.get("date", ""))
+                if oldest.get("close"):
+                    print(f"[WARN] EUR/TRY için {date_str} tarihli kur bulunamadı (730 günlük sınır), "
+                          f"en eski mevcut kur ({oldest.get('date')}) kullanılıyor.")
+                    return float(oldest["close"])
 
         # Güncel kur — önce hızlı servis
         fast = _fetch_current_rates_fast()
@@ -313,6 +335,15 @@ def get_gbp_try_rate(date_str: Optional[str] = None) -> float:
                         pass
                     _svc_fc.set(cache_key, rate)
                     return rate
+
+            # bkz. get_usd_try_rate'teki not — 730 günden eski tarihler için bugünün kuruna
+            # sessizce düşmek yerine elimizdeki en eski kuru kullan.
+            if series:
+                oldest = min(series, key=lambda x: x.get("date", ""))
+                if oldest.get("close"):
+                    print(f"[WARN] GBP/TRY için {date_str} tarihli kur bulunamadı (730 günlük sınır), "
+                          f"en eski mevcut kur ({oldest.get('date')}) kullanılıyor.")
+                    return float(oldest["close"])
 
         # Güncel kur — önce hızlı servis
         fast = _fetch_current_rates_fast()
@@ -633,11 +664,17 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
         invested_eur = invested_try / buy_date_eur_try if buy_date_eur_try else None
         invested_gbp = invested_try / buy_date_gbp_try if buy_date_gbp_try else None
 
+        # invested_*/current_value_* burada 4 ondalıkla saklanıyor (2 değil) — bu alanlar
+        # portföy toplamını hesaplarken TEKRAR toplanıyor (bkz. total_invested_tly,
+        # summary_by_class). Her pozisyonu 2 ondalığa erken yuvarlayıp sonra toplamak,
+        # yüzlerce pozisyonda toplamda birkaç kuruşluk sapmaya yol açıyordu ("sum of
+        # rounded" hatası). Ekranda hâlâ 2 ondalık gösteriliyor (frontend formatCurrency),
+        # burada sadece toplamayı doğru yapmak için fazladan hassasiyet tutuluyor.
         result.update({
-            "invested_tly": round(invested_try, 2),
-            "invested_usd": round(invested_usd, 2) if invested_usd is not None else None,
-            "invested_eur": round(invested_eur, 2) if invested_eur is not None else None,
-            "invested_gbp": round(invested_gbp, 2) if invested_gbp is not None else None,
+            "invested_tly": round(invested_try, 4),
+            "invested_usd": round(invested_usd, 4) if invested_usd is not None else None,
+            "invested_eur": round(invested_eur, 4) if invested_eur is not None else None,
+            "invested_gbp": round(invested_gbp, 4) if invested_gbp is not None else None,
             "buy_date_usd_try": buy_date_usd_try,
             "buy_date_eur_try": buy_date_eur_try,
             "buy_date_gbp_try": buy_date_gbp_try,
@@ -703,10 +740,11 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
                 fx_effect_pct = round((cur_rate / buy_rate - 1.0) * 100.0, 2) if buy_rate and cur_rate else None
 
             result.update({
-                "current_value_tly": round(current_value_try, 2),
-                "current_value_usd": round(current_value_usd, 2) if current_value_usd is not None else None,
-                "current_value_eur": round(current_value_eur, 2) if current_value_eur is not None else None,
-                "current_value_gbp": round(current_value_gbp, 2) if current_value_gbp is not None else None,
+                # bkz. invested_tly'deki not — 4 ondalık, toplama hatasını önlemek için.
+                "current_value_tly": round(current_value_try, 4),
+                "current_value_usd": round(current_value_usd, 4) if current_value_usd is not None else None,
+                "current_value_eur": round(current_value_eur, 4) if current_value_eur is not None else None,
+                "current_value_gbp": round(current_value_gbp, 4) if current_value_gbp is not None else None,
                 "gross_return_tly": round(gross_return_tly, 2),
                 "gross_return_pct": round(gross_return_pct, 2),
                 "gross_return_usd": gross_return_usd,

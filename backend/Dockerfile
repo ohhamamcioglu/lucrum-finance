@@ -20,4 +20,11 @@ COPY backend/ /app/
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# --proxy-headers + --forwarded-allow-ips='*': Railway'in kendi ters proxy'si arkasında
+# çalışıyoruz. Bu bayraklar olmadan uvicorn/starlette istemci IP'si olarak proxy'nin
+# kendi iç IP'sini görüyordu — bu da rate limiter'ın (giriş sayfası brute-force koruması)
+# gerçek istemciyi değil proxy'yi sınırlamasına, dolayısıyla ya hiç işe yaramamasına ya da
+# tüm kullanıcıları TEK bir "istemci" gibi paylaştırıp yanlışlıkla birbirini
+# engellemesine yol açıyordu. Railway'in kendi proxy katmanı güvenilir olduğu için
+# forwarded-allow-ips='*' burada kabul edilebilir.
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

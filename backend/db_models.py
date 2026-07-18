@@ -67,7 +67,7 @@ class DBPosition(Base):
     __tablename__ = "positions"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     ticker = Column(String, nullable=False)
     asset_class = Column(String, nullable=False)
     quantity = Column(Float, nullable=False)
@@ -100,7 +100,7 @@ class DBTransaction(Base):
     __tablename__ = "transactions"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     position_id = Column(Integer, ForeignKey("positions.id", ondelete="SET NULL"), nullable=True)
     ticker = Column(String, nullable=False)
     asset_class = Column(String, nullable=False)
@@ -157,7 +157,7 @@ class DBPortfolioSnapshot(Base):
     __tablename__ = "portfolio_snapshots"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     snapshot_date = Column(Date, nullable=False)
     total_invested_try = Column(Float, nullable=True)
     total_value_try = Column(Float, nullable=True)
@@ -178,7 +178,7 @@ class DBAssetClassSummary(Base):
     __tablename__ = "asset_class_summaries"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     snapshot_date = Column(Date, nullable=False)
     asset_class = Column(String, nullable=False)
     total_invested_try = Column(Float, nullable=True)
@@ -200,7 +200,7 @@ class DBPerformanceHistory(Base):
     __tablename__ = "performance_history"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     period_date = Column(Date, nullable=False)
     period_type = Column(String, nullable=False)  # DAILY, MONTHLY, YEARLY
     value_try = Column(Float, nullable=True)
@@ -219,7 +219,7 @@ class DBLiability(Base):
     __tablename__ = "liabilities"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String, nullable=False)
     liability_type = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
@@ -236,7 +236,7 @@ class DBTargetAllocation(Base):
     __tablename__ = "target_allocations"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     asset_class = Column(String, nullable=False)
     target_pct = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -249,7 +249,7 @@ class DBPriceAlert(Base):
     __tablename__ = "price_alerts"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     ticker = Column(String, nullable=False)
     target_price = Column(Float, nullable=False)
     condition = Column(String, nullable=False)  # ABOVE, BELOW
@@ -263,7 +263,7 @@ class DBNotification(Base):
     __tablename__ = "notifications"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String, nullable=False)
     message = Column(String, nullable=False)
     type = Column(String, nullable=False)
@@ -282,7 +282,7 @@ class DBAuthToken(Base):
     __tablename__ = "auth_tokens"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token_hash = Column(String, nullable=False, unique=True, index=True)
     token_type = Column(String, nullable=False)  # REFRESH, EMAIL_VERIFY, PASSWORD_RESET
     expires_at = Column(DateTime, nullable=False)
@@ -303,7 +303,7 @@ class DBPayment(Base):
     __tablename__ = "payments"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     provider = Column(String, nullable=False)  # 'lemonsqueezy'
     provider_reference = Column(String, nullable=False)  # benzersiz placeholder — asıl korelasyon DBPayment.id üzerinden
     plan_tier = Column(String, nullable=False)  # 'PRO' | 'ENTERPRISE'

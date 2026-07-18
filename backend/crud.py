@@ -458,7 +458,12 @@ def update_position(user_id: int, position_id: int, update: PositionUpdate, db: 
     BUY/SELL çifti oluşturuyor, TWRR ve zaman çizelgesini bozuyordu."""
     session, must_close = _get_db(db)
     try:
-        pos = session.query(DBPosition).filter(DBPosition.id == position_id, DBPosition.user_id == user_id).first()
+        # with_for_update(): iki ardışık istek (ör. hızlı çift tıklama ile top-up/kısmi satış)
+        # aynı pozisyonu aynı anda okuyup üzerine yazabiliyordu ("lost update") — satır kilidi
+        # ikinci isteğin birincinin transaction'ı bitene kadar beklemesini sağlıyor.
+        pos = session.query(DBPosition).filter(
+            DBPosition.id == position_id, DBPosition.user_id == user_id
+        ).with_for_update().first()
         if not pos:
             return None
 
@@ -503,7 +508,9 @@ def delete_position(user_id: int, position_id: int, sell_price: Optional[float] 
     gerçek bir kâr/zarar iması taşımaz."""
     session, must_close = _get_db(db)
     try:
-        pos = session.query(DBPosition).filter(DBPosition.id == position_id, DBPosition.user_id == user_id).first()
+        pos = session.query(DBPosition).filter(
+            DBPosition.id == position_id, DBPosition.user_id == user_id
+        ).with_for_update().first()
         if not pos:
             return False
 
