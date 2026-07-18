@@ -419,6 +419,18 @@ export default function DashboardApp() {
     navigate('/');
   };
 
+  // Hesap zaten sunucu tarafında silindi (bkz. SettingsView.handleDeleteAccount) — burada
+  // sadece yerel oturum durumu temizleniyor, handleLogout'un aksine ayrıca api.logout()
+  // çağırmaya gerek yok (kullanıcı ve auth token'ları zaten cascade ile silindi).
+  const handleAccountDeleted = () => {
+    setToken(null);
+    setHoldings([]);
+    setPerformanceHistory([]);
+    setPerformanceMetrics(null);
+    setActiveTab('portfolio');
+    navigate('/');
+  };
+
   // Search Select Asset logic - transitions to markets view and highlights the selected instrument
   const handleSearchSelectAsset = (symbol: string, assetClass: string) => {
     setSelectedSymbolFromSearch(symbol);
@@ -560,6 +572,7 @@ export default function DashboardApp() {
                   onUpdateSettings={handleUpdateSettings}
                   onResetPortfolio={handleResetPortfolio}
                   onLogout={handleLogout}
+                  onAccountDeleted={handleAccountDeleted}
                   currentPositionCount={portfolioMetrics.holdings.length}
                   onError={showError}
                 />

@@ -11,7 +11,7 @@ from crud import (
     get_user_by_id, get_user_by_email, create_user,
     create_auth_token, get_valid_auth_token, consume_auth_token,
     revoke_auth_token, revoke_all_refresh_tokens,
-    mark_email_verified, update_user_password,
+    mark_email_verified, update_user_password, delete_user,
 )
 from dependencies import get_current_user_id, get_db
 from auth import (
@@ -219,6 +219,25 @@ def logout(
     raw = request.cookies.get(REFRESH_COOKIE_NAME)
     if raw:
         revoke_auth_token(hash_token(raw), db=db)
+    response.delete_cookie(REFRESH_COOKIE_NAME, path="/api/users")
+    return {"status": "success"}
+
+
+@router.delete("/me")
+@limiter.limit("3/minute")
+def delete_account(
+    request: Request,
+    response: Response,
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """Giriş yapmış kullanıcının kendi hesabını ve TÜM verilerini kalıcı olarak siler
+    (KVKK madde 11 — Gizlilik Politikası'nın vaat ettiği silme hakkı). Geri alınamaz.
+    Not: delete_user zaten kullanıcının auth_tokens kayıtlarını cascade ile sildiğinden
+    ayrıca revoke_auth_token çağırmaya gerek yok — cookie'yi temizlemek yeterli."""
+    deleted = delete_user(user_id, db=db)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
     response.delete_cookie(REFRESH_COOKIE_NAME, path="/api/users")
     return {"status": "success"}
 

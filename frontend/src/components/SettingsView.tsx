@@ -1,5 +1,6 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { Shield, User, Landmark, CheckCircle, Globe, CreditCard, Sparkles, Crown } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Shield, User, Landmark, CheckCircle, Globe, CreditCard, Sparkles, Crown, AlertTriangle } from 'lucide-react';
 import { UserSettings } from '../types';
 import { useT } from '../i18n';
 import type { Language } from '../i18n';
@@ -11,16 +12,20 @@ interface SettingsViewProps {
   onUpdateSettings: (newSettings: Partial<UserSettings>) => void;
   onResetPortfolio: () => void;
   onLogout: () => void;
+  onAccountDeleted: () => void;
   currentPositionCount: number;
   onError?: (message: string) => void;
 }
 
-export default function SettingsView({ settings, onUpdateSettings, onResetPortfolio, onLogout, currentPositionCount, onError }: SettingsViewProps) {
+export default function SettingsView({ settings, onUpdateSettings, onResetPortfolio, onLogout, onAccountDeleted, currentPositionCount, onError }: SettingsViewProps) {
   const t = useT(settings.language);
   const [userName, setUserName] = useState(settings.userName);
   const [userRole, setUserRole] = useState(settings.userRole);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
   const [profile, setProfile] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [showToast, setShowToast] = useState(false);
@@ -48,6 +53,19 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
       setTimeout(() => setShowToast(false), 4000);
     }
   }, [checkout.error]);
+
+  const handleDeleteAccount = async () => {
+    if (deletingAccount || deleteConfirmText !== t.deleteAccountConfirmWord) return;
+    setDeletingAccount(true);
+    try {
+      await api.deleteAccount();
+      onAccountDeleted();
+    } catch (err: any) {
+      console.error('Failed to delete account:', err);
+      onError?.(err?.message || t.deleteAccountFailed);
+      setDeletingAccount(false);
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -496,6 +514,22 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
                 {t.initiateReset}
               </button>
             )}
+
+            <div className="pt-3 mt-3 border-t border-red-300/30 space-y-2.5">
+              <h4 className="font-sans text-xs font-bold text-red-500 uppercase tracking-wider">
+                {t.deleteAccountTitle}
+              </h4>
+              <p className="text-[11px] text-[#6B645E] leading-relaxed font-medium">
+                {t.deleteAccountText}
+              </p>
+              <button
+                id="initiate-delete-account-btn"
+                onClick={() => { setDeleteConfirmText(''); setShowDeleteAccountModal(true); }}
+                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold text-xs py-2 rounded-full transition-all cursor-pointer"
+              >
+                {t.deleteAccountButton}
+              </button>
+            </div>
           </div>
 
           {/* Log Out Card */}
@@ -526,6 +560,65 @@ export default function SettingsView({ settings, onUpdateSettings, onResetPortfo
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* DELETE ACCOUNT MODAL — typed confirmation gerekiyor, tek tıkla geri alınamaz veri
+          kaybı riskini azaltmak için (bkz. Pozisyon/Borç silme ConfirmDialog'undan daha
+          güçlü bir onay — burada TÜM hesap ve verileri kalıcı olarak siliniyor). */}
+      <AnimatePresence>
+        {showDeleteAccountModal && (
+          <div className="fixed inset-0 bg-[#2D2926]/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
+            onClick={() => !deletingAccount && setShowDeleteAccountModal(false)}>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#F9F7F2] border border-[#E8E2D9] rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+            >
+              <div className="p-6 space-y-4">
+                <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-[#2D2926] mb-1.5">{t.deleteAccountModalTitle}</h3>
+                  <p className="text-sm text-[#6B645E]">{t.deleteAccountModalBody}</p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5">
+                    {t.deleteAccountTypeToConfirm}
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder={t.deleteAccountConfirmWord}
+                    className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-400 focus:border-red-400 font-mono font-medium"
+                  />
+                </div>
+              </div>
+              <div className="flex border-t border-[#E8E2D9]">
+                <button
+                  type="button"
+                  disabled={deletingAccount}
+                  onClick={() => setShowDeleteAccountModal(false)}
+                  className="flex-1 py-3.5 text-sm font-bold text-[#6B645E] hover:bg-[#F1EFE9] transition-colors disabled:opacity-50"
+                >
+                  {t.deleteAccountCancelButton}
+                </button>
+                <button
+                  type="button"
+                  disabled={deletingAccount || deleteConfirmText !== t.deleteAccountConfirmWord}
+                  onClick={handleDeleteAccount}
+                  className="flex-1 py-3.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {t.deleteAccountConfirmButton}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

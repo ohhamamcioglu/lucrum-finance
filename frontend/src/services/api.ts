@@ -383,6 +383,14 @@ export const api = {
     }
   },
 
+  async deleteAccount(): Promise<void> {
+    try {
+      await request(`${BASE_URL}/api/users/me`, { method: 'DELETE' });
+    } finally {
+      localStorage.removeItem('lucrum_auth_token');
+    }
+  },
+
   async tryRestoreSession(): Promise<string | null> {
     return refreshAccessToken();
   },

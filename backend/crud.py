@@ -127,6 +127,26 @@ def update_user_subscription_tier(user_id: int, tier: str, db: Optional[Session]
         if must_close:
             session.close()
 
+def delete_user(user_id: int, db: Optional[Session] = None) -> bool:
+    """Kullanıcının hesabını ve TÜM verilerini kalıcı olarak siler (KVKK madde 11 —
+    Gizlilik Politikası'nın vaat ettiği silme hakkı). DBUser.* ilişkileri
+    cascade="all, delete-orphan" ile tanımlı (bkz. db_models.py) — session.delete(user)
+    tek başına pozisyon/işlem/borç/ödeme/bildirim/token gibi tüm bağlı kayıtları da siler."""
+    session, must_close = _get_db(db)
+    try:
+        user = session.query(DBUser).filter(DBUser.id == user_id).first()
+        if not user:
+            return False
+        session.delete(user)
+        session.commit()
+        return True
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
 def set_user_active(user_id: int, is_active: bool, db: Optional[Session] = None) -> Optional[Dict]:
     """Admin: bir kullanıcının hesabını etkinleştirir/devre dışı bırakır."""
     session, must_close = _get_db(db)
