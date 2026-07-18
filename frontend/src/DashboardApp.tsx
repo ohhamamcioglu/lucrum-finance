@@ -56,6 +56,10 @@ export default function DashboardApp() {
   const [exchangeRates, setExchangeRates] = useState<{ usd_rate: number; eur_rate: number; gbp_rate?: number }>({ usd_rate: 35.0, eur_rate: 38.0 });
   const [performanceMetrics, setPerformanceMetrics] = useState<{ twrr: number; volatility: number; max_drawdown: number; netAlpha?: number } | null>(null);
   const [performanceDays, setPerformanceDays] = useState<90 | 180 | 365 | 730>(90);
+  // performanceHistory/Metrics arka planda yükleniyor (bkz. loadData) — bu bayrak olmadan
+  // DashboardView, yükleme sırasında "Henüz veri birikmedi" mesajını gerçekten boş bir
+  // portföyle karıştırıyordu (aynı [] başlangıç değeri her iki durumda da geçerli).
+  const [performanceLoading, setPerformanceLoading] = useState<boolean>(true);
 
   // Load and persist settings state from local storage
   const [settings, setSettings] = useState<UserSettings>(() => {
@@ -208,6 +212,7 @@ export default function DashboardApp() {
         .catch((err) => console.warn('Risk score refresh failed:', err));
 
       // Load performance history in background (non-blocking)
+      setPerformanceLoading(true);
       api.getPerformance(performanceDays, settings.baseCurrency)
         .then(async (performance) => {
           setPerformanceHistory(performance.history);
@@ -215,7 +220,8 @@ export default function DashboardApp() {
           const netAlpha = performance.twrr - benchmarkReturn;
           setPerformanceMetrics({ twrr: performance.twrr, volatility: performance.volatility, max_drawdown: performance.max_drawdown, netAlpha });
         })
-        .catch((err) => console.error('Performance load failed:', err));
+        .catch((err) => console.error('Performance load failed:', err))
+        .finally(() => setPerformanceLoading(false));
 
     } catch (err) {
       console.error('Error loading backend data:', err);
@@ -258,6 +264,7 @@ export default function DashboardApp() {
   useEffect(() => {
     if (holdings.length === 0) return;
     let cancelled = false;
+    setPerformanceLoading(true);
     api.getPerformance(performanceDays, settings.baseCurrency)
       .then(async (performance) => {
         if (cancelled) return;
@@ -271,7 +278,8 @@ export default function DashboardApp() {
           netAlpha: performance.twrr - benchmarkReturn,
         });
       })
-      .catch(err => console.error('Performance reload failed:', err));
+      .catch(err => console.error('Performance reload failed:', err))
+      .finally(() => { if (!cancelled) setPerformanceLoading(false); });
     return () => { cancelled = true; };
   }, [performanceDays]); // settings.benchmark stale closure yok çünkü fetchBenchmarkReturn closure'ı her render'da taze
 
@@ -494,6 +502,7 @@ export default function DashboardApp() {
                   performanceHistory={performanceHistory}
                   exchangeRates={exchangeRates}
                   performanceMetrics={performanceMetrics}
+                  performanceLoading={performanceLoading}
                   performanceDays={performanceDays}
                   onPerformanceDaysChange={setPerformanceDays}
                   liabilities={liabilities}

@@ -47,6 +47,7 @@ interface DashboardViewProps {
   performanceHistory?: any[];
   exchangeRates: { usd_rate: number; eur_rate: number; gbp_rate?: number };
   performanceMetrics?: { twrr: number; volatility: number; max_drawdown: number; netAlpha?: number } | null;
+  performanceLoading?: boolean;
   performanceDays?: 90 | 180 | 365 | 730;
   onPerformanceDaysChange?: (days: 90 | 180 | 365 | 730) => void;
   liabilities?: Liability[];
@@ -71,6 +72,7 @@ export default function DashboardView({
   performanceHistory = [],
   exchangeRates,
   performanceMetrics = null,
+  performanceLoading = false,
   performanceDays = 90,
   onPerformanceDaysChange,
   liabilities = [],
@@ -614,7 +616,11 @@ export default function DashboardView({
               <span className="font-serif text-[11px] font-bold text-[#9E958C] uppercase tracking-wider">{m.label}</span>
               {m.icon}
             </div>
-            <div className="text-2xl font-bold font-serif text-[#2D2926] tracking-tight">{m.val}</div>
+            {performanceLoading ? (
+              <div className="h-8 w-24 bg-[#F1EFE9] rounded animate-pulse" />
+            ) : (
+              <div className="text-2xl font-bold font-serif text-[#2D2926] tracking-tight">{m.val}</div>
+            )}
             <div className="text-[10px] text-[#6B645E] mt-1 font-semibold">{m.sub}</div>
           </div>
         ))}
@@ -805,7 +811,12 @@ export default function DashboardView({
                   </div>
                 </div>
               );
-            })() : (
+            })() : performanceLoading ? (
+              <div className="w-full h-full flex flex-col justify-end gap-2 animate-pulse">
+                <div className="flex-1 bg-[#F1EFE9] rounded-lg" />
+                <div className="h-3 w-32 bg-[#F1EFE9] rounded" />
+              </div>
+            ) : (
               <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[#9E958C]">
                 <div className="w-8 h-8 rounded-full border-2 border-[#E8E2D9] flex items-center justify-center text-lg">—</div>
                 <span className="text-xs font-semibold">{t.noDataAccumulated}</span>
