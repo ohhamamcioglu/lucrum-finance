@@ -321,6 +321,24 @@ class DBPayment(Base):
     user = relationship("DBUser", back_populates="payments")
 
 
+class DBAuditLog(Base):
+    """Admin işlemlerinin (tier değişimi, aktiflik değişimi, destek amaçlı portföy
+    görüntüleme) kalıcı izi. admin/target kullanıcı sonradan silinse bile (bkz.
+    crud.delete_user) kaydın kendisi kaybolmasın diye e-posta ayrıca metin olarak
+    tutulur ve FK'ler CASCADE değil SET NULL — audit log'un amacı tam olarak
+    hesap silindikten SONRA bile "ne olmuştu" sorusuna cevap verebilmek."""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    admin_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    admin_email = Column(String, nullable=True)
+    target_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    target_email = Column(String, nullable=True)
+    action = Column(String, nullable=False)  # 'tier_change' | 'toggle_active' | 'view_portfolio'
+    details = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 # Dependency for database session
 def get_db():
     db = SessionLocal()

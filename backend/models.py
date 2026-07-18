@@ -81,6 +81,25 @@ class AdminStatsResponse(BaseModel):
     admin_users: int
     tier_breakdown: dict
 
+class AuditLogEntry(BaseModel):
+    id: int
+    admin_user_id: Optional[int] = None
+    admin_email: Optional[str] = None
+    target_user_id: Optional[int] = None
+    target_email: Optional[str] = None
+    action: str
+    details: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class AuditLogListResponse(BaseModel):
+    items: List[AuditLogEntry]
+    total: int
+    page: int
+    page_size: int
+
 # Ödeme
 class LemonSqueezyCheckoutRequest(BaseModel):
     plan: str  # PRO | ENTERPRISE

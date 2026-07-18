@@ -13,7 +13,7 @@ from db_models import (
     SessionLocal, DBUser, DBPosition, DBTransaction, DBPriceHistory,
     DBExchangeRate, DBPortfolioSnapshot, DBAssetClassSummary,
     DBPerformanceHistory, DBLiability, DBTargetAllocation,
-    DBPriceAlert, DBNotification, DBAuthToken, DBPayment
+    DBPriceAlert, DBNotification, DBAuthToken, DBPayment, DBAuditLog
 )
 
 # ----------------- HELPERS -----------------
@@ -161,6 +161,42 @@ def set_user_active(user_id: int, is_active: bool, db: Optional[Session] = None)
     except Exception as e:
         session.rollback()
         raise e
+    finally:
+        if must_close:
+            session.close()
+
+def create_audit_log(
+    admin_user_id: Optional[int], admin_email: Optional[str], action: str,
+    target_user_id: Optional[int] = None, target_email: Optional[str] = None,
+    details: Optional[str] = None, db: Optional[Session] = None,
+) -> None:
+    """Admin panel işlemlerinin kalıcı izini kaydeder (tier/aktiflik değişimi, destek
+    amaçlı portföy görüntüleme). E-postalar ayrıca metin olarak saklanır — admin ya da
+    hedef kullanıcı sonradan silinirse (bkz. delete_user) FK'ler SET NULL olur ama
+    kaydın kendisi ve kimin-kimi-ne-zaman etkilediği bilgisi kaybolmaz."""
+    session, must_close = _get_db(db)
+    try:
+        session.add(DBAuditLog(
+            admin_user_id=admin_user_id, admin_email=admin_email,
+            target_user_id=target_user_id, target_email=target_email,
+            action=action, details=details,
+        ))
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def list_audit_logs(page: int = 1, page_size: int = 20, db: Optional[Session] = None) -> Dict[str, Any]:
+    """Admin: audit log kayıtlarını en yeniden eskiye, sayfalı döner."""
+    session, must_close = _get_db(db)
+    try:
+        query = session.query(DBAuditLog).order_by(desc(DBAuditLog.created_at))
+        total = query.count()
+        items = query.offset((page - 1) * page_size).limit(page_size).all()
+        return {"items": to_dict_list(items), "total": total, "page": page, "page_size": page_size}
     finally:
         if must_close:
             session.close()

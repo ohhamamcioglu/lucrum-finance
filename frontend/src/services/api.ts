@@ -451,4 +451,19 @@ export const api = {
   }> {
     return request(`${BASE_URL}/api/admin/stats`);
   },
+
+  async adminGetAuditLog(page = 1, pageSize = 20): Promise<{
+    items: {
+      id: number; admin_user_id: number | null; admin_email: string | null;
+      target_user_id: number | null; target_email: string | null;
+      action: string; details: string | null; created_at: string;
+    }[];
+    total: number; page: number; page_size: number;
+  }> {
+    return request(`${BASE_URL}/api/admin/audit-log?page=${page}&page_size=${pageSize}`);
+  },
+
+  async adminGetUserPortfolio(userId: number): Promise<any> {
+    return request(`${BASE_URL}/api/admin/users/${userId}/portfolio`);
+  },
 };
