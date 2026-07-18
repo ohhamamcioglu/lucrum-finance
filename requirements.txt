@@ -22,3 +22,7 @@ evds==0.4.0
 pykap==0.2.0
 sentry-sdk[fastapi]==2.64.0
 google-auth==2.41.1
+
+# Test (tests/ dizini, CI: .github/workflows/ci.yml)
+pytest==9.1.1
+httpx==0.28.1
