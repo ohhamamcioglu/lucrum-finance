@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy.orm import Session
 
@@ -13,11 +13,14 @@ from crud import (
 )
 from services import calculate_portfolio, calculate_twrr_and_metrics
 from dependencies import get_current_user_id, get_db
+from rate_limit import limiter
 
 router = APIRouter(prefix="/api/portfolio", tags=["Portfolio"])
 
 @router.get("", response_model=dict)
+@limiter.limit("120/minute")
 def get_portfolio(
+    request: Request,
     refresh: bool = False,
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
@@ -34,7 +37,9 @@ def get_portfolio(
     return portfolio
 
 @router.get("/performance")
+@limiter.limit("60/minute")
 def get_performance(
+    request: Request,
     days: int = Query(90, ge=7, le=730),
     currency: str = Query('TRY'),
     user_id: int = Depends(get_current_user_id)
@@ -164,7 +169,9 @@ def save_targets(
     return [TargetAllocation(**r) for r in rows]
 
 @router.post("/reset")
+@limiter.limit("5/minute")
 def reset_portfolio_db(
+    request: Request,
     user_id: int = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):

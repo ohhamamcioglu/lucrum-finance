@@ -3,7 +3,8 @@ import logging
 import xml.etree.ElementTree as ET
 from datetime import date, datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request as FastAPIRequest
+from rate_limit import limiter
 from urllib.request import urlopen, Request
 from urllib.parse import quote_plus
 from concurrent.futures import ThreadPoolExecutor, as_completed, wait
@@ -486,7 +487,8 @@ def _catalog_row_to_asset(row: dict) -> Optional[dict]:
 
 # Routes
 @router.get("/assets/search")
-def search_assets(query: str = Query(..., min_length=1)):
+@limiter.limit("60/minute")
+def search_assets(request: FastAPIRequest, query: str = Query(..., min_length=1)):
     """Arama sorgusuna uyan varliklari listele"""
     q = query.upper().strip()
     results = []
@@ -605,7 +607,9 @@ def search_assets(query: str = Query(..., min_length=1)):
     return unique_results
 
 @router.get("/assets/{ticker}/overview")
+@limiter.limit("60/minute")
 def get_asset_overview(
+    request: FastAPIRequest,
     ticker: str,
     asset_class: str = Query(...),
 ):
@@ -729,7 +733,9 @@ def get_asset_overview(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/assets/{ticker}/fundamentals")
+@limiter.limit("60/minute")
 def get_asset_fundamentals(
+    request: FastAPIRequest,
     ticker: str,
     asset_class: str = Query(...),
 ):
@@ -779,7 +785,9 @@ def get_asset_fundamentals(
     }
 
 @router.get("/assets/{ticker}/indicators")
+@limiter.limit("60/minute")
 def get_asset_indicators(
+    request: FastAPIRequest,
     ticker: str,
     asset_class: str = Query(...),
     interval: str = Query("1day"),
@@ -819,7 +827,9 @@ def get_asset_indicators(
     }
 
 @router.get("/assets/{ticker}/enrich")
+@limiter.limit("30/minute")
 def enrich_asset(
+    request: FastAPIRequest,
     ticker: str,
     asset_class: str = Query(...),
 ):
@@ -831,7 +841,9 @@ def enrich_asset(
     return {"symbol": t_code, "fetched": summary}
 
 @router.get("/market/movers")
+@limiter.limit("60/minute")
 def get_market_movers_endpoint(
+    request: FastAPIRequest,
     market: str = Query("US"),
     direction: str = Query("gainers"),
 ):
@@ -840,7 +852,9 @@ def get_market_movers_endpoint(
     return {"market": market, "direction": direction, "movers": movers}
 
 @router.get("/news")
+@limiter.limit("30/minute")
 def get_news(
+    request: FastAPIRequest,
     tickers: Optional[str] = Query(None, description="Comma-separated ticker list; omit for all portfolio tickers"),
     user_id: int = Depends(get_current_user_id),
 ):
@@ -935,7 +949,9 @@ def get_news(
     }
 
 @router.get("/funds/{fund_code}/disclosures")
+@limiter.limit("60/minute")
 def get_fund_disclosures(
+    request: FastAPIRequest,
     fund_code: str,
     days: int = Query(180, ge=30, le=730),
 ):
@@ -1013,6 +1029,11 @@ def get_fund_disclosures(
 
 @router.get("/funds/{fund_code}/breakdown")
 def get_fund_breakdown(fund_code: str):
+    # NOT: Bu fonksiyon HEM bir HTTP route'u HEM DE get_asset_overview içinden doğrudan
+    # bir yardımcı fonksiyon olarak çağrılıyor (bkz. yukarıdaki "breakdown = get_fund_
+    # breakdown(t_code)" satırı) — bu yüzden slowapi rate limit dekoratörü (zorunlu
+    # `request: Request` parametresi gerektirir) buraya eklenemedi, dahili çağrıyı
+    # bozardı. Zaten get_asset_overview üzerinden dolaylı olarak sınırlanıyor.
     """TEFAS fonu için fiyat, temel bilgiler ve portföy dağılımını döner."""
     code = fund_code.upper()
     now = time.time()

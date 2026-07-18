@@ -1,16 +1,18 @@
 from typing import List, Optional
 from datetime import date, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 import twelve_data as td
 from crud import get_exchange_rate_history
 from services import get_usd_try_rate, get_eur_try_rate, get_gbp_try_rate, get_current_price, get_price_currency
 from dependencies import get_current_user_id, get_db
+from rate_limit import limiter
 
 router = APIRouter(prefix="/api/prices", tags=["Prices"])
 
 @router.get("/live")
-def get_live_price(ticker: str):
+@limiter.limit("60/minute")
+def get_live_price(request: Request, ticker: str):
     """Canlı fiyat al"""
     try:
         price = td.get_live_price(ticker)
@@ -21,7 +23,8 @@ def get_live_price(ticker: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/rates")
-def get_rates():
+@limiter.limit("60/minute")
+def get_rates(request: Request):
     """Güncel döviz kurlarını al"""
     try:
         usd = get_usd_try_rate()
@@ -32,7 +35,9 @@ def get_rates():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/rates/history")
+@limiter.limit("60/minute")
 def get_rates_history(
+    request: Request,
     days: int = Query(90, ge=1, le=365),
     db: Session = Depends(get_db)
 ):
@@ -48,7 +53,9 @@ def get_rates_history(
     ]
 
 @router.get("/history/{ticker}")
+@limiter.limit("90/minute")
 def get_ticker_price_history(
+    request: Request,
     ticker: str,
     days: int = Query(90, ge=1, le=365),
     asset_class: Optional[str] = None,
@@ -95,7 +102,8 @@ def get_ticker_price_history(
     ]
 
 @router.get("/{ticker}")
-def get_price(ticker: str, asset_class: Optional[str] = None):
+@limiter.limit("180/minute")
+def get_price(request: Request, ticker: str, asset_class: Optional[str] = None):
     """Belirli bir varlığın güncel fiyatını al. `currency` alanı, `price`'ın hangi para
     biriminde olduğunu açıkça belirtir (TEFAS Fonu / BIST Hissesi → TRY, diğerleri → USD) —
     frontend bunu asset_class'tan tahmin etmek zorunda kalmasın diye. Bu rota diğer sabit
