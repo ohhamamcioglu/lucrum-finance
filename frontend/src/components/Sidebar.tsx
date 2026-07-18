@@ -63,6 +63,7 @@ export default function Sidebar({ activeTab, setActiveTab, settings, mobileOpen,
           <button
             type="button"
             onClick={onClose}
+            aria-label={t.closeMenu}
             className="md:hidden p-1 text-[#9E958C] hover:text-[#2D2926]"
           >
             <X className="w-5 h-5" />

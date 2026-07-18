@@ -540,7 +540,8 @@ export default function MarketsView({
                 </span>
                 <button
                   onClick={toggleWatch}
-                  title={isWatched ? 'İzleme listesinden çıkar' : 'İzleme listesine ekle'}
+                  title={isWatched ? t.removeFromWatchlistLabel : t.addToWatchlistLabel}
+                  aria-label={isWatched ? t.removeFromWatchlistLabel : t.addToWatchlistLabel}
                   className={`p-1 rounded transition-colors ${isWatched ? 'text-[#D1A86A]' : 'text-[#D1CABF] hover:text-[#D1A86A]'}`}
                 >
                   <Star className={`w-4 h-4 ${isWatched ? 'fill-[#D1A86A]' : ''}`} />

@@ -211,6 +211,11 @@ const en = {
   systemAlertBoard: 'SYSTEM ALERT BOARD',
   clearAll: 'Clear All',
   searchPlaceholder: 'Search instruments, tickers, or reports...',
+  openMenu: 'Open menu',
+  closeMenu: 'Close menu',
+  notificationsLabel: 'Notifications',
+  addToWatchlistLabel: 'Add to watchlist',
+  removeFromWatchlistLabel: 'Remove from watchlist',
 
   // Public nav
   navHome: 'Home',
@@ -582,6 +587,11 @@ const tr: typeof en = {
   systemAlertBoard: 'SİSTEM UYARI PANELİ',
   clearAll: 'Tümünü Temizle',
   searchPlaceholder: 'Enstrüman, sembol veya rapor ara...',
+  openMenu: 'Menüyü aç',
+  closeMenu: 'Menüyü kapat',
+  notificationsLabel: 'Bildirimler',
+  addToWatchlistLabel: 'İzleme listesine ekle',
+  removeFromWatchlistLabel: 'İzleme listesinden çıkar',
 
   // Public nav
   navHome: 'Ana Sayfa',

@@ -5,6 +5,24 @@ import { api } from '../services/api';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
+// Kayıt formunda şifre gücü için anlık geri bildirim yoktu — kullanıcı zayıf bir şifre
+// girdiğini ancak submit ettikten sonra (backend min_length=8 hatasıyla) öğreniyordu.
+function passwordStrength(pw: string): { score: 0 | 1 | 2 | 3 | 4; label: { tr: string; en: string } } {
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw)) score++;
+  const labels: { tr: string; en: string }[] = [
+    { tr: 'Çok zayıf', en: 'Very weak' },
+    { tr: 'Zayıf', en: 'Weak' },
+    { tr: 'Orta', en: 'Fair' },
+    { tr: 'İyi', en: 'Good' },
+    { tr: 'Güçlü', en: 'Strong' },
+  ];
+  return { score: score as 0 | 1 | 2 | 3 | 4, label: labels[score] };
+}
+
 interface AuthViewProps {
   onAuthSuccess: (token: string) => void;
   initialMode?: 'login' | 'register';
@@ -295,6 +313,27 @@ export default function AuthView({ onAuthSuccess, initialMode = 'login' }: AuthV
                   className="w-full pl-10 pr-4 py-2.5 bg-[#F2EDE4]/40 border border-[#8C9A86]/20 focus:border-[#8C9A86] focus:bg-white rounded-xl text-sm text-[#4A443F] outline-none transition-all"
                 />
               </div>
+              {mode === 'register' && password.length > 0 && (() => {
+                const { score, label } = passwordStrength(password);
+                const colors = ['#B5836F', '#B5836F', '#D1A86A', '#8C9A86', '#7A8874'];
+                return (
+                  <div className="pt-1">
+                    <div className="flex gap-1 h-1">
+                      {[0, 1, 2, 3].map(i => (
+                        <div key={i} className="flex-1 rounded-full bg-[#E8E2D9] overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: i < score ? '100%' : '0%', backgroundColor: colors[score] }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <span className="text-[10px] font-semibold mt-1 block" style={{ color: colors[score] }}>
+                      {lang === 'tr' ? label.tr : label.en}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

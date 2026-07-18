@@ -146,6 +146,7 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates, o
         <button
           type="button"
           onClick={onMenuClick}
+          aria-label={t.openMenu}
           className="md:hidden shrink-0 p-1.5 -ml-1.5 text-[#4A443F] hover:text-[#8C9A86] rounded hover:bg-[#F1EFE9]"
         >
           <Menu className="w-5 h-5" />
@@ -210,6 +211,7 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates, o
               <button
                 id="notification-bell-btn"
                 onClick={handleOpenPanel}
+                aria-label={t.notificationsLabel}
                 className="text-[#6B645E] hover:text-[#8C9A86] transition-colors p-1.5 rounded hover:bg-[#F1EFE9] relative"
               >
                 <Bell className="w-4 h-4" />
