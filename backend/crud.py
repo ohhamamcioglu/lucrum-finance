@@ -249,6 +249,53 @@ def mark_payment_failed(payment_id: int, db: Optional[Session] = None) -> None:
         if must_close:
             session.close()
 
+def mark_payment_refunded(payment_id: int, db: Optional[Session] = None) -> None:
+    """Ödemeyi iade edilmiş işaretler ve kullanıcının erişimini hemen FREE'ye düşürür
+    (para iade edildiği halde ücretli erişimin süre dolana kadar devam etmesini önler)."""
+    session, must_close = _get_db(db)
+    try:
+        payment = session.query(DBPayment).filter(DBPayment.id == payment_id).first()
+        if not payment:
+            return
+        payment.status = "refunded"
+        payment.completed_at = datetime.utcnow()
+
+        user = session.query(DBUser).filter(DBUser.id == payment.user_id).first()
+        if user:
+            user.subscription_tier = "FREE"
+            user.subscription_status = "refunded"
+            user.subscription_ends_at = None
+
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
+def update_user_subscription_status(user_id: int, status: str, db: Optional[Session] = None) -> None:
+    """LemonSqueezy'den gelen abonelik iptal/süre-dolum/duraklatma/ödeme-hatası event'lerini
+    uygular. Bu uygulama otomatik yenilemeli gerçek bir abonelik akışı DEĞİL (bkz. payments.py
+    modül başlığı) — bu yüzden LemonSqueezy'nin dönem sonunu beklemesi yerine erişimi anında
+    FREE'ye düşürüyoruz, aksi halde ödemesi durdurulmuş/iptal olmuş kullanıcı süre dolana kadar
+    ücretli limitlerde kalırdı."""
+    session, must_close = _get_db(db)
+    try:
+        user = session.query(DBUser).filter(DBUser.id == user_id).first()
+        if not user:
+            return
+        user.subscription_tier = "FREE"
+        user.subscription_status = status
+        user.subscription_ends_at = None
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        if must_close:
+            session.close()
+
 def list_user_payments(user_id: int, db: Optional[Session] = None) -> List[Dict]:
     session, must_close = _get_db(db)
     try:

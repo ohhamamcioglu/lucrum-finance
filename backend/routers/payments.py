@@ -1,4 +1,5 @@
 import json
+import logging
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -7,16 +8,29 @@ from typing import List
 
 from models import LemonSqueezyCheckoutRequest, CheckoutResponse, PaymentSummary
 from crud import (
-    create_payment_record, mark_payment_succeeded, list_user_payments,
-    get_user_by_id,
+    create_payment_record, mark_payment_succeeded, mark_payment_refunded,
+    update_user_subscription_status, list_user_payments, get_user_by_id,
 )
 from dependencies import get_current_user_id, get_db
 from rate_limit import limiter
 import payments as payment_svc
 
+logger = logging.getLogger("lucrum.payments")
+
 router = APIRouter(prefix="/api/payments", tags=["Payments"])
 
 VALID_PLANS = ("PRO", "ENTERPRISE")
+
+# subscription_* event'leri sadece LemonSqueezy tarafında ürün gerçekten "subscription"
+# (dönemsel) olarak yapılandırılırsa gelir — bu uygulama şu an tek seferlik checkout
+# kullansa da (bkz. payments.py modül başlığı), variant ileride abonelik tipine
+# geçerse veya LS panelinden manuel iade/iptal yapılırsa bu event'ler tetiklenebilir.
+SUBSCRIPTION_TERMINATION_EVENTS = {
+    "subscription_cancelled": "cancelled",
+    "subscription_expired": "expired",
+    "subscription_paused": "paused",
+    "subscription_payment_failed": "payment_failed",
+}
 
 
 @router.post("/lemonsqueezy/checkout", response_model=CheckoutResponse)
@@ -83,6 +97,28 @@ async def lemonsqueezy_webhook(request: Request, db: Session = Depends(get_db)):
                 mark_payment_succeeded(int(payment_record_id), db=db)
             except (ValueError, TypeError):
                 pass
+
+    elif event_name == "order_refunded":
+        payment_record_id = custom_data.get("payment_record_id")
+        if payment_record_id:
+            try:
+                mark_payment_refunded(int(payment_record_id), db=db)
+            except (ValueError, TypeError):
+                pass
+        else:
+            logger.warning("order_refunded webhook'unda custom_data.payment_record_id yok, işlenemedi.")
+
+    elif event_name in SUBSCRIPTION_TERMINATION_EVENTS:
+        user_id_raw = custom_data.get("user_id")
+        if user_id_raw:
+            try:
+                update_user_subscription_status(
+                    int(user_id_raw), SUBSCRIPTION_TERMINATION_EVENTS[event_name], db=db
+                )
+            except (ValueError, TypeError):
+                pass
+        else:
+            logger.warning("%s webhook'unda custom_data.user_id yok, işlenemedi.", event_name)
 
     return {"status": "ok"}
 
