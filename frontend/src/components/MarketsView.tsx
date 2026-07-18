@@ -164,7 +164,10 @@ export default function MarketsView({
         const res = await fetch(`${BASE_URL}/api/prices/${encodeURIComponent(symbol)}?asset_class=${encodeURIComponent(assetClass)}`).catch(() => null);
         if (res?.ok) {
           const d = await res.json();
-          if (d?.price) return { symbol, price: d.price as number, currency: (d.price_currency ?? 'USD') as string };
+          // Backend alan adı "currency"dir (bkz. routers/prices.py get_price) — burada
+          // yanlışlıkla "price_currency" okunuyordu, hep undefined gelip sessizce USD'ye
+          // düşülüyor ve TRY fiyatlar (TEFAS/BIST) kur çevrimiyle ~47x şişiriliyordu.
+          if (d?.price) return { symbol, price: d.price as number, currency: (d.currency ?? 'USD') as string };
         }
         return null;
       })
@@ -201,7 +204,7 @@ export default function MarketsView({
         .then(r => r.ok ? r.json() : null)
         .then(priceData => {
           const price = priceData?.price ?? 0;
-          const priceCur: string = priceData?.price_currency ?? 'USD';
+          const priceCur: string = priceData?.currency ?? 'USD';
           const cat: AssetCategory = found.category === 'Crypto' ? 'Crypto' : found.category === 'FixedIncome' ? 'FixedIncome' : 'Equity';
           const asset: MarketAsset = {
             symbol: found.symbol, name: found.name, category: cat, sector: found.sector,
