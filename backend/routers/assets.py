@@ -112,22 +112,50 @@ _BREAKDOWN_LABEL_MAP = {
     "other_pct": "Diğer",
 }
 
+# Fonoloji'nin /funds/{code} portfolio alanı pytefas'tan daha sade (8 kategori);
+# sadece pytefas breakdown alınamadığında yedek olarak kullanılır.
+_FONOLOJI_BREAKDOWN_LABEL_MAP = {
+    "stock": "Hisse Senedi",
+    "government_bond": "Devlet Tahvili",
+    "treasury_bill": "Hazine Bonosu",
+    "corporate_bond": "Özel Sektör Tahvili",
+    "eurobond": "Eurobond",
+    "gold": "Altın",
+    "cash": "Nakit",
+    "other": "Diğer",
+}
+
 # Helpers
 def _get_tefas_fund_name(fund_code: str) -> str:
-    """TEFAS fon adını pytefas üzerinden çeker, cache'ler."""
+    """TEFAS fon adını döner (Fonoloji öncelikli, pytefas yedek), cache'ler.
+    pytefas'ın fund_code filtresi güvenilmiyor (bkz. get_fund_breakdown notu) —
+    eşleşme yoksa ASLA başka bir fonun adına düşülmez."""
     code = fund_code.upper()
     if code in _tefas_name_cache:
         return _tefas_name_cache[code]
+
+    if td.FONOLOJI_API_KEY:
+        try:
+            data = td._fonoloji_api(f"/funds/{code}")
+            fund = (data or {}).get("fund") or {}
+            if fund.get("code", "").upper() == code and fund.get("name"):
+                _tefas_name_cache[code] = fund["name"]
+                return fund["name"]
+        except Exception:
+            pass
+
     try:
         from pytefas import Crawler
         c = Crawler()
         today = date.today()
-        df = c.fetch(today.isoformat(), today.isoformat(), kind="YAT", columns="info", fund_code=code)
-        if df.empty:
-            df = c.fetch(today.isoformat(), today.isoformat(), kind="EMK", columns="info", fund_code=code)
-        if not df.empty:
+        for kind in ("YAT", "EMK"):
+            df = c.fetch(today.isoformat(), today.isoformat(), kind=kind, columns="info", fund_code=code)
+            if df.empty:
+                continue
             row = df[df["fund_code"] == code]
-            name = row.iloc[0]["fund_name"] if not row.empty else df.iloc[0]["fund_name"]
+            if row.empty:
+                continue
+            name = row.iloc[0]["fund_name"]
             _tefas_name_cache[code] = name
             return name
     except Exception:
@@ -980,7 +1008,7 @@ def get_fund_disclosures(
 
 @router.get("/funds/{fund_code}/breakdown")
 def get_fund_breakdown(fund_code: str):
-    """TEFAS fonu için portföy dağılımını (breakdown) döner."""
+    """TEFAS fonu için fiyat, temel bilgiler ve portföy dağılımını döner."""
     code = fund_code.upper()
     now = time.time()
     if code in _breakdown_cache:
@@ -988,43 +1016,87 @@ def get_fund_breakdown(fund_code: str):
         if now - ts < _BREAKDOWN_TTL:
             return cached
 
-    try:
-        from pytefas import Crawler
-        c = Crawler()
-        today = date.today()
-        for kind in ("YAT", "EMK", "BYF"):
-            df = c.fetch(today.isoformat(), today.isoformat(), kind=kind, columns="breakdown", fund_code=code)
-            if not df.empty:
-                sub = df[df["fund_code"] == code]
-                if sub.empty:
-                    sub = df
-                row = sub.sort_values("date").iloc[-1].to_dict()
+    fund_name = None
+    price = None
+    portfolio_size = None
+    investor_count = None
+    breakdown_date = None
+    allocation: list[dict] = []
 
-                info_df = c.fetch(today.isoformat(), today.isoformat(), kind=kind, columns="info", fund_code=code)
-                info_row: dict = {}
-                if not info_df.empty:
-                    info_sub = info_df[info_df["fund_code"] == code]
-                    info_row = (info_sub if not info_sub.empty else info_df).sort_values("date").iloc[-1].to_dict()
-
-                allocation = []
-                for col, label in _BREAKDOWN_LABEL_MAP.items():
-                    val = float(row.get(col, 0) or 0)
+    # 1. Fonoloji — fiyat ve temel bilgiler için birincil kaynak.
+    if td.FONOLOJI_API_KEY:
+        try:
+            data = td._fonoloji_api(f"/funds/{code}")
+            fund = (data or {}).get("fund") or {}
+            if fund.get("code", "").upper() == code:
+                fund_name = fund.get("name")
+                price = fund.get("current_price")
+                portfolio_size = fund.get("aum")
+                investor_count = fund.get("investor_count")
+                breakdown_date = fund.get("current_date")
+                portfolio = (data or {}).get("portfolio") or {}
+                for col, label in _FONOLOJI_BREAKDOWN_LABEL_MAP.items():
+                    val = float(portfolio.get(col, 0) or 0)
                     if val > 0:
                         allocation.append({"label": label, "pct": round(val, 2)})
                 allocation.sort(key=lambda x: x["pct"], reverse=True)
+        except Exception as e:
+            logging.warning("[BREAKDOWN] Fonoloji fetch failed for %s: %s", code, e)
 
-                result = {
-                    "fund_code": code,
-                    "fund_name": row.get("fund_name", code),
-                    "date": str(row.get("date", today)),
-                    "price": info_row.get("price"),
-                    "portfolio_size": info_row.get("portfolio_size"),
-                    "investor_count": info_row.get("investor_count"),
-                    "allocation": allocation,
-                }
-                _breakdown_cache[code] = (now, result)
-                return result
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"TEFAS veri çekme hatası: {e}")
+    # 2. pytefas — Fonoloji anahtarı yok/başarısız olduğunda ya da daha detaylı
+    # kırılım (26 kategori vs Fonoloji'nin 8'i) gerektiğinde yedek/zenginleştirme.
+    # ÖNEMLİ: pytefas'ın breakdown/info endpoint'leri fund_code filtresini
+    # desteklemiyor — istenen kod API'ye gönderilse bile dönen tablo TÜM fonları
+    # içerebiliyor. Eski kod, kendi fonumuzun satırı bulunamayınca sessizce
+    # TÜM TABLOYU kullanıp iloc[-1] ile RASTGELE BAŞKA BİR FONUN satırını
+    # alıyordu — canlıda BIH aratılınca gerçek fiyatı (8.11 TL) yerine alakasız
+    # bir fonun fiyatı (382 TL) döndü. Artık eşleşme yoksa o kind atlanır, asla
+    # başka bir fonun verisi kullanılmaz.
+    if price is None or not allocation:
+        try:
+            from pytefas import Crawler
+            c = Crawler()
+            today = date.today()
+            for kind in ("YAT", "EMK", "BYF"):
+                if price is None:
+                    info_df = c.fetch(today.isoformat(), today.isoformat(), kind=kind, columns="info", fund_code=code)
+                    if not info_df.empty:
+                        info_sub = info_df[info_df["fund_code"] == code]
+                        if not info_sub.empty:
+                            info_row = info_sub.sort_values("date").iloc[-1].to_dict()
+                            fund_name = fund_name or info_row.get("fund_name", code)
+                            price = info_row.get("price")
+                            portfolio_size = portfolio_size or info_row.get("portfolio_size")
+                            investor_count = investor_count or info_row.get("investor_count")
+                            breakdown_date = breakdown_date or str(info_row.get("date", today))
+                if not allocation:
+                    df = c.fetch(today.isoformat(), today.isoformat(), kind=kind, columns="breakdown", fund_code=code)
+                    if not df.empty:
+                        sub = df[df["fund_code"] == code]
+                        if not sub.empty:
+                            row = sub.sort_values("date").iloc[-1].to_dict()
+                            fund_name = fund_name or row.get("fund_name", code)
+                            for col, label in _BREAKDOWN_LABEL_MAP.items():
+                                val = float(row.get(col, 0) or 0)
+                                if val > 0:
+                                    allocation.append({"label": label, "pct": round(val, 2)})
+                            allocation.sort(key=lambda x: x["pct"], reverse=True)
+                if price is not None and allocation:
+                    break
+        except Exception as e:
+            logging.warning("[BREAKDOWN] pytefas fallback failed for %s: %s", code, e)
 
-    raise HTTPException(status_code=404, detail=f"Fon bulunamadı: {fund_code}")
+    if fund_name is None and price is None and not allocation:
+        raise HTTPException(status_code=404, detail=f"Fon bulunamadı: {fund_code}")
+
+    result = {
+        "fund_code": code,
+        "fund_name": fund_name or code,
+        "date": breakdown_date or str(date.today()),
+        "price": price,
+        "portfolio_size": portfolio_size,
+        "investor_count": investor_count,
+        "allocation": allocation,
+    }
+    _breakdown_cache[code] = (now, result)
+    return result
