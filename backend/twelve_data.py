@@ -644,6 +644,49 @@ def search_instruments(query: str, limit: int = 40) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def _seed_etf_catalog(exchange: str) -> int:
+    """Twelve Data'nın ETF/mutual fund listesini td_instruments'a kaydeder (TTL: 14 gün).
+    fetch_instruments() sadece /stocks (adi hisse) endpoint'ini çekiyor, ETF'ler hiç
+    kataloğa girmiyordu — bu yüzden bir ABD ETF'i, aynı 3 harfli koda sahip bir TEFAS
+    fonuyla çakıştığında (ör. "PTF": hem TEFAS fonu hem NASDAQ'ta Invesco Dorsey
+    Wright Technology ETF) arama sadece TEFAS'ı buluyor, ETF hiç seçenek olarak
+    çıkmıyordu. type='ETF' ile ayrı TTL takip edilir (aynı borsanın stok taraması
+    ile karışmasın diye)."""
+    with _db_lock:
+        c = _conn()
+        row = c.execute(
+            "SELECT MAX(fetched_at) fa FROM td_instruments WHERE exchange=? AND type='ETF'",
+            (exchange,)
+        ).fetchone()
+        c.close()
+    if _fresh(row["fa"] if row else None, TTL_INSTRUMENTS):
+        return 0
+    data = _api("etfs", {"exchange": exchange})
+    items = (data or {}).get("data") or []
+    if not items:
+        return 0
+    ts = _now()
+    rows = [
+        (
+            item["symbol"], exchange,
+            item.get("name"), item.get("currency"),
+            "ETF", item.get("country"),
+            item.get("mic_code"), item.get("figi_code"), ts
+        )
+        for item in items if item.get("symbol")
+    ]
+    with _db_lock:
+        c = _conn()
+        c.executemany("""
+            INSERT OR REPLACE INTO td_instruments
+            (symbol,exchange,name,currency,type,country,mic_code,figi_code,fetched_at)
+            VALUES (?,?,?,?,?,?,?,?,?)
+        """, rows)
+        c.commit()
+        c.close()
+    return len(rows)
+
+
 def _seed_crypto_catalog() -> int:
     """Twelve Data kripto para listesini td_instruments'a kaydeder (TTL: 14 gün)."""
     with _db_lock:
@@ -757,7 +800,7 @@ def seed_tefas_fund_catalog() -> int:
 
 
 def refresh_instrument_catalog() -> dict:
-    """BIST, NASDAQ, NYSE, Kripto ve TEFAS arama kataloğunu tazeler.
+    """BIST, NASDAQ, NYSE (hisse+ETF), Kripto ve TEFAS arama kataloğunu tazeler.
     Her kaynak kendi TTL'ine göre (14 gün) ağa gerçek istek atar; taze olan
     kaynaklar için hiçbir API çağrısı yapılmaz."""
     counts: dict[str, int] = {}
@@ -765,6 +808,8 @@ def refresh_instrument_catalog() -> dict:
         ("XIST", lambda: len(get_bist_instruments())),
         ("NASDAQ", lambda: len(fetch_instruments("NASDAQ"))),
         ("NYSE", lambda: len(fetch_instruments("NYSE"))),
+        ("NASDAQ_ETF", lambda: _seed_etf_catalog("NASDAQ")),
+        ("NYSE_ETF", lambda: _seed_etf_catalog("NYSE")),
         ("CRYPTO", _seed_crypto_catalog),
         ("TEFAS", seed_tefas_fund_catalog),
     ):

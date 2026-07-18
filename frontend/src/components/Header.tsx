@@ -165,8 +165,8 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates }:
               {searchResults.length > 0 ? (
                 searchResults.map((asset) => (
                   <button
-                    key={asset.symbol}
-                    id={`search-result-${asset.symbol}`}
+                    key={`${asset.symbol}-${asset.asset_class}`}
+                    id={`search-result-${asset.symbol}-${asset.asset_class.replace(/[^A-Za-z0-9]/g, '')}`}
                     onClick={() => { onSearchSelectAsset(asset.symbol); setSearchQuery(''); setShowResults(false); setSearchResults([]); }}
                     className="w-full text-left px-4 py-2.5 hover:bg-[#F1EFE9] transition-colors flex justify-between items-center border-b border-[#E8E2D9]/40 last:border-b-0"
                   >

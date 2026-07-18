@@ -1156,7 +1156,7 @@ export default function DashboardView({
                             ) : (
                               suggestions.map((item) => (
                                 <button
-                                  key={item.symbol}
+                                  key={`${item.symbol}-${item.asset_class}`}
                                   type="button"
                                   onClick={() => handleSelectSuggestion(item)}
                                   className="w-full text-left px-4 py-2 hover:bg-[#F1EFE9] border-b border-[#E8E2D9]/50 last:border-0 flex flex-col"

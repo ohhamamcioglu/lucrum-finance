@@ -589,11 +589,16 @@ def search_assets(query: str = Query(..., min_length=1)):
                 "riskScore": 4.5
             })
             
+    # (symbol, asset_class) çiftine göre tekilleştir — sadece symbol'e göre yapılırsa
+    # aynı 3 harfli kodu paylaşan farklı piyasalardaki gerçek varlıklar (ör. "PTF":
+    # hem bir TEFAS fonu hem NASDAQ'ta bir ETF) yanlışlıkla "aynı varlık" sayılıp
+    # ikincisi sessizce eleniyordu.
     seen = set()
     unique_results = []
     for r in results:
-        if r["symbol"] not in seen:
-            seen.add(r["symbol"])
+        key = (r["symbol"], r["asset_class"])
+        if key not in seen:
+            seen.add(key)
             unique_results.append(r)
             if len(unique_results) >= 20:
                 break
