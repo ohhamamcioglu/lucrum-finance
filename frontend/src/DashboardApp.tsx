@@ -452,8 +452,14 @@ export default function DashboardApp() {
         onMenuClick={() => setMobileMenuOpen(true)}
       />
 
-      {/* Main viewport area */}
-      <main className="ml-0 md:ml-64 mt-16 p-4 md:p-8 h-[calc(100vh-64px)] overflow-y-auto custom-scrollbar">
+      {/* Main viewport area.
+          Not: eskiden "mt-16 h-[calc(100vh-64px)]" idi — main'in margin-top'ı,
+          üst kapsayıcıda onu engelleyecek bir padding/border/overflow olmadığı için
+          kapsayıcının kendi üst kenarıyla "collapse" oluyordu. Görünürde hiçbir şey
+          taşmıyor gibi göründüğü halde belge (html/body) 64px daha uzun ölçülüyor ve
+          hem mobilde hem masaüstünde işlevsiz bir dikey scrollbar çıkıyordu. margin
+          yerine main'in KENDİ padding'i (pt-*) kullanılınca collapse hiç olmuyor. */}
+      <main className="ml-0 md:ml-64 h-screen overflow-y-auto custom-scrollbar px-4 md:px-8 pb-4 md:pb-8 pt-20 md:pt-24">
         <div className="max-w-7xl mx-auto">
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
