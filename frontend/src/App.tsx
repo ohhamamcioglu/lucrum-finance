@@ -1,16 +1,21 @@
-import { useEffect, useState, ReactElement } from 'react';
+import { useEffect, useState, lazy, Suspense, ReactElement } from 'react';
 import { Routes, Route, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 
 import { AuthProvider, useAuth } from './AuthContext';
-import DashboardApp from './DashboardApp';
-import LandingPage from './components/LandingPage';
-import PricingPage from './components/PricingPage';
-import LegalPage from './components/LegalPage';
-import AuthView from './components/AuthView';
-import ResetPasswordView from './components/ResetPasswordView';
-import AdminPage from './components/AdminPage';
 import { api } from './services/api';
+
+// Route-level code splitting — eskiden tüm sayfalar (Admin paneli, Pricing, Legal dahil)
+// tek bir ~650KB bundle'da toplanıyordu; ilk ziyaretçi hiç görmeyeceği Admin panelini bile
+// indiriyordu. Her rota artık ayrı bir chunk'a ayrılıyor, ilk yüklemede sadece o an
+// gidilen rotanın kodu iniyor.
+const LandingPage = lazy(() => import('./components/LandingPage'));
+const PricingPage = lazy(() => import('./components/PricingPage'));
+const LegalPage = lazy(() => import('./components/LegalPage'));
+const AuthView = lazy(() => import('./components/AuthView'));
+const ResetPasswordView = lazy(() => import('./components/ResetPasswordView'));
+const AdminPage = lazy(() => import('./components/AdminPage'));
+const DashboardApp = lazy(() => import('./DashboardApp'));
 
 function LoadingSpinner() {
   return (
@@ -89,19 +94,21 @@ function AppRoutes() {
   return (
     <>
       <VerifyEmailBanner />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/legal/kvkk" element={<LegalPage contentKey="kvkk" />} />
-        <Route path="/legal/terms" element={<LegalPage contentKey="terms" />} />
-        <Route path="/legal/privacy" element={<LegalPage contentKey="privacy" />} />
-        <Route path="/login" element={<LoginRoute />} />
-        <Route path="/register" element={<RegisterRoute />} />
-        <Route path="/reset-password" element={<ResetPasswordRoute />} />
-        <Route path="/app" element={<RequireAuth><DashboardApp /></RequireAuth>} />
-        <Route path="/admin" element={<RequireAdmin><AdminPage /></RequireAdmin>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/legal/kvkk" element={<LegalPage contentKey="kvkk" />} />
+          <Route path="/legal/terms" element={<LegalPage contentKey="terms" />} />
+          <Route path="/legal/privacy" element={<LegalPage contentKey="privacy" />} />
+          <Route path="/login" element={<LoginRoute />} />
+          <Route path="/register" element={<RegisterRoute />} />
+          <Route path="/reset-password" element={<ResetPasswordRoute />} />
+          <Route path="/app" element={<RequireAuth><DashboardApp /></RequireAuth>} />
+          <Route path="/admin" element={<RequireAdmin><AdminPage /></RequireAdmin>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }
