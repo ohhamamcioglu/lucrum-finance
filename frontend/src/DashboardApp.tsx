@@ -468,7 +468,12 @@ export default function DashboardApp() {
           arayüzündeki değişikliklere göre dinamik olarak güncellenir, bu sorunu
           ortadan kaldırır. h-screen'i de bırakıyoruz — dvh'yi desteklemeyen eski
           tarayıcılarda yedek olarak kalır. */}
-      <main className="ml-0 md:ml-64 h-screen h-dvh overflow-y-auto custom-scrollbar px-4 md:px-8 pb-4 md:pb-8 pt-20 md:pt-24">
+      {/* pb-24 (mobil): dvh düzeltmesi tarayıcının üstteki adres çubuğunu hesaba
+          katıyor, ama alttaki gezinme çubuğu/home-indicator bazı mobil
+          tarayıcılarda içeriğin üzerine bindirilmiş (overlay) şekilde duruyor —
+          bu, dvh'ye yansımıyor. Bol bir alt tampon + güvenli alan payı, son
+          öğenin bu arayüzün arkasında kalmasını engelliyor. */}
+      <main className="ml-0 md:ml-64 h-screen h-dvh overflow-y-auto custom-scrollbar px-4 md:px-8 pt-20 md:pt-24 md:pb-8 [padding-bottom:max(6rem,env(safe-area-inset-bottom))] md:[padding-bottom:2rem]">
         <div className="max-w-7xl mx-auto">
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
