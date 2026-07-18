@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2, X, Landmark } from 'lucide-react';
 import { Liability, LiabilityType, UserSettings } from '../types';
 import { formatCurrency, convertCurrency } from '../utils';
 import { useT } from '../i18n';
+import ConfirmDialog from './ConfirmDialog';
 
 interface LiabilitiesViewProps {
   liabilities: Liability[];
@@ -33,6 +34,7 @@ export default function LiabilitiesView({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<Omit<Liability, 'id'>>(emptyForm());
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const typeLabel = (type: string) => {
     switch (type) {
@@ -149,7 +151,7 @@ export default function LiabilitiesView({
                         className="text-[#9E958C]/60 hover:text-[#8C9A86] p-1.5 rounded hover:bg-[#8C9A86]/10 transition-all">
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button onClick={() => { if (window.confirm(t.confirmDeleteLiability)) onDeleteLiability(l.id); }} title={t.deleteLiability}
+                      <button onClick={() => setPendingDeleteId(l.id)} title={t.deleteLiability}
                         className="text-[#9E958C]/60 hover:text-[#B5836F] p-1.5 rounded hover:bg-[#B5836F]/10 transition-all">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -242,6 +244,16 @@ export default function LiabilitiesView({
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title={t.confirmDeleteTitle}
+        message={t.confirmDeleteLiabilityBody}
+        confirmLabel={t.deleteLiability}
+        cancelLabel={t.cancelLiability}
+        onConfirm={() => { if (pendingDeleteId !== null) onDeleteLiability(pendingDeleteId); setPendingDeleteId(null); }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

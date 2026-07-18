@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Holding, AssetCategory, UserSettings, Liability } from '../types';
 import { formatCurrency, MARKET_ASSETS, convertCurrency } from '../utils';
+import ConfirmDialog from './ConfirmDialog';
 import { useT, Translations } from '../i18n';
 import { api, BASE_URL } from '../services/api';
 
@@ -101,6 +102,8 @@ export default function DashboardView({
   // Mobilde varlıklar tablo yerine kapalı/açılır (accordion) kartlar olarak gösteriliyor —
   // kapalıyken sadece güncel değer/ağırlık/günlük değişim görünür, tıklanınca detaylar açılır.
   const [expandedMobileRow, setExpandedMobileRow] = useState<string | null>(null);
+  // Pozisyon silme onayı — eskiden hiçbir onay istenmeden anında siliniyordu.
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   // Modal chart states
   const [modalHistory, setModalHistory] = useState<Array<{ date: string; price: number }>>([]);
@@ -988,7 +991,7 @@ export default function DashboardView({
                             className="text-[#9E958C]/60 hover:text-[#8C9A86] p-1.5 rounded hover:bg-[#8C9A86]/10 transition-all">
                             <Pencil className="w-4 h-4" />
                           </button>
-                          <button onClick={() => onDeleteHolding(h.id)} title={t.deletePosition}
+                          <button onClick={() => setPendingDeleteId(h.id)} title={t.deletePosition}
                             className="text-[#9E958C]/60 hover:text-[#B5836F] p-1.5 rounded hover:bg-[#B5836F]/10 transition-all">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1090,7 +1093,7 @@ export default function DashboardView({
                             className="p-2.5 rounded-lg bg-white border border-[#E8E2D9] text-[#9E958C] hover:text-[#8C9A86] hover:bg-[#8C9A86]/10 transition-all">
                             <Pencil className="w-4 h-4" />
                           </button>
-                          <button onClick={() => onDeleteHolding(h.id)} title={t.deletePosition}
+                          <button onClick={() => setPendingDeleteId(h.id)} title={t.deletePosition}
                             className="p-2.5 rounded-lg bg-white border border-[#E8E2D9] text-[#9E958C] hover:text-[#B5836F] hover:bg-[#B5836F]/10 transition-all">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1728,6 +1731,16 @@ export default function DashboardView({
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title={t.confirmDeleteTitle}
+        message={t.confirmDeletePositionBody}
+        confirmLabel={t.deletePosition}
+        cancelLabel={t.cancel}
+        onConfirm={() => { if (pendingDeleteId) onDeleteHolding(pendingDeleteId); setPendingDeleteId(null); }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

@@ -375,7 +375,9 @@ const en = {
   netWorthDesc: 'Total assets minus total liabilities',
   saveLiability: 'Save',
   cancelLiability: 'Cancel',
-  confirmDeleteLiability: 'Delete this liability?',
+  confirmDeleteTitle: 'Are you sure?',
+  confirmDeletePositionBody: 'This position and its transaction history will be permanently removed from your portfolio. This cannot be undone.',
+  confirmDeleteLiabilityBody: 'This liability will be permanently removed. This cannot be undone.',
 };
 
 const tr: typeof en = {
@@ -744,7 +746,9 @@ const tr: typeof en = {
   netWorthDesc: 'Toplam varlık eksi toplam borç',
   saveLiability: 'Kaydet',
   cancelLiability: 'Vazgeç',
-  confirmDeleteLiability: 'Bu borç kaydı silinsin mi?',
+  confirmDeleteTitle: 'Emin misiniz?',
+  confirmDeletePositionBody: 'Bu pozisyon ve işlem geçmişi portföyünüzden kalıcı olarak silinecek. Bu işlem geri alınamaz.',
+  confirmDeleteLiabilityBody: 'Bu borç kaydı kalıcı olarak silinecek. Bu işlem geri alınamaz.',
 };
 
 export type Translations = typeof en;
