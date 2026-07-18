@@ -157,12 +157,27 @@ def save_targets(
     return [TargetAllocation(**r) for r in rows]
 
 @router.post("/reset")
-def reset_portfolio_db():
-    """Sıfırla ve varsayılan verileri yükle"""
+def reset_portfolio_db(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """Çağıran kullanıcının kendi pozisyon/işlem geçmişini siler ve demo verileriyle değiştirir.
+
+    GÜVENLİK DÜZELTMESİ: Bu endpoint eskiden hiçbir kimlik doğrulama içermiyordu VE
+    init_db.init_database() çağırarak Base.metadata.drop_all() ile TÜM veritabanını
+    (tüm kullanıcılar, tüm tablolar) silip yeniden oluşturuyordu — canlıda kimliksiz
+    herhangi biri POST isteğiyle bunu tetikleyebiliyordu. Artık kimlik doğrulaması
+    zorunlu ve etkisi SADECE çağıran kullanıcının kendi pozisyon/işlem kayıtlarıyla
+    sınırlı; başka hiçbir kullanıcıya veya tabloya dokunulmuyor.
+    """
+    from db_models import DBPosition, DBTransaction
+    from init_db import load_holdings_to_db
     try:
-        from init_db import init_database, load_holdings_to_db
-        init_database()
-        load_holdings_to_db()
-        return {"status": "success", "message": "Database reset to factory defaults"}
+        db.query(DBTransaction).filter(DBTransaction.user_id == user_id).delete()
+        db.query(DBPosition).filter(DBPosition.user_id == user_id).delete()
+        db.commit()
+        load_holdings_to_db(user_id=user_id)
+        return {"status": "success", "message": "Portfolio reset to demo defaults"}
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

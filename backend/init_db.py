@@ -49,19 +49,21 @@ def init_database():
     finally:
         session.close()
 
-def load_holdings_to_db():
-    """holdings_full.json dosyasını okur ve varsayılan pozisyonları yükler."""
-    print("Loading holdings to database via ORM...")
+def load_holdings_to_db(user_id: int = 1):
+    """holdings_full.json dosyasını okur ve varsayılan pozisyonları verilen kullanıcıya yükler.
+    user_id parametresi eklendi — eskiden sabit 1 idi, bu yüzden bu fonksiyonu HTTP üzerinden
+    çağıran bir endpoint (routers/portfolio.py reset) her zaman id=1'e (demo hesabı) yazıyordu."""
+    print(f"Loading holdings to database via ORM (user_id={user_id})...")
     if not os.path.exists(HOLDINGS_FILE):
         print(f"Holdings file not found: {HOLDINGS_FILE}")
         return
-        
+
     with open(HOLDINGS_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
-        
+
     holdings = data.get("holdings", [])
     session = SessionLocal()
-    
+
     try:
         for h in holdings:
             ticker = h["ticker"].upper().strip()
@@ -71,10 +73,10 @@ def load_holdings_to_db():
             buy_date = datetime.strptime(h["buy_date"], "%Y-%m-%d").date()
             currency = h["buy_currency"]
             cost_basis = h.get("invested_tl", qty * price)
-            
+
             # 1. Pozisyon ekle
             pos = DBPosition(
-                user_id=1,
+                user_id=user_id,
                 ticker=ticker,
                 asset_class=asset_class,
                 quantity=qty,
@@ -85,10 +87,10 @@ def load_holdings_to_db():
             )
             session.add(pos)
             session.flush()  # Populates pos.id for transaction record
-            
+
             # 2. İşlem geçmişi (transaction) ekle
             txn = DBTransaction(
-                user_id=1,
+                user_id=user_id,
                 position_id=pos.id,
                 ticker=ticker,
                 asset_class=asset_class,
