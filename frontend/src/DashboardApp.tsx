@@ -458,8 +458,17 @@ export default function DashboardApp() {
           kapsayıcının kendi üst kenarıyla "collapse" oluyordu. Görünürde hiçbir şey
           taşmıyor gibi göründüğü halde belge (html/body) 64px daha uzun ölçülüyor ve
           hem mobilde hem masaüstünde işlevsiz bir dikey scrollbar çıkıyordu. margin
-          yerine main'in KENDİ padding'i (pt-*) kullanılınca collapse hiç olmuyor. */}
-      <main className="ml-0 md:ml-64 h-screen overflow-y-auto custom-scrollbar px-4 md:px-8 pb-4 md:pb-8 pt-20 md:pt-24">
+          yerine main'in KENDİ padding'i (pt-*) kullanılınca collapse hiç olmuyor.
+
+          h-screen (100vh) yerine h-dvh (100dvh) kullanılıyor — mobil tarayıcılarda
+          100vh, adres çubuğu gizliyken ulaşılabilecek EN BÜYÜK görünür alanı esas
+          alır; adres çubuğu görünürken gerçek görünür alan daha küçüktür. Bu yüzden
+          main'in kutusu gerçek ekrandan daha uzun ölçülüp en alttaki içerik (son
+          pozisyonlar) normal kaydırmayla erişilemez hale geliyordu. 100dvh tarayıcı
+          arayüzündeki değişikliklere göre dinamik olarak güncellenir, bu sorunu
+          ortadan kaldırır. h-screen'i de bırakıyoruz — dvh'yi desteklemeyen eski
+          tarayıcılarda yedek olarak kalır. */}
+      <main className="ml-0 md:ml-64 h-screen h-dvh overflow-y-auto custom-scrollbar px-4 md:px-8 pb-4 md:pb-8 pt-20 md:pt-24">
         <div className="max-w-7xl mx-auto">
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
