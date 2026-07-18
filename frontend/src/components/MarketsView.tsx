@@ -52,6 +52,10 @@ function saveWatchlist(items: WatchlistItem[]) {
 interface MarketsViewProps {
   selectedSymbolFromSearch: string;
   setSelectedSymbolFromSearch: (symbol: string) => void;
+  // Aynı sembolü paylaşan farklı varlık sınıflarını (ör. TEFAS fonu vs ABD ETF'i)
+  // ayırt edebilmek için — üst arama çubuğunda kullanıcının GERÇEKTEN tıkladığı
+  // sonucun asset_class'ı.
+  selectedAssetClassFromSearch?: string;
   onAddHoldingFromMarket: (holding: {
     symbol: string; name: string; category: AssetCategory; sector: string;
     shares: number; avgBuyPrice: number; currentPrice: number; riskScore: number;
@@ -71,6 +75,7 @@ const mapToHistoryObjects = (prices: number[], baseDate = new Date()): { date: s
 export default function MarketsView({
   selectedSymbolFromSearch,
   setSelectedSymbolFromSearch,
+  selectedAssetClassFromSearch,
   onAddHoldingFromMarket,
   settings,
   exchangeRates,
@@ -197,7 +202,13 @@ export default function MarketsView({
     }
 
     api.searchAssets(sym).then(results => {
-      const found = results.find(r => r.symbol.toUpperCase() === sym);
+      // Aynı sembolü paylaşan birden fazla varlık olabilir (ör. "PTF": hem TEFAS
+      // fonu hem NASDAQ ETF'i) — kullanıcının arama listesinde GERÇEKTEN tıkladığı
+      // varlık sınıfı biliniyorsa (selectedAssetClassFromSearch) önce onu ara, yoksa
+      // (veya eşleşmezse) ilk sonuca düş.
+      const found =
+        results.find(r => r.symbol.toUpperCase() === sym && r.asset_class === selectedAssetClassFromSearch) ||
+        results.find(r => r.symbol.toUpperCase() === sym);
       if (!found) return;
       const assetClass = found.asset_class || 'ABD Hisse/ETF';
       fetch(`${BASE_URL}/api/prices/${encodeURIComponent(sym)}?asset_class=${encodeURIComponent(assetClass)}`)
@@ -218,7 +229,7 @@ export default function MarketsView({
           setPriceCurrencies(prev => ({ ...prev, [sym]: priceCur }));
         }).catch(() => {});
     }).catch(() => {});
-  }, [selectedSymbolFromSearch]);
+  }, [selectedSymbolFromSearch, selectedAssetClassFromSearch]);
 
   const getAssetClass = useCallback((asset: MarketAsset): string => {
     // Backend'in tanıdığı gerçek asset_class — description string'ini parse

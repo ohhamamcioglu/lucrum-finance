@@ -69,6 +69,9 @@ export default function DashboardApp() {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('portfolio');
   const [selectedSymbolFromSearch, setSelectedSymbolFromSearch] = useState<string>('');
+  // Aynı sembolü paylaşan farklı varlık sınıflarını (ör. TEFAS fonu vs ABD ETF'i)
+  // ayırt edebilmek için — bkz. MarketsView'daki kullanım notu.
+  const [selectedAssetClassFromSearch, setSelectedAssetClassFromSearch] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
 
@@ -406,8 +409,9 @@ export default function DashboardApp() {
   };
 
   // Search Select Asset logic - transitions to markets view and highlights the selected instrument
-  const handleSearchSelectAsset = (symbol: string) => {
+  const handleSearchSelectAsset = (symbol: string, assetClass: string) => {
     setSelectedSymbolFromSearch(symbol);
+    setSelectedAssetClassFromSearch(assetClass);
     setActiveTab('markets');
   };
 
@@ -496,6 +500,7 @@ export default function DashboardApp() {
                 <MarketsView
                   selectedSymbolFromSearch={selectedSymbolFromSearch}
                   setSelectedSymbolFromSearch={setSelectedSymbolFromSearch}
+                  selectedAssetClassFromSearch={selectedAssetClassFromSearch}
                   onAddHoldingFromMarket={handleAddHolding}
                   settings={settings}
                   exchangeRates={exchangeRates}

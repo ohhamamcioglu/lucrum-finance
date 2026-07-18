@@ -16,7 +16,7 @@ interface NewsItem {
 }
 
 interface HeaderProps {
-  onSearchSelectAsset: (symbol: string) => void;
+  onSearchSelectAsset: (symbol: string, assetClass: string) => void;
   settings: UserSettings;
   exchangeRates: { usd_rate: number; eur_rate: number };
 }
@@ -167,7 +167,7 @@ export default function Header({ onSearchSelectAsset, settings, exchangeRates }:
                   <button
                     key={`${asset.symbol}-${asset.asset_class}`}
                     id={`search-result-${asset.symbol}-${asset.asset_class.replace(/[^A-Za-z0-9]/g, '')}`}
-                    onClick={() => { onSearchSelectAsset(asset.symbol); setSearchQuery(''); setShowResults(false); setSearchResults([]); }}
+                    onClick={() => { onSearchSelectAsset(asset.symbol, asset.asset_class); setSearchQuery(''); setShowResults(false); setSearchResults([]); }}
                     className="w-full text-left px-4 py-2.5 hover:bg-[#F1EFE9] transition-colors flex justify-between items-center border-b border-[#E8E2D9]/40 last:border-b-0"
                   >
                     <div className="flex items-center gap-3">
