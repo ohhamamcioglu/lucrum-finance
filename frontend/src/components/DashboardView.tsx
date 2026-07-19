@@ -66,16 +66,21 @@ function riskScoreSourceLabel(assetClass: string | undefined, t: Translations): 
 // Yabancı para birimli pozisyonlarda getiri, varlık fiyatının mı yoksa kurun mu hareket
 // ettiğinden kaynaklandığını ayırır (bkz. services.calculate_portfolio price_effect_pct/
 // fx_effect_pct). TRY pozisyonlarda fx_effect_pct her zaman tam 0 olduğundan otomatik
-// gizlenir — sadece gerçekten yabancı para olan pozisyonlarda gösterilir.
-function effectBreakdownLabel(h: Pick<Holding, 'priceEffectPct' | 'fxEffectPct'>, t: Translations): string | null {
-  const parts: string[] = [];
+// gizlenir. Son birim fiyatı (currentPrice, zaten baseCurrency'ye çevrilmiş) her zaman
+// gösterilir — Fiyat/Kur ayrıştırmasından bağımsız olarak faydalı bir bilgi.
+function effectBreakdownLabel(
+  h: Pick<Holding, 'priceEffectPct' | 'fxEffectPct' | 'currentPrice'>,
+  t: Translations,
+  baseCurrency: string
+): string {
+  const parts: string[] = [formatCurrency(h.currentPrice, baseCurrency)];
   if (h.priceEffectPct != null) {
     parts.push(`${t.priceEffectShort} ${h.priceEffectPct >= 0 ? '+' : ''}${h.priceEffectPct.toFixed(1)}%`);
   }
   if (h.fxEffectPct != null && h.fxEffectPct !== 0) {
     parts.push(`${t.fxEffectShort} ${h.fxEffectPct >= 0 ? '+' : ''}${h.fxEffectPct.toFixed(1)}%`);
   }
-  return parts.length > 0 ? parts.join(' · ') : null;
+  return parts.join(' · ');
 }
 
 export default function DashboardView({
@@ -980,9 +985,7 @@ export default function DashboardView({
                     <span className={`text-[10px] font-mono font-bold block mt-0.5 ${h.unrealizedPL >= 0 ? 'text-[#7A8874]/85' : 'text-[#B5836F]/85'}`}>
                       {h.unrealizedPL >= 0 ? '+' : ''}{h.unrealizedPLPercent.toFixed(2)}%
                     </span>
-                    {effectBreakdownLabel(h, t) && (
-                      <span className="text-[9px] text-[#9E958C] font-mono block mt-0.5">{effectBreakdownLabel(h, t)}</span>
-                    )}
+                    <span className="text-[9px] text-[#9E958C] font-mono block mt-0.5">{effectBreakdownLabel(h, t, settings.baseCurrency)}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end items-center gap-2.5 relative">
@@ -1087,9 +1090,7 @@ export default function DashboardView({
                           {h.unrealizedPL >= 0 ? '+' : ''}{formatCurrency(h.unrealizedPL, settings.baseCurrency)}
                           <span className="opacity-80"> ({h.unrealizedPL >= 0 ? '+' : ''}{h.unrealizedPLPercent.toFixed(2)}%)</span>
                         </div>
-                        {effectBreakdownLabel(h, t) && (
-                          <div className="text-[9px] text-[#9E958C] font-mono mt-0.5">{effectBreakdownLabel(h, t)}</div>
-                        )}
+                        <div className="text-[9px] text-[#9E958C] font-mono mt-0.5">{effectBreakdownLabel(h, t, settings.baseCurrency)}</div>
                       </div>
                       <div>
                         <div className="text-[9px] font-bold uppercase tracking-wider text-[#9E958C] flex items-center gap-1">
