@@ -24,6 +24,8 @@ export interface BackendPosition {
   // TRY pozisyonlarda fx_effect_pct her zaman 0'dır (bkz. services.calculate_portfolio).
   price_effect_pct?: number | null;
   fx_effect_pct?: number | null;
+  // UK vergi sarmalı (GIA/ISA/SIPP) — Faz 3, task #58. Sadece UK vergi hesaplayıcısı için anlamlı.
+  tax_wrapper?: string | null;
 }
 
 export interface BackendLiability {
@@ -292,6 +294,59 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+  },
+
+  async getGermanyTaxSummary(married = false): Promise<{
+    year: number;
+    sparerpauschbetrag: {
+      married: boolean; exemption_eur: number; realized_gain_eur: number;
+      used_pct: number; remaining_eur: number; unconverted_events: number;
+    };
+    crypto_lots: {
+      ticker: string; buy_date: string; quantity: number; unit_price: number; currency: string;
+      holding_days: number; tax_free: boolean; days_until_tax_free: number;
+    }[];
+    crypto_tax_free_holding_days: number;
+  }> {
+    return request(`${BASE_URL}/api/tax/germany?married=${married}`);
+  },
+
+  async calculateVorabpauschale(payload: {
+    value_start_eur: number; basiszins_pct: number; fund_type?: string;
+    months_held?: number; value_end_eur?: number | null;
+  }): Promise<{
+    basisertrag_prorated_eur: number; vorabpauschale_gross_eur: number;
+    capped_by_actual_gain: boolean; actual_gain_provided: boolean;
+    teilfreistellung_pct: number; taxable_base_eur: number;
+  }> {
+    return request(`${BASE_URL}/api/tax/germany/vorabpauschale`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getUkTaxSummary(cgtAllowanceGbp?: number | null): Promise<{
+    isa_allowance: {
+      tax_year_start: string; used_gbp: number; allowance_gbp: number;
+      remaining_gbp: number; used_pct: number;
+    };
+    bed_and_isa: {
+      total_gia_unrealized_gain_gbp: number; cgt_allowance_gbp: number;
+      exceeds_allowance: boolean; excess_gbp: number;
+    } | null;
+  }> {
+    const qs = cgtAllowanceGbp != null ? `?cgt_allowance_gbp=${cgtAllowanceGbp}` : '';
+    return request(`${BASE_URL}/api/tax/uk${qs}`);
+  },
+
+  async getDividendCalendar(): Promise<{
+    events: {
+      ticker: string; ex_date: string; amount_per_share: number;
+      quantity_held: number; total_amount: number; is_future: boolean;
+    }[];
+  }> {
+    return request(`${BASE_URL}/api/calendar/dividends`);
   },
 
   async resetPortfolio(): Promise<{ status: string; message: string }> {

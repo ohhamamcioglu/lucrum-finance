@@ -488,7 +488,8 @@ def create_position(user_id: int, pos: PositionCreate, db: Optional[Session] = N
             interest_rate=pos.interest_rate,
             maturity_date=pos.maturity_date,
             commodity_type=pos.commodity_type,
-            unit=pos.unit
+            unit=pos.unit,
+            tax_wrapper=pos.tax_wrapper,
         )
         session.add(db_pos)
         session.flush()  # Populates db_pos.id
@@ -524,6 +525,7 @@ def create_position(user_id: int, pos: PositionCreate, db: Optional[Session] = N
             maturity_date=db_pos.maturity_date,
             commodity_type=db_pos.commodity_type,
             unit=db_pos.unit,
+            tax_wrapper=db_pos.tax_wrapper,
             created_at=db_pos.created_at or datetime.now(),
             updated_at=db_pos.updated_at or datetime.now()
         )

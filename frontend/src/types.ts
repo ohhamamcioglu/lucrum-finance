@@ -15,6 +15,7 @@ export interface Holding {
   buyDate?: string; // YYYY-MM-DD — alım tarihi, kur/kâr-zarar hesabı için backend'e gönderilir
   priceEffectPct?: number | null; // yabancı para pozisyonda getirinin varlık fiyatından gelen kısmı
   fxEffectPct?: number | null; // yabancı para pozisyonda getirinin kur hareketinden gelen kısmı — TRY pozisyonda hep 0
+  taxWrapper?: string | null; // UK vergi sarmalı (GIA/ISA/SIPP) — sadece UK vergi hesaplayıcısı için anlamlı
 }
 
 export interface Transaction {
@@ -38,7 +39,7 @@ export interface UserSettings {
   language: 'tr' | 'en';
 }
 
-export type ActiveTab = 'portfolio' | 'analytics' | 'risk' | 'markets' | 'news' | 'liabilities' | 'settings';
+export type ActiveTab = 'portfolio' | 'analytics' | 'risk' | 'markets' | 'news' | 'liabilities' | 'tax' | 'settings';
 
 export type LiabilityType = 'Loan' | 'CreditCard' | 'Mortgage' | 'Other';
 

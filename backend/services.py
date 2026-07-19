@@ -677,7 +677,8 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
             "interest_rate": interest_rate,
             "maturity_date": maturity_date,
             "commodity_type": commodity_type,
-            "unit": unit
+            "unit": unit,
+            "tax_wrapper": pos.get('tax_wrapper'),
         }
 
         # 1) Yatırılan tutarı TRY'ye çevir (buy_currency'ye göre, alım tarihi kuruyla).

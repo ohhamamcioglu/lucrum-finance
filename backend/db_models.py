@@ -82,10 +82,13 @@ class DBPosition(Base):
     maturity_date = Column(String, nullable=True)
     commodity_type = Column(String, nullable=True)
     unit = Column(String, nullable=True)
-    
+    # UK vergi sarmalı (GIA/ISA/SIPP) — Faz 3, task #58. Sadece UK vergi hesaplayıcısı
+    # için anlamlı, diğer ülke kullanıcıları için None kalır.
+    tax_wrapper = Column(String, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Constraints & Relationships
     __table_args__ = (
         UniqueConstraint("user_id", "ticker", name="uq_user_ticker"),

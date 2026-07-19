@@ -10,6 +10,7 @@ import MarketsView from './components/MarketsView';
 import SettingsView from './components/SettingsView';
 import NewsView from './components/NewsView';
 import LiabilitiesView from './components/LiabilitiesView';
+import TaxDashboardView from './components/TaxDashboardView';
 
 import { Holding, ActiveTab, UserSettings, AssetCategory, Liability } from './types';
 import { INITIAL_SETTINGS, MARKET_ASSETS, calculatePortfolio, convertCurrency } from './utils';
@@ -571,6 +572,10 @@ export default function DashboardApp() {
                   holdings={portfolioMetrics.holdings}
                   settings={settings}
                 />
+              )}
+
+              {activeTab === 'tax' && (
+                <TaxDashboardView settings={settings} />
               )}
 
               {activeTab === 'settings' && (

@@ -2255,16 +2255,21 @@ def get_dividends(symbol: str) -> list[dict]:
         return []
     items = raw.get("dividends", [])
     ts = _now()
+    # Twelve Data'nın gerçek yanıt anahtarı "ex_date" — "date" değil (bkz. canlı yanıt
+    # örneği: {"ex_date": "2026-05-11", "amount": 0.27}, frequency/description alanları
+    # hiç dönmüyor). Eskiden burada "date" okunuyordu, bu da her zaman None'a düşüp
+    # td_dividends tablosuna tarihsiz kayıt yazıyordu — temettü takvimi gibi tarihe
+    # dayalı hiçbir özellik bu veriyle çalışamazdı.
     with _db_lock:
         c = _conn()
         c.executemany("""
             INSERT OR REPLACE INTO td_dividends (symbol, date, amount, frequency, description, fetched_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, [(sym, i.get("date"), _f(i.get("amount")), _i(i.get("frequency")), i.get("description"), ts)
+        """, [(sym, i.get("ex_date"), _f(i.get("amount")), _i(i.get("frequency")), i.get("description"), ts)
               for i in items])
         c.commit()
         c.close()
-    return [{"date": i.get("date"), "amount": _f(i.get("amount")),
+    return [{"date": i.get("ex_date"), "amount": _f(i.get("amount")),
              "frequency": _i(i.get("frequency")), "description": i.get("description")} for i in items]
 
 

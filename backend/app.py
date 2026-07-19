@@ -45,6 +45,8 @@ from routers import (
     admin,
     payments,
     imports as imports_router,
+    tax,
+    calendar as calendar_router,
 )
 from scheduler import start_scheduler, stop_scheduler
 from rate_limit import limiter
@@ -102,6 +104,8 @@ app.include_router(liabilities.router)
 app.include_router(admin.router)
 app.include_router(payments.router)
 app.include_router(imports_router.router)
+app.include_router(tax.router)
+app.include_router(calendar_router.router)
 
 # ============ HEALTH ============
 

@@ -133,6 +133,9 @@ class PositionBase(BaseModel):
     maturity_date: Optional[str] = None
     commodity_type: Optional[str] = None
     unit: Optional[str] = None
+    # UK vergi sarmalı (GIA/ISA/SIPP) — sadece UK vergi hesaplayıcısı (Faz 3, task #58)
+    # için anlamlı, diğer ülke kullanıcıları için None kalır.
+    tax_wrapper: Optional[str] = None
 
 class PositionCreate(PositionBase):
     pass
@@ -150,6 +153,7 @@ class PositionUpdate(BaseModel):
     maturity_date: Optional[str] = None
     commodity_type: Optional[str] = None
     unit: Optional[str] = None
+    tax_wrapper: Optional[str] = None
     # Bir top-up (ekleme) veya kısmi satış (azaltma) düzenlemesini GERÇEK bir işlem olarak
     # kaydetmek için — delta_quantity pozitifse BUY, negatifse SELL olarak, bugünün tarihiyle
     # işlem geçmişine eklenir. Eski/mevcut işlemlere hiç dokunulmaz. Bkz. crud.update_position.
@@ -215,6 +219,16 @@ class ImportConfirmResponse(BaseModel):
     created: int
     skipped: int
     errors: List[ImportRowError] = []
+
+# Almanya vergi hesaplayıcısı (Faz 3, task #58)
+class VorabpauschaleRequest(BaseModel):
+    value_start_eur: float
+    # basiszins_pct KULLANICI girdisidir — bkz. backend/tax_germany.py docstring'i,
+    # sistem bu oranı asla otomatik çekmez veya tahmin etmez.
+    basiszins_pct: float
+    fund_type: str = "equity"  # equity | mixed | other (Teilfreistellung oranı belirler)
+    months_held: int = 12
+    value_end_eur: Optional[float] = None
 
 # Portföy Özeti
 class PositionDetail(BaseModel):
