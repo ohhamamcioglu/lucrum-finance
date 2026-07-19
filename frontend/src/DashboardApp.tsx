@@ -193,6 +193,8 @@ export default function DashboardApp() {
           assetClass: pos.asset_class,
           changePct: pos.change_pct ?? null,
           buyDate: typeof pos.buy_date === 'string' ? pos.buy_date : String(pos.buy_date),
+          priceEffectPct: pos.price_effect_pct ?? null,
+          fxEffectPct: pos.fx_effect_pct ?? null,
         };
       });
 

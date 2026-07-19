@@ -13,6 +13,8 @@ export interface Holding {
   assetClass?: string;
   changePct?: number | null; // günlük değişim yüzdesi (ör. 2.34 = +%2.34), veri yoksa null
   buyDate?: string; // YYYY-MM-DD — alım tarihi, kur/kâr-zarar hesabı için backend'e gönderilir
+  priceEffectPct?: number | null; // yabancı para pozisyonda getirinin varlık fiyatından gelen kısmı
+  fxEffectPct?: number | null; // yabancı para pozisyonda getirinin kur hareketinden gelen kısmı — TRY pozisyonda hep 0
 }
 
 export interface Transaction {

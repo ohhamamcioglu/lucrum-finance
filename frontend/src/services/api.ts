@@ -19,6 +19,11 @@ export interface BackendPosition {
   current_value_usd?: number | null;
   current_value_eur?: number | null;
   current_value_gbp?: number | null;
+  // Kur Etkisi vs Fiyat Etkisi ayrıştırması — yabancı para birimli pozisyonlarda getirinin
+  // ne kadarının varlık fiyatı hareketinden, ne kadarının kur hareketinden geldiğini ayırır.
+  // TRY pozisyonlarda fx_effect_pct her zaman 0'dır (bkz. services.calculate_portfolio).
+  price_effect_pct?: number | null;
+  fx_effect_pct?: number | null;
 }
 
 export interface BackendLiability {

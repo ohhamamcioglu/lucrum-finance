@@ -307,6 +307,8 @@ const en = {
   adminAuditActionTierChange: 'Tier change',
   adminAuditActionToggleActive: 'Active status change',
   adminAuditActionViewPortfolio: 'Viewed portfolio',
+  priceEffectShort: 'Price',
+  fxEffectShort: 'FX',
 
   // Header — news dropdown
   newsFeedFooter: (n: number) => `Last ${n} articles · Updates every 15 minutes`,
@@ -714,6 +716,8 @@ const tr: typeof en = {
   adminAuditActionTierChange: 'Abonelik değişimi',
   adminAuditActionToggleActive: 'Aktiflik değişimi',
   adminAuditActionViewPortfolio: 'Portföy görüntülendi',
+  priceEffectShort: 'Fiyat',
+  fxEffectShort: 'Kur',
 
   // Header — haber dropdown'u
   newsFeedFooter: (n: number) => `Son ${n} haber · Her 15 dakikada güncellenir`,
