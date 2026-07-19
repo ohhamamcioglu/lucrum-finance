@@ -3,7 +3,7 @@ Pydantic Models for Portfolio API
 """
 from pydantic import BaseModel, Field
 from datetime import date, datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 # Kullanıcı
 class UserBase(BaseModel):
@@ -188,6 +188,33 @@ class Transaction(TransactionBase):
 
     class Config:
         from_attributes = True
+
+# Esnek CSV/Excel İçe Aktarma (Faz 2, task #57)
+class ImportPreviewResponse(BaseModel):
+    import_id: str
+    columns: List[str]
+    row_count: int
+    preview_rows: List[Dict[str, Any]]
+    suggested_mapping: Dict[str, Optional[str]]
+    warnings: List[str] = []
+
+class ImportConfirmRequest(BaseModel):
+    import_id: str
+    mapping: Dict[str, Optional[str]]
+    asset_class_default: Optional[str] = None
+    buy_currency_default: str = "TRY"
+    # None ise önizlemedeki TÜM satırlar işlenir; verilirse yalnızca bu index'ler (kullanıcı
+    # önizlemede belirli satırları hariç tutabilsin diye).
+    row_indices: Optional[List[int]] = None
+
+class ImportRowError(BaseModel):
+    row: int
+    reason: str
+
+class ImportConfirmResponse(BaseModel):
+    created: int
+    skipped: int
+    errors: List[ImportRowError] = []
 
 # Portföy Özeti
 class PositionDetail(BaseModel):

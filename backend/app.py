@@ -43,7 +43,8 @@ from routers import (
     notifications,
     liabilities,
     admin,
-    payments
+    payments,
+    imports as imports_router,
 )
 from scheduler import start_scheduler, stop_scheduler
 from rate_limit import limiter
@@ -100,6 +101,7 @@ app.include_router(notifications.router)
 app.include_router(liabilities.router)
 app.include_router(admin.router)
 app.include_router(payments.router)
+app.include_router(imports_router.router)
 
 # ============ HEALTH ============
 

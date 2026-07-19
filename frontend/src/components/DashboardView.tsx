@@ -2,11 +2,12 @@ import { useState, FormEvent, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   TrendingUp, Bolt, Plus, Trash2, X, Wallet2, AlertCircle,
-  Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Info,
+  Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Info, Upload,
 } from 'lucide-react';
 import { Holding, AssetCategory, UserSettings, Liability } from '../types';
 import { formatCurrency, MARKET_ASSETS, convertCurrency } from '../utils';
 import ConfirmDialog from './ConfirmDialog';
+import ImportModal from './ImportModal';
 import { useT, Translations } from '../i18n';
 import { api, BASE_URL } from '../services/api';
 
@@ -51,6 +52,7 @@ interface DashboardViewProps {
   performanceDays?: 90 | 180 | 365 | 730;
   onPerformanceDaysChange?: (days: 90 | 180 | 365 | 730) => void;
   liabilities?: Liability[];
+  onImportComplete?: () => void;
 }
 
 // Risk skorunun kaynağı varlık sınıfına göre değişir — TEFAS fonları için SPK/KAP'ın
@@ -91,8 +93,12 @@ export default function DashboardView({
   performanceDays = 90,
   onPerformanceDaysChange,
   liabilities = [],
+  onImportComplete,
 }: DashboardViewProps) {
   const t = useT(settings.language);
+
+  // ── Import modal ─────────────────────────────────────────────────
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // ── Add modal ────────────────────────────────────────────────────
   const [showAddModal, setShowAddModal] = useState(false);
@@ -901,12 +907,26 @@ export default function DashboardView({
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowAddModal(true)}
-              className="flex items-center justify-center gap-1.5 bg-[#8C9A86] hover:bg-[#7A8874] text-white px-5 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all shadow-sm shrink-0">
-              <Plus className="w-3.5 h-3.5" />{t.addTransaction}
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setShowImportModal(true)}
+                className="flex items-center justify-center gap-1.5 bg-white border border-[#E8E2D9] hover:border-[#8C9A86]/50 text-[#6B645E] hover:text-[#2D2926] px-4 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all">
+                <Upload className="w-3.5 h-3.5" />{t.importFromFile}
+              </button>
+              <button onClick={() => setShowAddModal(true)}
+                className="flex items-center justify-center gap-1.5 bg-[#8C9A86] hover:bg-[#7A8874] text-white px-5 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest transition-all shadow-sm">
+                <Plus className="w-3.5 h-3.5" />{t.addTransaction}
+              </button>
+            </div>
           </div>
         </div>
+
+        {showImportModal && (
+          <ImportModal
+            settings={settings}
+            onClose={() => setShowImportModal(false)}
+            onComplete={() => onImportComplete?.()}
+          />
+        )}
 
         {/* Masaüstü: tam tablo. Mobilde bunun yerine aşağıdaki accordion listesi gösterilir
             (dar ekranda 7 sütunlu tablo yatay kaydırmayla bile kullanışsız oluyordu). */}

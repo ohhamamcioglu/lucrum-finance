@@ -393,6 +393,10 @@ export default function DashboardApp() {
     }
   };
 
+  const handleImportComplete = async () => {
+    await loadData();
+  };
+
   const handleUpdateSettings = (newSettings: Partial<UserSettings>) => {
     setSettings((prev) => ({ ...prev, ...newSettings }));
   };
@@ -520,6 +524,7 @@ export default function DashboardApp() {
                   performanceDays={performanceDays}
                   onPerformanceDaysChange={setPerformanceDays}
                   liabilities={liabilities}
+                  onImportComplete={handleImportComplete}
                 />
               )}
 

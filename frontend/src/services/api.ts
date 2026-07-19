@@ -265,6 +265,35 @@ export const api = {
     });
   },
 
+  async importPreview(file: File): Promise<{
+    import_id: string;
+    columns: string[];
+    row_count: number;
+    preview_rows: Record<string, string | null>[];
+    suggested_mapping: Record<string, string | null>;
+    warnings: string[];
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request(`${BASE_URL}/api/imports/preview`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async importConfirm(payload: {
+    import_id: string;
+    mapping: Record<string, string | null>;
+    asset_class_default?: string | null;
+    buy_currency_default?: string;
+  }): Promise<{ created: number; skipped: number; errors: { row: number; reason: string }[] }> {
+    return request(`${BASE_URL}/api/imports/confirm`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  },
+
   async resetPortfolio(): Promise<{ status: string; message: string }> {
     return request(`${BASE_URL}/api/portfolio/reset`, {
       method: 'POST'
