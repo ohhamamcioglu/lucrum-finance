@@ -1,5 +1,6 @@
 import os
 import twelve_data as td
+import bluelytics
 import requests
 import json
 from datetime import datetime, timedelta, date
@@ -7,7 +8,7 @@ from typing import Optional, Dict, List
 
 from crud import (
     get_positions, get_exchange_rate, get_eur_exchange_rate, get_gbp_exchange_rate,
-    save_exchange_rate, save_price_history,
+    get_ars_exchange_rate, save_exchange_rate, save_price_history,
     get_transactions, create_notification, get_price_alerts, trigger_price_alert, get_target_allocations
 )
 from models import ExchangeRateCreate, PriceHistoryCreate
@@ -364,6 +365,55 @@ def get_gbp_try_rate(date_str: Optional[str] = None) -> float:
     except Exception as e:
         print(f"[WARN] GBP/TRY kuru alinamadi: {e}")
         return 43.0
+
+
+def get_ars_try_rate(date_str: Optional[str] = None) -> Optional[float]:
+    """ARS/TRY kurunu döner — Bluelytics'in Blue Dollar (paralel piyasa) kuru
+    üzerinden türetilir: ars_try_rate = usd_try_rate / ars_per_usd_blue.
+    Resmi kur değil bilerek paralel kur kullanılıyor — Arjantinli yatırımcı için
+    ekonomik olarak anlamlı olan bu (bkz. strategic_product_roadmap.md).
+
+    ÖNEMLİ FARK: get_usd/eur/gbp_try_rate'in aksine bu fonksiyon veri yoksa
+    HİÇBİR SABİT/TAHMİNİ DEĞERE düşmez — None döner. Bluelytics'in tarihsel
+    endpoint'i yok ve ARS aşırı oynak bir para birimi; kullanıcı "yanlış veya
+    tahmini veri asla gösterilmeyecek" talebini açıkça belirtti. Çağıran taraf
+    None'ı "veri yok" olarak ele almalı (ör. arayüzde '—')."""
+    try:
+        cache_key = f"arstry_{date_str}" if date_str else "arstry_current"
+        cached = _svc_fc.get(cache_key, ttl=3600)
+        if cached:
+            return float(cached)
+
+        if date_str:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+            if date_obj > datetime.now().date():
+                return get_ars_try_rate()
+
+            # Sadece DB'de daha önce biriktirilmiş gerçek bir kayıt varsa dön —
+            # Bluelytics'te tarihsel veri yok, tahmin/yaklaşıklık yapılmıyor.
+            cached_db = get_ars_exchange_rate(date_obj)
+            if cached_db:
+                _svc_fc.set(cache_key, cached_db)
+                return cached_db
+            return None
+
+        # Güncel kur
+        ars_per_usd_blue = bluelytics.get_blue_dollar_ars_per_usd()
+        if not ars_per_usd_blue:
+            return None
+        usd_try = get_usd_try_rate()
+        rate = round(usd_try / ars_per_usd_blue, 6)
+        _svc_fc.set(cache_key, rate)
+        try:
+            save_exchange_rate(ExchangeRateCreate(
+                rate_date=date.today(), ars_try_rate=rate, source="bluelytics"
+            ))
+        except Exception:
+            pass
+        return rate
+    except Exception as e:
+        print(f"[WARN] ARS/TRY kuru alinamadi: {e}")
+        return None
 
 
 # Portföy özeti önbelleği — Redis üzerinden (finance_cache/_svc_fc), KULLANICI BAŞINA anahtarlı.

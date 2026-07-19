@@ -240,6 +240,7 @@ class ExchangeRateCreate(BaseModel):
     usd_try_rate: Optional[float] = None
     eur_try_rate: Optional[float] = None
     gbp_try_rate: Optional[float] = None
+    ars_try_rate: Optional[float] = None
     source: str = "yfinance"
 
 class ExchangeRate(ExchangeRateCreate):

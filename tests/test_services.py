@@ -7,6 +7,8 @@ sahtelenir — testler internet erişimine bağımlı olmamalı (CI'da flaky olu
 """
 from datetime import date, timedelta
 
+import pytest
+
 import crud
 import services
 from db_models import SessionLocal, DBUser
@@ -263,3 +265,93 @@ def test_target_allocations_summing_to_100_accepted(client, auth_headers):
         headers=auth_headers,
     )
     assert resp.status_code == 200
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# bluelytics.py / services.get_ars_try_rate — Arjantin Blue Dollar (Faz 2,
+# task #54). Kural: veri yoksa HİÇBİR ZAMAN tahmini/sabit bir değere
+# düşülmez — None döner (kullanıcının açık talebi: yanlış/tahmini veri yok).
+# ─────────────────────────────────────────────────────────────────────────
+
+def test_bluelytics_get_latest_rates_returns_none_on_network_failure(monkeypatch):
+    import bluelytics
+
+    monkeypatch.setattr(bluelytics._fc, "get", lambda *a, **kw: None)
+    monkeypatch.setattr(bluelytics._fc, "set", lambda *a, **kw: None)
+
+    def _raise(*a, **kw):
+        raise ConnectionError("simulated network failure")
+    monkeypatch.setattr(bluelytics.requests, "get", _raise)
+
+    assert bluelytics.get_latest_rates() is None
+    assert bluelytics.get_blue_dollar_ars_per_usd() is None
+    assert bluelytics.get_official_ars_per_usd() is None
+
+
+def test_bluelytics_get_latest_rates_parses_real_shape(monkeypatch):
+    import bluelytics
+
+    monkeypatch.setattr(bluelytics._fc, "get", lambda *a, **kw: None)
+    monkeypatch.setattr(bluelytics._fc, "set", lambda *a, **kw: None)
+
+    fake_payload = {
+        "oficial": {"value_avg": 1476.5, "value_sell": 1502.0, "value_buy": 1451.0},
+        "blue": {"value_avg": 1513.5, "value_sell": 1530.0, "value_buy": 1497.0},
+        "oficial_euro": {"value_avg": 1604.5},
+        "blue_euro": {"value_avg": 1645.0},
+        "last_update": "2026-07-17T19:45:54.009928-03:00",
+    }
+
+    class _FakeResp:
+        def raise_for_status(self):
+            pass
+        def json(self):
+            return fake_payload
+
+    monkeypatch.setattr(bluelytics.requests, "get", lambda *a, **kw: _FakeResp())
+
+    assert bluelytics.get_blue_dollar_ars_per_usd() == 1513.5
+    assert bluelytics.get_official_ars_per_usd() == 1476.5
+
+
+def test_ars_try_rate_derived_from_usd_try_and_blue_dollar(monkeypatch):
+    """ars_try_rate = usd_try_rate / ars_per_usd_blue — canlı doğrulanan matematik
+    (usd_try=47.17, ars_per_usd_blue=1513.5 -> ars_try≈0.031168)."""
+    monkeypatch.setattr(services, "get_usd_try_rate", lambda *a, **kw: 47.172159)
+    monkeypatch.setattr(services.bluelytics, "get_blue_dollar_ars_per_usd", lambda: 1513.5)
+    monkeypatch.setattr(services, "save_exchange_rate", lambda *a, **kw: None)
+    monkeypatch.setattr(services._svc_fc, "get", lambda *a, **kw: None)
+    monkeypatch.setattr(services._svc_fc, "set", lambda *a, **kw: None)
+
+    rate = services.get_ars_try_rate()
+
+    # Kaynak fonksiyon 6 ondalığa yuvarlıyor — tolerans buna göre gevşetildi.
+    assert rate == pytest.approx(47.172159 / 1513.5, rel=1e-4)
+
+
+def test_ars_try_rate_returns_none_when_bluelytics_unavailable(monkeypatch):
+    """Bluelytics çökerse (veya tarihsel veri hiç birikmemişse) sabit/tahmini bir
+    kura DÜŞÜLMEMELİ — USD/EUR/GBP'nin aksine ARS için hiçbir hardcoded fallback yok."""
+    monkeypatch.setattr(services._svc_fc, "get", lambda *a, **kw: None)
+    monkeypatch.setattr(services.bluelytics, "get_blue_dollar_ars_per_usd", lambda: None)
+
+    assert services.get_ars_try_rate() is None
+
+
+def test_ars_try_rate_historical_date_without_db_cache_returns_none(monkeypatch):
+    """Bluelytics'in tarihsel endpoint'i yok — DB'de o tarih için birikmiş gerçek
+    bir kayıt yoksa None dönmeli, ASLA en yakın/tahmini bir değere düşülmemeli
+    (get_usd_try_rate'teki 'en eski mevcut kuru kullan' fallback'i burada YOK)."""
+    monkeypatch.setattr(services, "get_ars_exchange_rate", lambda *a, **kw: None)
+    monkeypatch.setattr(services._svc_fc, "get", lambda *a, **kw: None)
+    monkeypatch.setattr(services._svc_fc, "set", lambda *a, **kw: None)
+
+    assert services.get_ars_try_rate("2024-01-15") is None
+
+
+def test_ars_try_rate_historical_date_uses_db_cache_when_available(monkeypatch):
+    monkeypatch.setattr(services, "get_ars_exchange_rate", lambda *a, **kw: 0.028)
+    monkeypatch.setattr(services._svc_fc, "get", lambda *a, **kw: None)
+    monkeypatch.setattr(services._svc_fc, "set", lambda *a, **kw: None)
+
+    assert services.get_ars_try_rate("2024-01-15") == 0.028

@@ -149,6 +149,7 @@ class DBExchangeRate(Base):
     usd_try_rate = Column(Float, nullable=True)
     eur_try_rate = Column(Float, nullable=True)
     gbp_try_rate = Column(Float, nullable=True)
+    ars_try_rate = Column(Float, nullable=True)
     source = Column(String, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
