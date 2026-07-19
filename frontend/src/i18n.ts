@@ -309,6 +309,7 @@ const en = {
   adminAuditActionViewPortfolio: 'Viewed portfolio',
   priceEffectShort: 'Price',
   fxEffectShort: 'FX',
+  unitPriceLabel: 'Unit:',
 
   // Header — news dropdown
   newsFeedFooter: (n: number) => `Last ${n} articles · Updates every 15 minutes`,
@@ -718,6 +719,7 @@ const tr: typeof en = {
   adminAuditActionViewPortfolio: 'Portföy görüntülendi',
   priceEffectShort: 'Fiyat',
   fxEffectShort: 'Kur',
+  unitPriceLabel: 'Birim:',
 
   // Header — haber dropdown'u
   newsFeedFooter: (n: number) => `Son ${n} haber · Her 15 dakikada güncellenir`,
