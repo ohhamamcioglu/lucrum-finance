@@ -169,7 +169,8 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: '$',
   EUR: '€',
   TRY: '₺',
-  GBP: '£'
+  GBP: '£',
+  INR: '₹'
 };
 
 export function formatCurrency(value: number, currency: string = 'USD'): string {

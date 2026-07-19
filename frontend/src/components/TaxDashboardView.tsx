@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Landmark, Calculator, PiggyBank, ExternalLink, CalendarClock, Coins } from 'lucide-react';
+import { AlertTriangle, Landmark, Calculator, PiggyBank, ExternalLink, CalendarClock, Coins, Search, Lock, LockOpen } from 'lucide-react';
 import { UserSettings } from '../types';
 import { useT } from '../i18n';
 import { api } from '../services/api';
@@ -13,6 +13,8 @@ type GermanySummary = Awaited<ReturnType<typeof api.getGermanyTaxSummary>>;
 type UkSummary = Awaited<ReturnType<typeof api.getUkTaxSummary>>;
 type VorabResult = Awaited<ReturnType<typeof api.calculateVorabpauschale>>;
 type DividendEvent = Awaited<ReturnType<typeof api.getDividendCalendar>>['events'][number];
+type IndiaSummary = Awaited<ReturnType<typeof api.getIndiaTaxSummary>>;
+type IndiaFundResult = Awaited<ReturnType<typeof api.searchIndiaFunds>>['results'][number];
 
 export default function TaxDashboardView({ settings }: TaxDashboardViewProps) {
   const t = useT(settings.language);
@@ -34,6 +36,17 @@ export default function TaxDashboardView({ settings }: TaxDashboardViewProps) {
   const [cgtAllowance, setCgtAllowance] = useState('');
   const [uk, setUk] = useState<UkSummary | null>(null);
   const [ukLoading, setUkLoading] = useState(true);
+
+  // Hindistan
+  const [india, setIndia] = useState<IndiaSummary | null>(null);
+  const [indiaLoading, setIndiaLoading] = useState(true);
+  const [ltcgRate, setLtcgRate] = useState('');
+  const [stcgRate, setStcgRate] = useState('');
+  const [ltcgExemption, setLtcgExemption] = useState('');
+
+  const [fundQuery, setFundQuery] = useState('');
+  const [fundResults, setFundResults] = useState<IndiaFundResult[]>([]);
+  const [fundSearchLoading, setFundSearchLoading] = useState(false);
 
   // Temettü takvimi
   const [dividends, setDividends] = useState<DividendEvent[]>([]);
@@ -62,6 +75,33 @@ export default function TaxDashboardView({ settings }: TaxDashboardViewProps) {
       .catch((err) => console.error('Dividend calendar fetch failed:', err))
       .finally(() => setDividendsLoading(false));
   }, []);
+
+  useEffect(() => {
+    setIndiaLoading(true);
+    const rates = (ltcgRate && stcgRate && ltcgExemption)
+      ? { ltcgRatePct: Number(ltcgRate), stcgRatePct: Number(stcgRate), ltcgExemptionInr: Number(ltcgExemption) }
+      : undefined;
+    api.getIndiaTaxSummary(rates)
+      .then(setIndia)
+      .catch((err) => console.error('India tax summary fetch failed:', err))
+      .finally(() => setIndiaLoading(false));
+  }, [ltcgRate, stcgRate, ltcgExemption]);
+
+  useEffect(() => {
+    if (fundQuery.trim().length < 2) {
+      setFundResults([]);
+      return;
+    }
+    let cancelled = false;
+    setFundSearchLoading(true);
+    const timer = setTimeout(() => {
+      api.searchIndiaFunds(fundQuery)
+        .then((r) => { if (!cancelled) setFundResults(r.results); })
+        .catch((err) => console.error('AMFI fund search failed:', err))
+        .finally(() => { if (!cancelled) setFundSearchLoading(false); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [fundQuery]);
 
   const handleCalculateVorab = async () => {
     if (!basiszins || !fundValueStart) return;
@@ -285,6 +325,140 @@ export default function TaxDashboardView({ settings }: TaxDashboardViewProps) {
                   <p className="text-[11px] font-medium text-[#B5836F]">{t.taxExceedsAllowance} {formatCurrency(uk.bed_and_isa.excess_gbp, 'GBP')}</p>
                 ) : (
                   <p className="text-[11px] font-medium text-[#8C9A86]">{t.taxWithinAllowance}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HİNDİSTAN ───────────────────────────────────────────── */}
+      <section className={cardCls}>
+        <h3 className="text-xs font-bold text-[#2D2926] uppercase tracking-widest flex items-center gap-2 font-serif mb-4">
+          <Landmark className="w-4 h-4 text-[#8C9A86]" />{t.taxIndiaSection}
+        </h3>
+
+        <div className="flex items-start gap-2.5 bg-[#F1EFE9] rounded-lg px-3 py-2.5 mb-5">
+          <AlertTriangle className="w-3.5 h-3.5 text-[#9E958C] shrink-0 mt-0.5" />
+          <p className="text-[11px] text-[#9E958C] leading-relaxed">{t.taxIndiaDisclaimer}</p>
+        </div>
+
+        <div className="space-y-5">
+          {/* Section 80C */}
+          <div>
+            <h4 className="text-xs font-bold text-[#2D2926]">{t.taxSection80c}</h4>
+            <p className="text-[11px] text-[#9E958C] mb-3">{t.taxSection80cDesc}</p>
+            {indiaLoading ? (
+              <div className="h-16 bg-[#F1EFE9] rounded-lg animate-pulse" />
+            ) : india && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={statBoxCls}>
+                    <div className={statLabelCls}>{t.taxSection80cUsed}</div>
+                    <div className={statValueCls}>{formatCurrency(india.section_80c.used_inr, 'INR')}</div>
+                  </div>
+                  <div className={statBoxCls}>
+                    <div className={statLabelCls}>{t.taxSection80cRemaining}</div>
+                    <div className={`${statValueCls} text-[#8C9A86]`}>{formatCurrency(india.section_80c.remaining_inr, 'INR')}</div>
+                  </div>
+                </div>
+                <div className="mt-3 h-1.5 bg-[#E8E2D9] rounded-full overflow-hidden">
+                  <div className="h-full bg-[#8C9A86] transition-all" style={{ width: `${Math.min(100, india.section_80c.used_pct)}%` }} />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ELSS lock-in */}
+          <div className="border-t border-[#E8E2D9] pt-4">
+            <h4 className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-[#8C9A86]" />{t.taxElssLockin}</h4>
+            <p className="text-[11px] text-[#9E958C] mb-3">{t.taxElssLockinDesc}</p>
+            {indiaLoading ? (
+              <div className="h-10 bg-[#F1EFE9] rounded-lg animate-pulse" />
+            ) : india && india.elss_lots.length > 0 ? (
+              <div className="space-y-1.5">
+                {india.elss_lots.map((lot, i) => (
+                  <div key={i} className="flex items-center justify-between bg-[#F9F7F2] rounded-lg px-3 py-2 text-[12px]">
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="font-bold text-[#2D2926]">{lot.ticker}</span>
+                      <span className="text-[#9E958C]">{lot.quantity} · {lot.buy_date}</span>
+                    </div>
+                    {lot.locked ? (
+                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase text-[#B5836F] bg-[#B5836F]/10 px-2 py-0.5 rounded-full">
+                        <Lock className="w-2.5 h-2.5" />{t.taxElssDaysLeft(lot.days_until_unlock)}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase text-[#8C9A86] bg-[#8C9A86]/10 px-2 py-0.5 rounded-full">
+                        <LockOpen className="w-2.5 h-2.5" />{t.taxElssUnlocked}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12px] text-[#9E958C]">{t.taxNoElssLots}</p>
+            )}
+          </div>
+
+          {/* LTCG/STCG */}
+          <div className="border-t border-[#E8E2D9] pt-4">
+            <h4 className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5"><Calculator className="w-3.5 h-3.5 text-[#8C9A86]" />{t.taxLtcgStcg}</h4>
+            <p className="text-[11px] text-[#9E958C] mb-3">{t.taxLtcgStcgDesc}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className={labelCls}>{t.taxLtcgRateLabel}</label>
+                <input type="number" step="0.01" value={ltcgRate} onChange={(e) => setLtcgRate(e.target.value)} className={inputCls} placeholder="12.5" />
+              </div>
+              <div>
+                <label className={labelCls}>{t.taxStcgRateLabel}</label>
+                <input type="number" step="0.01" value={stcgRate} onChange={(e) => setStcgRate(e.target.value)} className={inputCls} placeholder="20" />
+              </div>
+              <div>
+                <label className={labelCls}>{t.taxLtcgExemptionLabel}</label>
+                <input type="number" value={ltcgExemption} onChange={(e) => setLtcgExemption(e.target.value)} className={inputCls} placeholder="125000" />
+              </div>
+            </div>
+            <p className="text-[10px] text-[#9E958C] mt-1.5">
+              {t.taxIndiaRateHint}{' '}
+              <a href="https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1" target="_blank" rel="noopener noreferrer"
+                className="text-[#8C9A86] underline inline-flex items-center gap-0.5">
+                {t.taxIndiaRateCheck} <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </p>
+            {india?.ltcg_stcg && (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className={statBoxCls}>
+                  <div className={statLabelCls}>{t.taxLtcgTotal}</div>
+                  <div className={statValueCls}>{formatCurrency(india.ltcg_stcg.ltcg_total_inr, 'INR')}</div>
+                  <div className="text-[10px] text-[#9E958C] mt-1">{t.taxLtcgTaxEstimate}: {formatCurrency(india.ltcg_stcg.ltcg_tax_estimate_inr, 'INR')}</div>
+                </div>
+                <div className={statBoxCls}>
+                  <div className={statLabelCls}>{t.taxStcgTotal}</div>
+                  <div className={statValueCls}>{formatCurrency(india.ltcg_stcg.stcg_total_inr, 'INR')}</div>
+                  <div className="text-[10px] text-[#9E958C] mt-1">{t.taxStcgTaxEstimate}: {formatCurrency(india.ltcg_stcg.stcg_tax_estimate_inr, 'INR')}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* AMFI fund search */}
+          <div className="border-t border-[#E8E2D9] pt-4">
+            <h4 className="text-xs font-bold text-[#2D2926] flex items-center gap-1.5"><Search className="w-3.5 h-3.5 text-[#8C9A86]" />{t.taxFundSearch}</h4>
+            <p className="text-[11px] text-[#9E958C] mb-3">{t.taxFundSearchDesc}</p>
+            <input type="text" value={fundQuery} onChange={(e) => setFundQuery(e.target.value)}
+              placeholder={t.taxFundSearchPlaceholder} className={inputCls} />
+            {fundQuery.trim().length >= 2 && (
+              <div className="mt-2 space-y-1">
+                {fundSearchLoading ? (
+                  <div className="h-8 bg-[#F1EFE9] rounded-lg animate-pulse" />
+                ) : fundResults.length > 0 ? (
+                  fundResults.map((f) => (
+                    <div key={f.schemeCode} className="text-[12px] bg-[#F9F7F2] rounded-lg px-3 py-2 text-[#2D2926]">
+                      {f.schemeName}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[12px] text-[#9E958C]">{t.taxFundSearchEmpty}</p>
                 )}
               </div>
             )}

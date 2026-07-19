@@ -20,6 +20,7 @@ const ASSET_CLASS_OPTIONS: { value: string; labelKey: keyof Translations }[] = [
   { value: 'BIST Hissesi', labelKey: 'importAssetClassBist' },
   { value: 'Kripto', labelKey: 'importAssetClassCrypto' },
   { value: 'TEFAS Fonu', labelKey: 'importAssetClassFund' },
+  { value: 'AMFI Fonu', labelKey: 'importAssetClassAmfi' },
   { value: 'FixedIncome', labelKey: 'importAssetClassFixedIncome' },
   { value: 'Nakit', labelKey: 'importAssetClassCash' },
 ];
@@ -207,6 +208,7 @@ export default function ImportModal({ settings, onClose, onComplete }: ImportMod
                       <option value="USD">USD</option>
                       <option value="EUR">EUR</option>
                       <option value="GBP">GBP</option>
+                      <option value="INR">INR</option>
                     </select>
                   </div>
                 </div>

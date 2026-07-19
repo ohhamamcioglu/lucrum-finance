@@ -349,6 +349,36 @@ export const api = {
     return request(`${BASE_URL}/api/calendar/dividends`);
   },
 
+  async getIndiaTaxSummary(rates?: { ltcgRatePct?: number; stcgRatePct?: number; ltcgExemptionInr?: number }): Promise<{
+    section_80c: { fy_start: string; used_inr: number; limit_inr: number; remaining_inr: number; used_pct: number };
+    elss_lots: { ticker: string; buy_date: string; quantity: number; unlock_date: string; locked: boolean; days_until_unlock: number }[];
+    ltcg_stcg: {
+      ltcg_total_inr: number; stcg_total_inr: number; ltcg_exemption_inr: number;
+      ltcg_taxable_inr: number; ltcg_tax_estimate_inr: number; stcg_tax_estimate_inr: number;
+    } | null;
+  }> {
+    const params = new URLSearchParams();
+    if (rates?.ltcgRatePct != null) params.set('ltcg_rate_pct', String(rates.ltcgRatePct));
+    if (rates?.stcgRatePct != null) params.set('stcg_rate_pct', String(rates.stcgRatePct));
+    if (rates?.ltcgExemptionInr != null) params.set('ltcg_exemption_inr', String(rates.ltcgExemptionInr));
+    const qs = params.toString();
+    return request(`${BASE_URL}/api/tax/india${qs ? `?${qs}` : ''}`);
+  },
+
+  async searchIndiaFunds(query: string): Promise<{ results: { schemeCode: number; schemeName: string }[] }> {
+    if (!query || query.trim().length < 2) return { results: [] };
+    return request(`${BASE_URL}/api/india/funds/search?query=${encodeURIComponent(query)}`);
+  },
+
+  async getIndiaFund(schemeCode: number | string): Promise<{
+    meta: { fund_house: string; scheme_category: string; scheme_name: string } | null;
+    latest_nav: { date: string; nav: string } | null;
+    is_equity_oriented: boolean | null;
+    nav_history: { date: string; nav: string }[];
+  }> {
+    return request(`${BASE_URL}/api/india/funds/${schemeCode}`);
+  },
+
   async resetPortfolio(): Promise<{ status: string; message: string }> {
     return request(`${BASE_URL}/api/portfolio/reset`, {
       method: 'POST'

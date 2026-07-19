@@ -1,12 +1,13 @@
 """
-Almanya & UK vergi modülleri (Faz 3, task #58).
+Almanya, UK & Hindistan vergi modülleri (Faz 3 task #58, Faz 3.5 task #59).
 
 YASAL UYARI: Bu router'ın döndürdüğü hiçbir sayı profesyonel vergi tavsiyesi
 DEĞİLDİR — sadece bilgilendirme amaçlıdır (bkz. frontend TaxDashboardView.tsx'teki
-zorunlu ibare). Gerçekleşmiş kazanç ve kripto lot yaşlandırması TAMAMEN kullanıcının
-gerçek işlem geçmişinden hesaplanır. Basiszins (Almanya) ve CGT muafiyet tutarı (UK)
-gibi her yıl değişen resmi oranlar KULLANICIDAN istenir — sistem bunları asla
-otomatik çekmez veya tahmin etmez (bkz. tax_germany.py / tax_uk.py docstring'leri).
+zorunlu ibare). Gerçekleşmiş kazanç ve kripto/ELSS lot yaşlandırması TAMAMEN
+kullanıcının gerçek işlem geçmişinden hesaplanır. Basiszins (Almanya), CGT muafiyet
+tutarı (UK) ve LTCG/STCG oranları (Hindistan) gibi her yıl/bütçeyle değişen resmi
+oranlar KULLANICIDAN istenir — sistem bunları asla otomatik çekmez veya tahmin
+etmez (bkz. tax_germany.py / tax_uk.py / tax_india.py docstring'leri).
 """
 from collections import defaultdict
 from datetime import date
@@ -16,6 +17,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 import tax_germany
+import tax_india
 import tax_uk
 from crud import get_positions, get_transactions
 from dependencies import get_current_user_id, get_db
@@ -160,4 +162,70 @@ def get_uk_tax_summary(
     return {
         "isa_allowance": isa_summary,
         "bed_and_isa": bed_and_isa,
+    }
+
+
+@router.get("/india")
+def get_india_tax_summary(
+    ltcg_rate_pct: Optional[float] = Query(
+        None, description="Güncel equity LTCG oranı (%) — incometax.gov.in üzerinden teyit edilip girilmeli"
+    ),
+    stcg_rate_pct: Optional[float] = Query(
+        None, description="Güncel equity STCG oranı (%) — incometax.gov.in üzerinden teyit edilip girilmeli"
+    ),
+    ltcg_exemption_inr: Optional[float] = Query(
+        None, description="Güncel yıllık LTCG muafiyet tutarı (₹) — incometax.gov.in üzerinden teyit edilip girilmeli"
+    ),
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """ELSS §80C limit kullanımı ve 3 yıllık kilitlenme takibi (gerçek işlem
+    geçmişinden), LTCG/STCG özeti (kullanıcı oranları girerse). tax_wrapper='ELSS'
+    ile işaretli pozisyonlar §80C/kilitlenme takibinde kullanılır; LTCG/STCG özeti
+    INR cinsindeki TÜM gerçekleşmiş kazançları kapsar (bkz. tax_india.py'deki
+    kapsam sınırı notu — borç fonları bu hesaplamaya dahil değildir)."""
+    positions = get_positions(user_id, db=db)
+    elss_tickers = {p["ticker"] for p in positions if p.get("tax_wrapper") == "ELSS"}
+
+    transactions = get_transactions(user_id, db=db)
+    inr_transactions = [t for t in transactions if t["currency"] == "INR"]
+
+    today = date.today()
+
+    elss_buy_events = [
+        {"transaction_date": t["transaction_date"], "amount_inr": t["quantity"] * t["price"]}
+        for t in inr_transactions if t["ticker"] in elss_tickers and t["transaction_type"] == "BUY"
+    ]
+    section_80c = tax_india.section_80c_used(elss_buy_events, today)
+
+    elss_txns_by_ticker: Dict[str, List[dict]] = defaultdict(list)
+    for t in inr_transactions:
+        if t["ticker"] in elss_tickers:
+            elss_txns_by_ticker[t["ticker"]].append(t)
+    elss_lots = []
+    for ticker, txns in elss_txns_by_ticker.items():
+        open_lots, _ = tax_india.fifo_match(txns)
+        for lot in open_lots:
+            status = tax_india.elss_lockin_status(lot.buy_date, lot.quantity, today)
+            status["ticker"] = ticker
+            elss_lots.append(status)
+
+    inr_txns_by_ticker: Dict[str, List[dict]] = defaultdict(list)
+    for t in inr_transactions:
+        inr_txns_by_ticker[t["ticker"]].append(t)
+    realized_events = []
+    for ticker, txns in inr_txns_by_ticker.items():
+        _, realized = tax_india.fifo_match(txns)
+        realized_events.extend(realized)
+
+    ltcg_stcg = None
+    if ltcg_rate_pct is not None and stcg_rate_pct is not None and ltcg_exemption_inr is not None:
+        ltcg_stcg = tax_india.summarize_realized_gains(
+            realized_events, ltcg_rate_pct, stcg_rate_pct, ltcg_exemption_inr
+        )
+
+    return {
+        "section_80c": section_80c,
+        "elss_lots": elss_lots,
+        "ltcg_stcg": ltcg_stcg,
     }

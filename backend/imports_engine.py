@@ -40,10 +40,12 @@ REQUIRED_FIELDS = ("ticker", "quantity", "buy_price", "buy_date")
 # DashboardView'daki manuel "Yeni Varlık Ekle" formunun ürettiği taksonomiyle birebir
 # aynı (bkz. frontend/src/components/DashboardView.tsx handleSymbolBlur/handleSubmitAdd) —
 # başka bir sınıf UYDURULMADI, mevcut sistemin zaten kabul ettiği değerler kullanıldı.
+# "AMFI Fonu" Faz 3.5'te (task #59) Hindistan yatırım fonları için eklendi.
 VALID_ASSET_CLASSES = {
     "ABD Hisse/ETF", "BIST Hissesi", "Kripto", "TEFAS Fonu", "FixedIncome", "Nakit",
+    "AMFI Fonu",
 }
-VALID_CURRENCIES = {"TRY", "USD", "EUR", "GBP"}
+VALID_CURRENCIES = {"TRY", "USD", "EUR", "GBP", "INR"}
 
 
 def _normalize_header(h: Any) -> str:
