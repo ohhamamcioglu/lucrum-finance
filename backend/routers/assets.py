@@ -972,14 +972,12 @@ def get_news(
         "articles": all_articles,
     }
 
-@router.get("/funds/{fund_code}/disclosures")
-@limiter.limit("60/minute")
-def get_fund_disclosures(
-    request: FastAPIRequest,
-    fund_code: str,
-    days: int = Query(180, ge=30, le=730),
-):
-    """TEFAS fonu için KAP bildirimlerini döner (yönetim şirketi üzerinden)."""
+def _get_fund_disclosures_data(fund_code: str, days: int = 180) -> dict:
+    """TEFAS fonu için KAP bildirimlerini döner (yönetim şirketi üzerinden).
+    NOT: Hem /funds/{code}/disclosures route'undan HEM DE notifications.py'deki dashboard
+    bildirim akışından (Faz 2: TEFAS pozisyonları için gerçek KAP verisi, Google News değil)
+    doğrudan çağrılıyor — bkz. get_fund_breakdown'daki aynı desen notu (rate limiter zorunlu
+    request parametresi gerektirir, dahili çağrıyı bozar)."""
     code = fund_code.upper()
     cache_key = f"{code}_{days}"
     now = time.time()
@@ -1050,6 +1048,16 @@ def get_fund_disclosures(
     }
     _kap_fund_disc_cache[cache_key] = (now, result)
     return result
+
+@router.get("/funds/{fund_code}/disclosures")
+@limiter.limit("60/minute")
+def get_fund_disclosures(
+    request: FastAPIRequest,
+    fund_code: str,
+    days: int = Query(180, ge=30, le=730),
+):
+    """TEFAS fonu için KAP bildirimlerini döner (yönetim şirketi üzerinden)."""
+    return _get_fund_disclosures_data(fund_code, days)
 
 @router.get("/funds/{fund_code}/breakdown")
 def get_fund_breakdown(fund_code: str):

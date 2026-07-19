@@ -15,7 +15,7 @@ from cache import finance_cache as _news_db
 # Import helpers from assets router to avoid duplicate crawler logic
 from routers.assets import (
     _is_tefas, _fetch_twelve_data_news, _get_news_for_ticker,
-    _fetch_google_news_rss, _NEWS_TTL
+    _fetch_google_news_rss, _NEWS_TTL, _get_fund_disclosures_data
 )
 
 router = APIRouter(prefix="/api", tags=["Notifications"])
@@ -94,8 +94,29 @@ def get_news_notifications(
     all_news = []
     
     def fetch_ticker_news(ticker):
+        # TEFAS fonları eskiden burada tamamen atlanıyordu (return []) — dashboard'daki
+        # tek gerçek "anlık" akış olan bu bildirim zili, kullanıcının BIST hisselerini
+        # gösterirken TEFAS fonlarını hiç göstermiyordu. Artık _fetch_kap_news'in BIST için
+        # yaptığının aynısını (gerçek KAP verisi, Google News değil) TEFAS için de yapıyor —
+        # fonun yönetim şirketi üzerinden gerçek KAP bildirimlerini çeker (bkz.
+        # _get_fund_disclosures_data / FundMiniCard'ın kullandığı aynı fonksiyon).
         if _is_tefas(ticker):
-            return []
+            try:
+                data = _get_fund_disclosures_data(ticker)
+            except Exception:
+                return []
+            items = []
+            for d in (data.get("disclosures") or [])[:5]:
+                items.append({
+                    "ticker": ticker,
+                    "title": d.get("title") or d.get("subject") or "",
+                    "summary": (d.get("subject") or "")[:200],
+                    "url": d.get("url") or data.get("kap_page") or "https://www.kap.org.tr",
+                    "source": "KAP",
+                    "published_at": str(d.get("publish_date") or ""),
+                    "tag": "portfolio",
+                })
+            return items
         items = _get_news_for_ticker(ticker)
         for item in items:
             item["tag"] = "portfolio"
