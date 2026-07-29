@@ -189,6 +189,20 @@ export default function DashboardApp() {
           shares: pos.quantity,
           avgBuyPrice: avgBuyPrice,
           currentPrice: currentPrice,
+          // Düzenleme (top-up/kısmi satış) formu backend'in beklediği NATIVE para birimini
+          // kullanmalı — bkz. types.ts Holding yorumu. avgBuyPrice/currentPrice yukarıda
+          // settings.baseCurrency'ye çevrilmiş DEĞERLERDİR, bunlar backend'e asla geri
+          // gönderilmemeli (backend buy_price'ı pozisyonun kendi buy_currency'sinde sanır).
+          buyCurrency: pos.buy_currency,
+          nativeAvgPrice: pos.buy_price,
+          nativeCurrentPrice: pos.current_price != null
+            ? convertCurrency(
+                pos.current_price,
+                pos.price_currency || (pos.asset_class === 'Kripto' ? 'USD' : pos.buy_currency),
+                pos.buy_currency,
+                rates
+              )
+            : pos.buy_price,
           // Modül-level cache'den al; yoksa MARKET_ASSETS beta ya da 5.0
           riskScore: _riskCache[pos.ticker] ?? (marketAsset ? marketAsset.beta * 4 : 5.0),
           assetClass: pos.asset_class,

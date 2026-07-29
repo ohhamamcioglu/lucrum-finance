@@ -424,9 +424,17 @@ export default function DashboardView({
       : Math.max(0, editingHolding.shares - editQty)
     : 0;
 
+  // KRİTİK: editPrice/editNewAvg NATIVE (pozisyonun kendi buyCurrency'si) cinsinden olmalı,
+  // settings.baseCurrency DEĞİL — bu değerler doğrudan backend'e buy_price olarak gönderilir
+  // ve backend bunu pozisyonun kendi buy_currency'sinde sanır. Eskiden burada avgBuyPrice/
+  // currentPrice (ikisi de HER ZAMAN baseCurrency'ye çevrilmiş) kullanılıyordu — bu, kullanıcının
+  // baseCurrency'si pozisyonun buy_currency'sinden farklı olduğunda (ör. TRY görüntülerken bir
+  // USD hisseye ekleme/kısmi satış yapmak) ortalama maliyeti yanlış para birimiyle kaydedip
+  // sessizce bozuyordu.
+  const editingHoldingNativeAvg = editingHolding?.nativeAvgPrice ?? editingHolding?.avgBuyPrice ?? 0;
   const editNewAvg = editingHolding && editMode === 'increase' && editQty > 0 && editNewTotal > 0
-    ? (editingHolding.shares * editingHolding.avgBuyPrice + editQty * editPrice) / editNewTotal
-    : editingHolding?.avgBuyPrice ?? 0;
+    ? (editingHolding.shares * editingHoldingNativeAvg + editQty * editPrice) / editNewTotal
+    : editingHoldingNativeAvg;
 
   const handleEditSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -445,9 +453,12 @@ export default function DashboardView({
   };
 
   const openEdit = (h: EnrichedHolding) => {
-    // h.currentPrice ham kayan-nokta değeri olabilir (örn. 14.377510000000002) — input'a
-    // doğrudan konursa kullanıcıya çirkin/okunaksız bir ondalık gösteriyordu.
-    setEditingHolding(h); setEditMode('increase'); setEditQty(0); setEditPrice(Number(h.currentPrice.toFixed(4)));
+    // NATIVE (buyCurrency) fiyat kullanılmalı — h.currentPrice HER ZAMAN baseCurrency'ye
+    // çevrilmiştir, backend'e o haliyle gönderilirse ortalama maliyeti bozar (bkz. editNewAvg
+    // yorumu). Ham kayan-nokta değeri (örn. 14.377510000000002) input'a doğrudan konursa
+    // kullanıcıya çirkin/okunaksız bir ondalık gösteriyordu, bu yüzden toFixed(4) korunuyor.
+    const nativePrice = h.nativeCurrentPrice ?? h.currentPrice;
+    setEditingHolding(h); setEditMode('increase'); setEditQty(0); setEditPrice(Number(nativePrice.toFixed(4)));
   };
 
   // ── Add modal helpers ────────────────────────────────────────────
@@ -1193,8 +1204,8 @@ export default function DashboardView({
                       <div className="text-sm font-mono font-bold text-[#2D2926]">{editingHolding.shares.toLocaleString('tr-TR', { maximumFractionDigits: 4 })}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-[#9E958C] font-semibold">{t.buyPriceAvg}</div>
-                      <div className="text-sm font-mono font-bold text-[#2D2926]">{formatCurrency(editingHolding.avgBuyPrice, settings.baseCurrency)}</div>
+                      <div className="text-[10px] text-[#9E958C] font-semibold">{t.buyPriceAvg} ({editingHolding.buyCurrency || settings.baseCurrency})</div>
+                      <div className="text-sm font-mono font-bold text-[#2D2926]">{formatCurrency(editingHoldingNativeAvg, editingHolding.buyCurrency || settings.baseCurrency)}</div>
                     </div>
                     <div>
                       <div className="text-[10px] text-[#9E958C] font-semibold">{t.currentValue}</div>
@@ -1228,7 +1239,7 @@ export default function DashboardView({
                 {/* Price (increase only) */}
                 {editMode === 'increase' && (
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5">{t.transactionPriceLabel}</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5">{t.transactionPriceLabel} ({editingHolding.buyCurrency || settings.baseCurrency})</label>
                     <input type="number" step="any" min="0.0001" required value={editPrice || ''}
                       onChange={e => setEditPrice(Number(e.target.value))}
                       className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
@@ -1246,8 +1257,8 @@ export default function DashboardView({
                     </div>
                     {editMode === 'increase' && editQty > 0 && (
                       <div>
-                        <div className="text-[10px] text-[#9E958C] font-semibold">{t.newAvgPriceLabel}</div>
-                        <div className="text-sm font-mono font-bold text-[#8C9A86]">{formatCurrency(editNewAvg, settings.baseCurrency)}</div>
+                        <div className="text-[10px] text-[#9E958C] font-semibold">{t.newAvgPriceLabel} ({editingHolding.buyCurrency || settings.baseCurrency})</div>
+                        <div className="text-sm font-mono font-bold text-[#8C9A86]">{formatCurrency(editNewAvg, editingHolding.buyCurrency || settings.baseCurrency)}</div>
                       </div>
                     )}
                   </div>

@@ -16,6 +16,13 @@ export interface Holding {
   priceEffectPct?: number | null; // yabancı para pozisyonda getirinin varlık fiyatından gelen kısmı
   fxEffectPct?: number | null; // yabancı para pozisyonda getirinin kur hareketinden gelen kısmı — TRY pozisyonda hep 0
   taxWrapper?: string | null; // UK vergi sarmalı (GIA/ISA/SIPP) — sadece UK vergi hesaplayıcısı için anlamlı
+  // avgBuyPrice/currentPrice HER ZAMAN settings.baseCurrency cinsindedir (dashboard genelinde
+  // tutarlı gösterim için) — backend'e pozisyon GÜNCELLEME/top-up gönderirken bu değerler
+  // asla kullanılmamalı, çünkü backend buy_price'ı pozisyonun KENDİ buyCurrency'si sanır.
+  // Düzenleme formu bu yüzden native (gerçek alım para birimi) alanları kullanır:
+  buyCurrency?: string; // pozisyonun gerçek alım para birimi (backend buy_currency)
+  nativeAvgPrice?: number; // buyCurrency cinsinden ortalama alım fiyatı (backend buy_price, ham)
+  nativeCurrentPrice?: number; // buyCurrency cinsinden güncel fiyat (current_price'ın buyCurrency'ye GÜNCEL kurla çevrilmiş hali)
 }
 
 export interface Transaction {
