@@ -98,6 +98,45 @@ def test_usd_try_rate_exact_match_within_window_returns_that_date(monkeypatch):
 
 
 # ─────────────────────────────────────────────────────────────────────────
+# _last_resort_rate — BUGFIX (kod incelemesinde bulundu): canlı kur kaynakları
+# başarısız olduğunda artık uydurma bir sabit sayıya değil, veritabanındaki en son
+# GERÇEK kura düşülür.
+# ─────────────────────────────────────────────────────────────────────────
+
+def test_current_rate_falls_back_to_last_known_db_rate_not_hardcoded_constant(monkeypatch):
+    """Canlı kur kaynakları (hızlı servis + Twelve Data) İKİSİ DE başarısız olduğunda,
+    eskiden kod sessizce uydurma bir sabit sayıya (USD/TRY için 35.0) düşüyordu.
+    Artık veritabanındaki en son kaydedilmiş GERÇEK kuru kullanmalı — bu, canlı bir
+    değer değil ama uydurma da değil, gerçekten bir gün kaydedilmiş bir kur."""
+    monkeypatch.setattr(services._svc_fc, "get", lambda *a, **kw: None)
+    monkeypatch.setattr(services._svc_fc, "set", lambda *a, **kw: None)
+    monkeypatch.setattr(services, "_fetch_current_rates_fast", lambda: None)
+    monkeypatch.setattr(services.td, "get_exchange_rate", lambda *a, **kw: None)
+    monkeypatch.setattr(services, "get_latest_exchange_rate_row", lambda *a, **kw: {
+        "rate_date": date(2026, 5, 1), "usd_try_rate": 41.75, "eur_try_rate": 45.2, "gbp_try_rate": 52.1,
+    })
+
+    rate = services.get_usd_try_rate()
+
+    assert rate == 41.75  # veritabanındaki gerçek son kur — 35.0 (uydurma sabit) DEĞİL
+
+
+def test_current_rate_uses_hardcoded_constant_only_when_no_db_history_exists_at_all(monkeypatch):
+    """Veritabanında GERÇEKTEN hiç kur kaydı yoksa (ör. yepyeni bir kurulumun ilk
+    dakikaları) başka çare kalmaz — bu durumda son çare sabit değere düşülür, ama bu
+    artık [CRITICAL] olarak loglanır, sessiz değildir (bkz. _last_resort_rate)."""
+    monkeypatch.setattr(services._svc_fc, "get", lambda *a, **kw: None)
+    monkeypatch.setattr(services._svc_fc, "set", lambda *a, **kw: None)
+    monkeypatch.setattr(services, "_fetch_current_rates_fast", lambda: None)
+    monkeypatch.setattr(services.td, "get_exchange_rate", lambda *a, **kw: None)
+    monkeypatch.setattr(services, "get_latest_exchange_rate_row", lambda *a, **kw: None)
+
+    assert services.get_usd_try_rate() == 35.0
+    assert services.get_eur_try_rate() == 38.0
+    assert services.get_gbp_try_rate() == 43.0
+
+
+# ─────────────────────────────────────────────────────────────────────────
 # crud.update_position — faizli nakitte ağırlıklı ortalama alım tarihi (task #30 fix)
 # ─────────────────────────────────────────────────────────────────────────
 

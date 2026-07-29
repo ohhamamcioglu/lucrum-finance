@@ -402,12 +402,29 @@ def get_valid_auth_token(token_hash: str, token_type: str, db: Optional[Session]
         if must_close:
             session.close()
 
-def consume_auth_token(token_hash: str, db: Optional[Session] = None) -> None:
-    """Tek kullanımlık token'ı (email verify / password reset) kullanıldı olarak işaretler."""
+def consume_auth_token(token_hash: str, db: Optional[Session] = None) -> bool:
+    """BUGFIX (kod incelemesinde bulundu — TOCTOU yarış durumu): tek kullanımlık
+    token'ı (email verify / password reset) ATOMİK olarak kullanıldı işaretler.
+    Eskiden çağıran taraf önce get_valid_auth_token ile AYRI bir SELECT yapıp,
+    sonra bu fonksiyonla KOŞULSUZ bir UPDATE atıyordu — aradaki pencerede iki
+    eşzamanlı istek (aynı token'ı, ör. bir e-posta linkine iki kez/iki sekmede
+    tıklanması ya da kötü niyetli bir tekrar deneme) ikisi de "geçerli" görüp
+    işlemi tamamlayabiliyordu. Artık UPDATE'in WHERE koşulu geçerlilik kontrolünü
+    de İÇERİYOR — sadece HÂLÂ used_at IS NULL / revoked_at IS NULL / süresi
+    dolmamışsa satırı günceller ve True döner. İki eşzamanlı çağrıdan SADECE biri
+    True alır (veritabanının satır seviyesi UPDATE atomikliği garanti eder);
+    çağıran taraf False dönerse işlemi (şifre değiştirme, email doğrulama vb.)
+    GERÇEKLEŞTİRMEMELİDİR."""
     session, must_close = _get_db(db)
     try:
-        session.query(DBAuthToken).filter(DBAuthToken.token_hash == token_hash).update({"used_at": datetime.utcnow()})
+        affected = session.query(DBAuthToken).filter(
+            DBAuthToken.token_hash == token_hash,
+            DBAuthToken.used_at.is_(None),
+            DBAuthToken.revoked_at.is_(None),
+            DBAuthToken.expires_at > datetime.utcnow(),
+        ).update({"used_at": datetime.utcnow()})
         session.commit()
+        return affected > 0
     except Exception as e:
         session.rollback()
         raise e
@@ -415,12 +432,21 @@ def consume_auth_token(token_hash: str, db: Optional[Session] = None) -> None:
         if must_close:
             session.close()
 
-def revoke_auth_token(token_hash: str, db: Optional[Session] = None) -> None:
-    """Refresh token'ı iptal eder (logout / rotation)."""
+def revoke_auth_token(token_hash: str, db: Optional[Session] = None) -> bool:
+    """Refresh token'ı iptal eder (logout / rotation). ATOMİK ve KOŞULLU — bkz.
+    consume_auth_token'daki not, aynı TOCTOU düzeltmesi refresh token rotation'ı
+    için de geçerli (iki eşzamanlı /refresh isteği aynı token'ı kullanmaya
+    çalışırsa). Sadece HÂLÂ iptal edilmemişse True döner; logout gibi "zaten
+    iptal edilmiş olsa da sorun değil" çağıranlar dönüş değerini yok sayabilir,
+    ama refresh rotation gibi güvenlik-kritik çağıranlar MUTLAKA kontrol etmeli."""
     session, must_close = _get_db(db)
     try:
-        session.query(DBAuthToken).filter(DBAuthToken.token_hash == token_hash).update({"revoked_at": datetime.utcnow()})
+        affected = session.query(DBAuthToken).filter(
+            DBAuthToken.token_hash == token_hash,
+            DBAuthToken.revoked_at.is_(None),
+        ).update({"revoked_at": datetime.utcnow()})
         session.commit()
+        return affected > 0
     except Exception as e:
         session.rollback()
         raise e
@@ -821,6 +847,20 @@ def get_ars_exchange_rate(rate_date: date, db: Optional[Session] = None) -> Opti
         if must_close:
             session.close()
 
+def get_latest_exchange_rate_row(db: Optional[Session] = None) -> Optional[Dict]:
+    """Tarihe bakılmaksızın en son KAYDEDİLMİŞ kur satırını döner — canlı kur kaynakları
+    (hızlı servis + Twelve Data) başarısız olduğunda kullanılır. Amaç: sabit/uydurma bir
+    sayıya (ör. "35.0 TL") düşmek yerine, elimizdeki EN GÜNCEL GERÇEK kuru kullanmak
+    (stale-while-revalidate) — bkz. services.py get_usd_try_rate/get_eur_try_rate/
+    get_gbp_try_rate'teki son çare fallback'i."""
+    session, must_close = _get_db(db)
+    try:
+        rate = session.query(DBExchangeRate).order_by(DBExchangeRate.rate_date.desc()).first()
+        return to_dict(rate) if rate else None
+    finally:
+        if must_close:
+            session.close()
+
 def get_exchange_rate_history(days: int = 90, db: Optional[Session] = None) -> List[Dict]:
     """Kur geçmişini al"""
     session, must_close = _get_db(db)
@@ -933,7 +973,13 @@ def update_liability(user_id: int, item_id: int, item: LiabilityUpdate, db: Opti
     """Borç güncelle"""
     session, must_close = _get_db(db)
     try:
-        liab = session.query(DBLiability).filter(DBLiability.id == item_id, DBLiability.user_id == user_id).first()
+        # BUGFIX (kod incelemesinde bulundu): update_position'da AYNI "lost update"
+        # riski için zaten .with_for_update() satır kilidi var (iki eşzamanlı istek
+        # aynı kaydı okuyup üzerine yazınca birincinin değişikliği kaybolur) — burada
+        # unutulmuştu, tutarlılık için eklendi.
+        liab = session.query(DBLiability).filter(
+            DBLiability.id == item_id, DBLiability.user_id == user_id
+        ).with_for_update().first()
         if not liab:
             return None
 

@@ -1,4 +1,7 @@
 import uuid
+from datetime import datetime, timedelta
+
+import crud
 
 
 def unique_email() -> str:
@@ -254,3 +257,52 @@ def test_delete_account_nonexistent_user_returns_404(client):
 
     second = client.delete("/api/users/me", headers=headers)
     assert second.status_code == 401  # token zaten iptal edilmiş kullanıcı için geçersiz
+
+
+def test_consume_auth_token_is_atomic_and_single_use(client):
+    """BUGFIX regresyon testi (kod incelemesinde bulunan TOCTOU yarış durumu):
+    eskiden consume_auth_token koşulsuz bir UPDATE atıyordu — get_valid_auth_token ile
+    arasındaki pencerede iki eşzamanlı istek aynı token'ı geçerli görüp ikisi de işlemi
+    tamamlayabiliyordu. Artık UPDATE'in kendisi geçerlilik kontrolünü de içeriyor:
+    ikinci çağrı (token zaten tüketilmiş olduğundan) False dönmeli, satırı tekrar
+    güncellememeli."""
+    email = unique_email()
+    data = client.post(
+        "/api/users/register",
+        json={"email": email, "name": "Token Test", "password": "testpass123"},
+    ).json()
+    user_id = data.get("user_id")
+    if not user_id:
+        # /register access_token içinde user_id olmayabilir — /me üzerinden al.
+        headers = {"Authorization": f"Bearer {data['access_token']}"}
+        user_id = client.get("/api/users/me", headers=headers).json()["id"]
+
+    token_hash = f"test-hash-{uuid.uuid4().hex}"
+    crud.create_auth_token(user_id, token_hash, "EMAIL_VERIFY", datetime.utcnow() + timedelta(hours=1))
+
+    first = crud.consume_auth_token(token_hash)
+    second = crud.consume_auth_token(token_hash)
+
+    assert first is True
+    assert second is False  # eşzamanlı/tekrarlanan çağrı token'ı tekrar tüketememeli
+
+
+def test_revoke_auth_token_is_atomic_and_single_use(client):
+    """Aynı TOCTOU düzeltmesi refresh token rotation'ı için de geçerli — bkz.
+    test_consume_auth_token_is_atomic_and_single_use."""
+    email = unique_email()
+    data = client.post(
+        "/api/users/register",
+        json={"email": email, "name": "Token Test 2", "password": "testpass123"},
+    ).json()
+    headers = {"Authorization": f"Bearer {data['access_token']}"}
+    user_id = client.get("/api/users/me", headers=headers).json()["id"]
+
+    token_hash = f"test-hash-{uuid.uuid4().hex}"
+    crud.create_auth_token(user_id, token_hash, "REFRESH", datetime.utcnow() + timedelta(days=1))
+
+    first = crud.revoke_auth_token(token_hash)
+    second = crud.revoke_auth_token(token_hash)
+
+    assert first is True
+    assert second is False

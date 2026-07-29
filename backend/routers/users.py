@@ -201,8 +201,14 @@ def refresh_access_token(
         response.delete_cookie(REFRESH_COOKIE_NAME, path="/api/users")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Hesabınız devre dışı bırakılmıştır.")
 
-    # Rotation: eski token'ı iptal et, yenisini ver (çalınmış token replay'ini sınırlar)
-    revoke_auth_token(token_hash, db=db)
+    # Rotation: eski token'ı ATOMİK olarak iptal et (çalınmış token replay'ini sınırlar).
+    # BUGFIX: revoke_auth_token artık koşullu — sadece token HÂLÂ geçerliyse iptal eder
+    # ve True döner. False dönerse (ör. eşzamanlı bir başka /refresh isteği bu token'ı
+    # az önce kullanıp iptal etti — TOCTOU yarış durumu, kod incelemesinde bulundu),
+    # bu isteği de reddetmeliyiz; aksi halde iki access token üretilebilirdi.
+    if not revoke_auth_token(token_hash, db=db):
+        response.delete_cookie(REFRESH_COOKIE_NAME, path="/api/users")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token zaten kullanılmış.")
     _issue_refresh_cookie(record.user_id, response, db)
 
     access_token = create_access_token(data={"sub": str(record.user_id), "email": user["email"]})
@@ -276,7 +282,12 @@ def reset_password(
     if not record:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Geçersiz veya süresi dolmuş bağlantı.")
 
-    consume_auth_token(token_hash, db=db)
+    # BUGFIX: consume_auth_token artık koşullu — sadece token HÂLÂ geçerliyse
+    # kullanıldı işaretler ve True döner (bkz. crud.py'deki TOCTOU notu). False
+    # dönerse (ör. eşzamanlı bir başka istek bu token'ı az önce tükettiyse) şifre
+    # değiştirme işlemi GERÇEKLEŞTİRİLMEMELİ.
+    if not consume_auth_token(token_hash, db=db):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bu bağlantı zaten kullanılmış.")
     update_user_password(record.user_id, get_password_hash(req.new_password), db=db)
     revoke_all_refresh_tokens(record.user_id, db=db)
 
@@ -296,8 +307,14 @@ def verify_email(
     if not record:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Geçersiz veya süresi dolmuş doğrulama bağlantısı.")
 
-    consume_auth_token(token_hash, db=db)
-    mark_email_verified(record.user_id, db=db)
+    # BUGFIX: consume_auth_token artık koşullu (bkz. crud.py'deki TOCTOU notu). Burada
+    # False dönmesi genelde zararsız bir çift-tıklama/çift-sekme senaryosudur (aynı
+    # bağlantıya eşzamanlı iki istek) — diğer istek zaten doğrulamayı tamamlamış demektir,
+    # bu yüzden kullanıcıya yanıltıcı bir "geçersiz bağlantı" hatası göstermek yerine
+    # başarı mesajı dönülür (idempotent davranış, şifre sıfırlamadaki gibi güvenlik
+    # açısından kritik olmadığından burada hata fırlatmıyoruz).
+    if consume_auth_token(token_hash, db=db):
+        mark_email_verified(record.user_id, db=db)
 
     return {"status": "success", "message": "Email adresiniz doğrulandı."}
 

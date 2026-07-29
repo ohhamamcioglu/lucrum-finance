@@ -8,7 +8,7 @@ from typing import Optional, Dict, List
 
 from crud import (
     get_positions, get_exchange_rate, get_eur_exchange_rate, get_gbp_exchange_rate,
-    get_ars_exchange_rate, save_exchange_rate, save_price_history,
+    get_ars_exchange_rate, get_latest_exchange_rate_row, save_exchange_rate, save_price_history,
     get_transactions, create_notification, get_price_alerts, trigger_price_alert, get_target_allocations
 )
 from models import ExchangeRateCreate, PriceHistoryCreate
@@ -177,6 +177,36 @@ def _fetch_current_rates_fast() -> dict:
         print(f"[WARN] Fast rates fetch failed: {e}")
     return {}
 
+def _last_resort_rate(column: str, pair: str, hardcoded_fallback: float) -> float:
+    """BUGFIX (kod incelemesinde bulundu): canlı kur kaynakları (hızlı servis + Twelve
+    Data) İKİSİ DE başarısız olduğunda, kod eskiden SESSİZCE uydurma bir sabit sayıya
+    (ör. USD/TRY için "35.0") düşüyordu — bu, kullanıcının açık "asla tahmini/uydurma
+    finansal veri üretme" ilkesini ihlal ediyordu. Bir API kesintisi anında TÜM portföy
+    değeri/TWRR hesaplamaları kullanıcıya hiçbir uyarı verilmeden yanlış sabit kurla
+    hesaplanıyordu.
+
+    Artık önce veritabanındaki EN SON KAYDEDİLMİŞ GERÇEK kuru dener (stale-while-
+    revalidate — güncel olmayabilir ama GERÇEKTİR, uydurma değildir) ve bunu SESSİZCE
+    DEĞİL, [CRITICAL] loglayarak kullanır. Veritabanında hiç kayıt yoksa (ör. yepyeni
+    bir kurulum, ilk dakikalar) gerçekten çaresiz kalınır — bu durumda son çare olarak
+    hardcoded_fallback kullanılır, ama bu da artık [CRITICAL] olarak loglanır, asla
+    sessiz değildir."""
+    try:
+        latest = get_latest_exchange_rate_row()
+    except Exception:
+        latest = None
+
+    if latest and latest.get(column):
+        print(f"[CRITICAL] {pair} için canlı kur alınamadı — veritabanındaki en son "
+              f"bilinen GERÇEK kur ({latest.get('rate_date')}) kullanılıyor: {latest[column]}")
+        return float(latest[column])
+
+    print(f"[CRITICAL] {pair} için ne canlı kur ne de veritabanında geçmiş bir kayıt "
+          f"bulunamadı — geçici sabit yedek ({hardcoded_fallback}) kullanılıyor. "
+          f"Bu SADECE veritabanında hiç kur kaydı olmayan bir ilk kurulumda olmalı.")
+    return hardcoded_fallback
+
+
 def get_usd_try_rate(date_str: Optional[str] = None) -> float:
     """USD/TRY kurunu al"""
     try:
@@ -238,10 +268,10 @@ def get_usd_try_rate(date_str: Optional[str] = None) -> float:
             _svc_fc.set(cache_key, rate)
             return rate
 
-        return 35.0
+        return _last_resort_rate("usd_try_rate", "USD/TRY", 35.0)
     except Exception as e:
         print(f"[WARN] USD/TRY kuru alinamadi: {e}")
-        return 35.0
+        return _last_resort_rate("usd_try_rate", "USD/TRY", 35.0)
 
 def get_eur_try_rate(date_str: Optional[str] = None) -> float:
     """EUR/TRY kurunu al"""
@@ -299,10 +329,10 @@ def get_eur_try_rate(date_str: Optional[str] = None) -> float:
             _svc_fc.set(cache_key, rate)
             return rate
 
-        return 38.0
+        return _last_resort_rate("eur_try_rate", "EUR/TRY", 38.0)
     except Exception as e:
         print(f"[WARN] EUR/TRY kuru alinamadi: {e}")
-        return 38.0
+        return _last_resort_rate("eur_try_rate", "EUR/TRY", 38.0)
 
 
 def get_gbp_try_rate(date_str: Optional[str] = None) -> float:
@@ -361,10 +391,10 @@ def get_gbp_try_rate(date_str: Optional[str] = None) -> float:
             _svc_fc.set(cache_key, rate)
             return rate
 
-        return 43.0
+        return _last_resort_rate("gbp_try_rate", "GBP/TRY", 43.0)
     except Exception as e:
         print(f"[WARN] GBP/TRY kuru alinamadi: {e}")
-        return 43.0
+        return _last_resort_rate("gbp_try_rate", "GBP/TRY", 43.0)
 
 
 def get_ars_try_rate(date_str: Optional[str] = None) -> Optional[float]:
