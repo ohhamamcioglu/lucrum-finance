@@ -961,6 +961,25 @@ def check_price_alerts_and_rebalancing(user_id: int, portfolio: Dict) -> None:
 _MAJOR_CRYPTO_YF = {'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'LTC', 'LINK', 'UNI', 'ATOM', 'NEAR', 'OP', 'ARB', 'INJ', 'TIA', 'APT', 'SUI', 'TAO', 'BRETT'}
 
 def get_ticker_historical_prices(ticker: str, asset_type: str, start_date: date, end_date: date) -> Dict[date, float]:
+    # BUGFIX: TEFAS fonları (asset_type == 'fund') Yahoo Finance/Twelve Data'nın genel
+    # sembol uzayında YOK — 3-4 harfli TEFAS kodları (ör. "AFA") gerçek küresel ticker'lar
+    # değil. Bu fonksiyonun altındaki genel yol (historical_db + Twelve Data time_series)
+    # bu kodlar için HER ZAMAN 404/boş dönüyordu, bu yüzden performans grafiği TEFAS
+    # pozisyonları için (bu Türkiye odaklı uygulamada en yaygın varlık türü) düz bir
+    # çizgiye — statik alım fiyatına — düşüyordu (bkz. get_asset_price_on_day fallback'i).
+    # TEFAS'ın kendi gerçek NAV geçmişini döndüren get_tefas_nav (Fonoloji/pytefas
+    # kaynaklı, kendi kalıcı önbelleğini tutuyor, RSI/MACD göstergelerinde zaten
+    # kullanılıyor) burada da kullanılmalı — genel yola hiç girmeden erken dönülür.
+    if asset_type == 'fund':
+        try:
+            nav_series = td.get_tefas_nav(ticker, start_date, end_date)
+        except Exception as e:
+            print(f"[WARN] TEFAS NAV geçmişi alınamadı ({ticker}): {e}")
+            return {}
+        if nav_series is None or nav_series.empty:
+            return {}
+        return {ts.date(): float(val) for ts, val in nav_series.items()}
+
     # DEX/meme coins not listed on Yahoo Finance → skip yfinance, use buy price fallback
     if asset_type == 'crypto' and ticker.upper() in COINGECKO_IDS and ticker.upper() not in _MAJOR_CRYPTO_YF:
         return {}

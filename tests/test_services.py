@@ -355,3 +355,44 @@ def test_ars_try_rate_historical_date_uses_db_cache_when_available(monkeypatch):
     monkeypatch.setattr(services._svc_fc, "set", lambda *a, **kw: None)
 
     assert services.get_ars_try_rate("2024-01-15") == 0.028
+
+
+def test_ticker_historical_prices_for_tefas_fund_uses_real_nav_not_flat_fallback(monkeypatch):
+    """BUGFIX regresyon testi: TEFAS fonları (asset_type='fund') için performans grafiği
+    düz bir çizgi (statik alım fiyatı) çiziyordu, çünkü get_ticker_historical_prices genel
+    Yahoo/Twelve Data yolunu deniyordu — bu yol TEFAS'ın 3-4 harfli kodlarını (ör. "AFA")
+    hiç tanımıyor (gerçek küresel ticker'lar değiller), her zaman boş/404 dönüyordu.
+    Artık TEFAS'ın kendi gerçek NAV kaynağı (get_tefas_nav) doğrudan kullanılmalı."""
+    import pandas as pd
+
+    fake_nav = pd.Series(
+        [1.10, 1.12, 1.09, 1.15],
+        index=pd.to_datetime(["2026-07-01", "2026-07-02", "2026-07-03", "2026-07-04"]),
+    )
+    monkeypatch.setattr(services.td, "get_tefas_nav", lambda *a, **kw: fake_nav)
+
+    result = services.get_ticker_historical_prices("AFA", "fund", date(2026, 7, 1), date(2026, 7, 4))
+
+    assert result == {
+        date(2026, 7, 1): 1.10,
+        date(2026, 7, 2): 1.12,
+        date(2026, 7, 3): 1.09,
+        date(2026, 7, 4): 1.15,
+    }
+    # Değerler AYNI DEĞİL — asıl düzeltilen bug, tüm günlerin tek bir statik fiyata düşmesiydi.
+    assert len(set(result.values())) > 1
+
+
+def test_ticker_historical_prices_for_tefas_fund_returns_empty_on_failure(monkeypatch):
+    """get_tefas_nav başarısız olursa (ağ hatası/boş sonuç), sessizce boş dict dönmeli —
+    çağıran taraf (calculate_twrr_and_metrics) zaten statik alım fiyatına düşen bir
+    fallback'e sahip; burada UYDURMA bir fiyat serisi üretilmemeli."""
+    import pandas as pd
+
+    monkeypatch.setattr(services.td, "get_tefas_nav", lambda *a, **kw: pd.Series(dtype=float))
+    assert services.get_ticker_historical_prices("ZZZ", "fund", date(2026, 7, 1), date(2026, 7, 4)) == {}
+
+    def _raise(*a, **kw):
+        raise RuntimeError("network down")
+    monkeypatch.setattr(services.td, "get_tefas_nav", _raise)
+    assert services.get_ticker_historical_prices("ZZZ", "fund", date(2026, 7, 1), date(2026, 7, 4)) == {}
