@@ -22,8 +22,14 @@ _ASSET_CLASS_TO_TYPE = {
     "Emtia": "commodity",
 }
 
+_MARKET_HISTORY_LOCK_KEY = "market_history_refresh_lock"
+# Tam-menzilli (730 gün) geçiş uzun sürebilir (çok fonlu bir portföyde pytefas'ın
+# parçalı scrape'i dakikalar alabilir) — kilit TTL'i bunu rahatça kapsayacak kadar
+# uzun, ama bir crash sonrası kilidin sonsuza dek takılı kalmaması için sınırlı.
+_MARKET_HISTORY_LOCK_TTL = 3600  # 1 saat
+
 @celery_app.task
-def refresh_market_history_task():
+def refresh_market_history_task(days: int = 100):
     """Performans grafiğinin ihtiyaç duyduğu TÜM tarihsel serileri (döviz kurları,
     BIST100/S&P500/BTC benchmark'ları, portföydeki her varlığın fiyat geçmişi — TEFAS
     fonları dahil) ARKA PLANDA doldurur/tazeler.
@@ -37,46 +43,64 @@ def refresh_market_history_task():
     diğerleri için saniyelerce) bloke etmekten çok daha iyi. Bkz. services.py
     get_ticker_historical_prices docstring'i — bu regresyon production'da canlı olarak
     gözlemlendi (kullanıcı: "3m-6m-1y-2y hiç sağlıklı çalışmıyor").
-    """
+
+    BUGFIX 2: İlk sürüm HER çalıştığında TÜM 730 günü (2Y) her fon için yeniden istiyordu.
+    Portföyde çok sayıda TEFAS fonu varsa (pytefas'ın 27 günlük parçalı senkron scrape'i
+    yüzünden) bu tek koşu 15 dakikalık aralıktan uzun sürebiliyordu — bir sonraki koşu
+    üst üste binip aynı yavaş fonları TEKRAR sıraya sokuyor, iş asla bir tam turu
+    bitiremiyor ve önbellek kalıcı olarak parça parça (bazı tarih aralıkları dolu,
+    bazıları hiç dolmayan) kalıyordu — kullanıcı: "parça parça uzun düzlükler". Düzeltme:
+    (1) basit bir kilit üst üste binmeyi engeller, (2) `days` parametreli iki ayrı
+    zamanlama var — sık çalışan kısa-menzilli geçiş (varsayılan grafik görünümünü hızlı
+    tutar) ve nadir çalışan tam-menzilli geçiş (bkz. celery_app.py beat_schedule)."""
     from datetime import date, timedelta
+    from cache import finance_cache
     from services import get_ticker_historical_prices
 
-    end = date.today()
-    start = end - timedelta(days=730)  # 2Y grafik aralığını kapsar
-
-    # 1) Döviz kurları ve endeks/kripto benchmark'ları — HER kullanıcının grafiği
-    # bunlara bağımlı, portföyünde ne olursa olsun.
-    universal = [
-        ("USDTRY=X", "exchange_rate"), ("EURTRY=X", "exchange_rate"), ("GBPTRY=X", "exchange_rate"),
-        ("XU100.IS", "index"), ("^GSPC", "index"), ("BTC-USD", "crypto"),
-    ]
-    for ticker, asset_type in universal:
-        try:
-            get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
-        except Exception as u_err:
-            logger.warning(f"[CELERY] Market history refresh failed for '{ticker}': {u_err}")
-
-    # 2) Portföylerdeki her benzersiz varlık.
-    db = SessionLocal()
-    try:
-        rows = db.query(DBPosition.ticker, DBPosition.asset_class).distinct().all()
-    finally:
-        db.close()
-
-    if not rows:
-        logger.info("[CELERY] No positions found for market history refresh.")
+    if finance_cache.get(_MARKET_HISTORY_LOCK_KEY, ttl=_MARKET_HISTORY_LOCK_TTL):
+        logger.info("[CELERY] Market history refresh already in progress — skipping this run.")
         return
+    finance_cache.set(_MARKET_HISTORY_LOCK_KEY, True)
 
-    logger.info(f"[CELERY] Refreshing market history cache for {len(rows)} ticker/asset_class pairs.")
-    for ticker, asset_class in rows:
-        asset_type = _ASSET_CLASS_TO_TYPE.get(asset_class)
-        if not asset_type:  # Nakit, AMFI Fonu (henüz canlı fiyatlandırma yok) vb.
-            continue
+    try:
+        end = date.today()
+        start = end - timedelta(days=days)
+
+        # 1) Döviz kurları ve endeks/kripto benchmark'ları — HER kullanıcının grafiği
+        # bunlara bağımlı, portföyünde ne olursa olsun.
+        universal = [
+            ("USDTRY=X", "exchange_rate"), ("EURTRY=X", "exchange_rate"), ("GBPTRY=X", "exchange_rate"),
+            ("XU100.IS", "index"), ("^GSPC", "index"), ("BTC-USD", "crypto"),
+        ]
+        for ticker, asset_type in universal:
+            try:
+                get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
+            except Exception as u_err:
+                logger.warning(f"[CELERY] Market history refresh failed for '{ticker}': {u_err}")
+
+        # 2) Portföylerdeki her benzersiz varlık.
+        db = SessionLocal()
         try:
-            get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
-        except Exception as t_err:
-            logger.warning(f"[CELERY] Market history refresh failed for '{ticker}': {t_err}")
-    logger.info("[CELERY] Market history cache refresh complete.")
+            rows = db.query(DBPosition.ticker, DBPosition.asset_class).distinct().all()
+        finally:
+            db.close()
+
+        if not rows:
+            logger.info("[CELERY] No positions found for market history refresh.")
+            return
+
+        logger.info(f"[CELERY] Refreshing {days}-day market history cache for {len(rows)} ticker/asset_class pairs.")
+        for ticker, asset_class in rows:
+            asset_type = _ASSET_CLASS_TO_TYPE.get(asset_class)
+            if not asset_type:  # Nakit, AMFI Fonu (henüz canlı fiyatlandırma yok) vb.
+                continue
+            try:
+                get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
+            except Exception as t_err:
+                logger.warning(f"[CELERY] Market history refresh failed for '{ticker}': {t_err}")
+        logger.info(f"[CELERY] {days}-day market history cache refresh complete.")
+    finally:
+        finance_cache.invalidate(_MARKET_HISTORY_LOCK_KEY)
 
 @celery_app.task
 def check_price_alerts_and_rebalancing_task(user_id: int, portfolio: dict):

@@ -73,14 +73,25 @@ celery_app.conf.update(
             # daha hızlı yakalamak için
             "schedule": 604800.0,
         },
-        "refresh-market-history-cache": {
+        "refresh-market-history-recent": {
             "task": "tasks.refresh_market_history_task",
-            # Her 15 dakikada bir — performans grafiği artık get_ticker_historical_prices'ı
+            # Her 15 dakikada bir, SADECE son 100 gün (varsayılan grafik görünümü 3M/6M'i
+            # kapsar) — performans grafiği artık get_ticker_historical_prices'ı
             # live_fetch=False ile çağırıyor (isteği asla bloke etmemek için), bu görev
-            # olmadan önbellek (döviz kurları, benchmark'lar, TEFAS/hisse/kripto geçmişi)
-            # asla dolmaz/tazelenmez. Yeni eklenen bir varlık en fazla bu kadar süre
-            # "düz çizgi" gösterir.
+            # olmadan önbellek asla dolmaz/tazelenmez. Kısa menzil tutulduğu için bu geçiş
+            # her zaman hızlı tamamlanır — çok fonlu bir portföyde bile.
             "schedule": 900.0,
+            "kwargs": {"days": 100},
+        },
+        "refresh-market-history-full": {
+            "task": "tasks.refresh_market_history_task",
+            # Günde bir, TAM 2 yıllık aralık (1Y/2Y grafik sekmeleri için). Bu geçiş
+            # yavaş olabilir (çok fonlu bir portföyde pytefas'ın parçalı scrape'i dakikalar
+            # sürebilir) — bu yüzden sık çalışan kısa-menzilli geçişle YARIŞMAMASI için
+            # ayrı, seyrek bir zamanlamada ve kilitle korunuyor (bkz. tasks.py
+            # _MARKET_HISTORY_LOCK_KEY).
+            "schedule": 86400.0,
+            "kwargs": {"days": 730},
         }
     }
 )

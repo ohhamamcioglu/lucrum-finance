@@ -70,46 +70,60 @@ _ASSET_CLASS_TO_TYPE = {
     "Emtia": "commodity",
 }
 
-def refresh_market_history_job():
+_market_history_job_running = threading.Lock()
+
+def refresh_market_history_job(days: int = 100):
     """Performans grafiğinin ihtiyaç duyduğu TÜM tarihsel serileri (döviz kurları,
     BIST100/S&P500/BTC benchmark'ları, portföydeki her varlığın fiyat geçmişi — TEFAS
     fonları dahil) ARKA PLANDA doldurur/tazeler. Bkz. tasks.refresh_market_history_task
     (Celery Beat'teki ikizi, production Redis ortamında bu iş yerine o çalışır) —
-    aynı mantık, sadece yerel/Redis'siz ortamlar için."""
+    aynı mantık, sadece yerel/Redis'siz ortamlar için.
+
+    days parametresi ve kilit: çok fonlu bir portföyde tam 2 yıllık geçmişi her seferinde
+    yeniden istemek bir koşuyu 15 dakikalık aralıktan uzatabiliyor, üst üste binen
+    koşular hiçbir zaman tamamlanamayan, kalıcı olarak parça parça bir önbelleğe yol
+    açıyordu (bkz. tasks.py'deki aynı notu — production'da canlı gözlemlendi)."""
+    if not _market_history_job_running.acquire(blocking=False):
+        logger.info("[SCHEDULER] Piyasa geçmişi tazeleme zaten çalışıyor — bu koşu atlanıyor.")
+        return
+
     from services import get_ticker_historical_prices
 
-    end = date.today()
-    start = end - timedelta(days=730)  # 2Y grafik aralığını kapsar
-
-    universal = [
-        ("USDTRY=X", "exchange_rate"), ("EURTRY=X", "exchange_rate"), ("GBPTRY=X", "exchange_rate"),
-        ("XU100.IS", "index"), ("^GSPC", "index"), ("BTC-USD", "crypto"),
-    ]
-    for ticker, asset_type in universal:
-        try:
-            get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
-        except Exception as u_err:
-            logger.warning(f"[SCHEDULER] Piyasa geçmişi tazeleme başarısız ({ticker}): {u_err}")
-
     try:
-        with get_db_session() as db:
-            rows = db.query(DBPosition.ticker, DBPosition.asset_class).distinct().all()
-    except Exception as e:
-        logger.error(f"[SCHEDULER] Piyasa geçmişi önbellek işi başarısız: {e}")
-        return
+        end = date.today()
+        start = end - timedelta(days=days)
 
-    if not rows:
-        return
-    logger.info(f"[SCHEDULER] Piyasa geçmişi önbelleği tazeleniyor: {len(rows)} varlık.")
-    for ticker, asset_class in rows:
-        asset_type = _ASSET_CLASS_TO_TYPE.get(asset_class)
-        if not asset_type:
-            continue
+        universal = [
+            ("USDTRY=X", "exchange_rate"), ("EURTRY=X", "exchange_rate"), ("GBPTRY=X", "exchange_rate"),
+            ("XU100.IS", "index"), ("^GSPC", "index"), ("BTC-USD", "crypto"),
+        ]
+        for ticker, asset_type in universal:
+            try:
+                get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
+            except Exception as u_err:
+                logger.warning(f"[SCHEDULER] Piyasa geçmişi tazeleme başarısız ({ticker}): {u_err}")
+
         try:
-            get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
-        except Exception as t_err:
-            logger.warning(f"[SCHEDULER] Piyasa geçmişi tazeleme başarısız ({ticker}): {t_err}")
-    logger.info("[SCHEDULER] Piyasa geçmişi önbelleği tazelendi.")
+            with get_db_session() as db:
+                rows = db.query(DBPosition.ticker, DBPosition.asset_class).distinct().all()
+        except Exception as e:
+            logger.error(f"[SCHEDULER] Piyasa geçmişi önbellek işi başarısız: {e}")
+            return
+
+        if not rows:
+            return
+        logger.info(f"[SCHEDULER] {days} günlük piyasa geçmişi önbelleği tazeleniyor: {len(rows)} varlık.")
+        for ticker, asset_class in rows:
+            asset_type = _ASSET_CLASS_TO_TYPE.get(asset_class)
+            if not asset_type:
+                continue
+            try:
+                get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
+            except Exception as t_err:
+                logger.warning(f"[SCHEDULER] Piyasa geçmişi tazeleme başarısız ({ticker}): {t_err}")
+        logger.info(f"[SCHEDULER] {days} günlük piyasa geçmişi önbelleği tazelendi.")
+    finally:
+        _market_history_job_running.release()
 
 def start_scheduler():
     """Arka plan tarayıcısını ve iş zamanlayıcıyı başlatır."""
@@ -149,7 +163,10 @@ def start_scheduler():
 
     scheduler.add_job(daily_snapshot_job, CronTrigger(hour=18, minute=0), id="daily_snapshot", replace_existing=True)
     scheduler.add_job(enrich_portfolio_holdings_job, CronTrigger(hour=1, minute=0), id="cache_enrichment", replace_existing=True)
-    scheduler.add_job(refresh_market_history_job, IntervalTrigger(minutes=15), id="market_history_refresh", replace_existing=True)
+    scheduler.add_job(refresh_market_history_job, IntervalTrigger(minutes=15), args=[100],
+                       id="market_history_refresh_recent", replace_existing=True)
+    scheduler.add_job(refresh_market_history_job, CronTrigger(hour=3, minute=30), args=[730],
+                       id="market_history_refresh_full", replace_existing=True)
     scheduler.start()
     logger.info("[SCHEDULER] Daily portfolio snapshot scheduled at 18:00 Istanbul time")
     logger.info("[SCHEDULER] Cache enrichment scheduled daily at 01:00 Istanbul time")
