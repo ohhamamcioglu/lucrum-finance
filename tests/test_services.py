@@ -396,3 +396,24 @@ def test_ticker_historical_prices_for_tefas_fund_returns_empty_on_failure(monkey
         raise RuntimeError("network down")
     monkeypatch.setattr(services.td, "get_tefas_nav", _raise)
     assert services.get_ticker_historical_prices("ZZZ", "fund", date(2026, 7, 1), date(2026, 7, 4)) == {}
+
+
+def test_ticker_historical_prices_for_tefas_fund_never_blocks_on_live_fetch(monkeypatch):
+    """REGRESYON: ilk düzeltme get_tefas_nav'ı live_fetch=True (varsayılan) ile çağırıyordu —
+    bu, pytefas'ın 27 günlük parçalar halindeki SENKRON scrape'ini (parça başına ~6sn'ye
+    kadar) HTTP isteğinin içine soktu ve performans grafiğini kullanılamayacak kadar
+    yavaşlattı (production'da canlı olarak gözlemlendi). get_ticker_historical_prices
+    ARTIK live_fetch=False geçmeli — sadece önbellekten okumalı, asla canlı ağ isteği
+    tetiklememeli. Önbellek ayrı bir arka plan görevi ile doldurulur (bkz. tasks.py
+    refresh_tefas_nav_task / scheduler.py refresh_tefas_nav_cache_job)."""
+    captured_kwargs = {}
+
+    def fake_get_tefas_nav(ticker, start, end, **kwargs):
+        captured_kwargs.update(kwargs)
+        import pandas as pd
+        return pd.Series(dtype=float)
+
+    monkeypatch.setattr(services.td, "get_tefas_nav", fake_get_tefas_nav)
+    services.get_ticker_historical_prices("AFA", "fund", date(2026, 7, 1), date(2026, 7, 4))
+
+    assert captured_kwargs.get("live_fetch") is False

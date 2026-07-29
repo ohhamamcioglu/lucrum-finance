@@ -972,7 +972,10 @@ def get_ticker_historical_prices(ticker: str, asset_type: str, start_date: date,
     # kullanılıyor) burada da kullanılmalı — genel yola hiç girmeden erken dönülür.
     if asset_type == 'fund':
         try:
-            nav_series = td.get_tefas_nav(ticker, start_date, end_date)
+            # live_fetch=False: burası canlı HTTP istek yolu, pytefas'ın senkron/parçalı
+            # scrape'i (parça başına ~6sn'ye kadar) isteği dakikalarca bloke edebiliyordu.
+            # Önbellek arka planda ayrı bir job ile doldurulur (bkz. scheduler.py).
+            nav_series = td.get_tefas_nav(ticker, start_date, end_date, live_fetch=False)
         except Exception as e:
             print(f"[WARN] TEFAS NAV geçmişi alınamadı ({ticker}): {e}")
             return {}

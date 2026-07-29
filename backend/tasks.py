@@ -15,6 +15,41 @@ def _td_symbol(ticker: str, asset_class: str) -> str:
     return ticker
 
 @celery_app.task
+def refresh_tefas_nav_task():
+    """TEFAS fonu tutan pozisyonların NAV geçmişini ARKA PLANDA doldurur/tazeler.
+
+    services.get_ticker_historical_prices (performans grafiği), pytefas'ın 27 günlük
+    parçalar halindeki SENKRON scrape'inin (parça başına ~6sn'ye kadar) bir HTTP isteğini
+    dakikalarca bloke etmesini önlemek için get_tefas_nav'ı live_fetch=False ile çağırır —
+    yani SADECE bu görevin önceden doldurduğu önbellekten okur, kendisi asla canlı bir
+    istek içinde ağa gitmez. Bu görev olmadan yeni eklenen bir TEFAS fonu, bu görev bir
+    sonraki çalışmasına kadar performans grafiğinde düz bir çizgi olarak kalır — kabul
+    edilebilir bir gecikme, isteği bloke etmekten çok daha iyi."""
+    from datetime import date, timedelta
+    db = SessionLocal()
+    try:
+        tickers = {
+            p.ticker for p in db.query(DBPosition.ticker)
+            .filter(DBPosition.asset_class == "TEFAS Fonu").distinct().all()
+        }
+        if not tickers:
+            logger.info("[CELERY] No TEFAS positions found for NAV cache refresh.")
+            return
+        logger.info(f"[CELERY] Refreshing TEFAS NAV cache for {len(tickers)} funds.")
+        end = date.today()
+        start = end - timedelta(days=730)  # 2Y grafik aralığını kapsar
+        for ticker in tickers:
+            try:
+                td.get_tefas_nav(ticker, start, end, live_fetch=True)
+            except Exception as t_err:
+                logger.warning(f"[CELERY] TEFAS NAV refresh failed for '{ticker}': {t_err}")
+        logger.info("[CELERY] TEFAS NAV cache refresh complete.")
+    except Exception as e:
+        logger.error(f"[CELERY] TEFAS NAV cache refresh task failed: {e}")
+    finally:
+        db.close()
+
+@celery_app.task
 def check_price_alerts_and_rebalancing_task(user_id: int, portfolio: dict):
     """calculate_portfolio içindeki fiyat alarmı/rebalans-sapma kontrolünü gerçekten arka
     planda çalıştırır. Eskiden bu kontrol GET /api/portfolio isteği içinde SENKRON

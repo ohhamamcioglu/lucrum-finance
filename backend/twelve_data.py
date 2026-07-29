@@ -2857,14 +2857,21 @@ def _compute_missing_ranges(db_data: dict, start_date: date, end_date: date) -> 
 # 13. TEFAS FON VERİTABANI ÖNBELLEĞİ
 # ═══════════════════════════════════════════════════════════════════════════
 
-def get_tefas_nav(fund_code: str, start_date: date, end_date: date) -> Any:
+def get_tefas_nav(fund_code: str, start_date: date, end_date: date, live_fetch: bool = True) -> Any:
     """
     TEFAS fonunun günlük fiyat (NAV) serisini döner.
     - Önce veritabanındaki kayıtları tarar.
     - Eksik tarihler varsa önce Fonoloji API'den (bkz. FONOLOJI_API_KEY yorumu),
       hâlâ eksik kalırsa pytefas ile çeker ve veritabanına ekler (Incremental Sync).
     Returns: pandas.Series (index=DatetimeIndex normalize, values=price)
-    """
+
+    live_fetch=False: SADECE veritabanındaki mevcut kayıtları döner, Fonoloji/pytefas'a
+    ASLA ağ isteği atmaz. pytefas yolu 27 günlük parçalar halinde SENKRON scrape yapıyor
+    (parça başına 6sn'ye kadar bekleme) — bu, tek bir kullanıcı isteği içinde BİRDEN FAZLA
+    fon için çağrıldığında (ör. performans grafiği) isteği dakikalarca bloke edebiliyordu.
+    Canlı HTTP istek yolundaki çağıranlar (services.get_ticker_historical_prices)
+    live_fetch=False kullanmalı; önbellek arka planda ayrıca doldurulur (bkz.
+    scheduler.py refresh_tefas_nav_cache_job)."""
     import pandas as pd
     from datetime import timedelta
 
@@ -2885,7 +2892,7 @@ def get_tefas_nav(fund_code: str, start_date: date, end_date: date) -> Any:
 
     # 2. Eksik varsa önce Fonoloji'den dene — tek çağrıda fonun TÜM geçmişini
     # döner (pytefas'ın aksine hızlı ve eşzamanlı isteklerde tıkanmıyor).
-    if missing_ranges and FONOLOJI_API_KEY:
+    if missing_ranges and FONOLOJI_API_KEY and live_fetch:
         try:
             data = _fonoloji_api(f"/funds/{code}/history", {"period": "all"})
             points = (data or {}).get("points") or []
@@ -2910,7 +2917,7 @@ def get_tefas_nav(fund_code: str, start_date: date, end_date: date) -> Any:
     # 3. Fonoloji sonrası hâlâ eksik varsa pytefas ile çek ve veritabanına kaydet
     from tefas_tools import _TEFAS_OK, _crawler, _fund_kind
 
-    if missing_ranges and _TEFAS_OK and _crawler is not None:
+    if missing_ranges and _TEFAS_OK and _crawler is not None and live_fetch:
         ts = _now()
         kind = _fund_kind(code)
         
