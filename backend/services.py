@@ -960,7 +960,16 @@ def check_price_alerts_and_rebalancing(user_id: int, portfolio: Dict) -> None:
 
 _MAJOR_CRYPTO_YF = {'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'LTC', 'LINK', 'UNI', 'ATOM', 'NEAR', 'OP', 'ARB', 'INJ', 'TIA', 'APT', 'SUI', 'TAO', 'BRETT'}
 
-def get_ticker_historical_prices(ticker: str, asset_type: str, start_date: date, end_date: date) -> Dict[date, float]:
+def get_ticker_historical_prices(
+    ticker: str, asset_type: str, start_date: date, end_date: date, live_fetch: bool = True
+) -> Dict[date, float]:
+    """live_fetch=False: hiçbir dış kaynağa (Twelve Data, Fonoloji, pytefas) canlı ağ
+    isteği ATMAZ — sadece kalıcı yerel önbellekten (historical_data.db / td_tefas_nav)
+    okur. Performans grafiği (calculate_twrr_and_metrics) HTTP istek yolunda çalıştığı
+    için buradan HER ZAMAN live_fetch=False ile çağrılmalı — arka plan job'ları
+    (refresh_tefas_nav_task, refresh_market_history_task) önbelleği ayrıca doldurur.
+    Varsayılan True, arka plan job'larının kendisi ve tek-varlık göstergeleri (RSI/MACD
+    gibi tek istek başına tek ticker sorgulayan endpoint'ler) için geriye dönük uyumlu."""
     # BUGFIX: TEFAS fonları (asset_type == 'fund') Yahoo Finance/Twelve Data'nın genel
     # sembol uzayında YOK — 3-4 harfli TEFAS kodları (ör. "AFA") gerçek küresel ticker'lar
     # değil. Bu fonksiyonun altındaki genel yol (historical_db + Twelve Data time_series)
@@ -972,10 +981,7 @@ def get_ticker_historical_prices(ticker: str, asset_type: str, start_date: date,
     # kullanılıyor) burada da kullanılmalı — genel yola hiç girmeden erken dönülür.
     if asset_type == 'fund':
         try:
-            # live_fetch=False: burası canlı HTTP istek yolu, pytefas'ın senkron/parçalı
-            # scrape'i (parça başına ~6sn'ye kadar) isteği dakikalarca bloke edebiliyordu.
-            # Önbellek arka planda ayrı bir job ile doldurulur (bkz. scheduler.py).
-            nav_series = td.get_tefas_nav(ticker, start_date, end_date, live_fetch=False)
+            nav_series = td.get_tefas_nav(ticker, start_date, end_date, live_fetch=live_fetch)
         except Exception as e:
             print(f"[WARN] TEFAS NAV geçmişi alınamadı ({ticker}): {e}")
             return {}
@@ -1009,14 +1015,20 @@ def get_ticker_historical_prices(ticker: str, asset_type: str, start_date: date,
     expected_days = (end_date - start_date).days
     cache_key = f"hist_checked_{yf_ticker}_{expected_days}"
     has_fetched = _svc_fc.get(cache_key, ttl=86400) # 24 saat TTL
-    
-    if len(series) < expected_days * 0.5 and not has_fetched:
+
+    # BUGFIX: bu blok Twelve Data'ya CANLI, senkron bir ağ isteği atıyordu — TEFAS
+    # fonlarındaki pytefas kadar yavaş olmasa da (tek istekte tüm seri döner), yine de
+    # performans grafiği isteğinin içinde, portföydeki HER önbelleksiz hisse/kripto/emtia
+    # ve HATTA döviz kuru/benchmark serileri için ayrı ayrı tetikleniyordu — birden fazla
+    # önbelleksiz varlığı olan bir portföyde saniyelerce sürebiliyordu. live_fetch=False
+    # iken bu adım tamamen atlanır, sadece yukarıdaki yerel önbellek kullanılır.
+    if live_fetch and len(series) < expected_days * 0.5 and not has_fetched:
         try:
             print(f"[HISTORICAL] Downloading {yf_ticker} from Twelve Data...")
             td_series = td.get_time_series(yf_ticker, days=max(expected_days, 30), interval="1day")
-            
+
             _svc_fc.set(cache_key, True)
-            
+
             if td_series:
                 dates = [pd.to_datetime(p["date"][:10]) for p in td_series]
                 prices_list = [p["close"] for p in td_series]
@@ -1108,10 +1120,11 @@ def calculate_twrr_and_metrics(user_id: int, days: int = 90, currency: str = 'TR
                 elif ac == 'Nakit': t['asset_type'] = 'cash'
                 elif ac == 'Emtia': t['asset_type'] = 'commodity'
 
-    # Get daily exchange rates
-    usd_try_history = get_ticker_historical_prices("USDTRY=X", "exchange_rate", start_date, today)
-    eur_try_history = get_ticker_historical_prices("EURTRY=X", "exchange_rate", start_date, today)
-    gbp_try_history = get_ticker_historical_prices("GBPTRY=X", "exchange_rate", start_date, today)
+    # Get daily exchange rates — live_fetch=False: bu HTTP istek yolu, canlı ağ çağrısı
+    # burada asla tetiklenmemeli (bkz. get_ticker_historical_prices docstring'i).
+    usd_try_history = get_ticker_historical_prices("USDTRY=X", "exchange_rate", start_date, today, live_fetch=False)
+    eur_try_history = get_ticker_historical_prices("EURTRY=X", "exchange_rate", start_date, today, live_fetch=False)
+    gbp_try_history = get_ticker_historical_prices("GBPTRY=X", "exchange_rate", start_date, today, live_fetch=False)
 
     def get_rate_on_day(rate_history, d, fallback=35.0):
         curr_d = d
@@ -1127,7 +1140,7 @@ def calculate_twrr_and_metrics(user_id: int, days: int = 90, currency: str = 'TR
     for ticker, asset_type, asset_class in unique_tickers:
         if asset_type == 'cash':
             continue
-        ticker_histories[ticker] = get_ticker_historical_prices(ticker, asset_type, start_date, today)
+        ticker_histories[ticker] = get_ticker_historical_prices(ticker, asset_type, start_date, today, live_fetch=False)
 
     # Reconstruct daily portfolio value
     daily_portfolio = []
@@ -1342,10 +1355,10 @@ def calculate_twrr_and_metrics(user_id: int, days: int = 90, currency: str = 'TR
 
     current_twrr = twrr_series[-1]
 
-    # Reconstruct indexes
-    bist100_history = get_ticker_historical_prices("XU100.IS", "index", start_date, today)
-    sp500_history = get_ticker_historical_prices("^GSPC", "index", start_date, today)
-    btc_history = get_ticker_historical_prices("BTC-USD", "crypto", start_date, today)
+    # Reconstruct indexes — live_fetch=False: bkz. yukarıdaki döviz kuru notu.
+    bist100_history = get_ticker_historical_prices("XU100.IS", "index", start_date, today, live_fetch=False)
+    sp500_history = get_ticker_historical_prices("^GSPC", "index", start_date, today, live_fetch=False)
+    btc_history = get_ticker_historical_prices("BTC-USD", "crypto", start_date, today, live_fetch=False)
 
     def calculate_benchmark_return_series(history):
         if not history:

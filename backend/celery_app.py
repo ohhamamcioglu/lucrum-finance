@@ -73,12 +73,13 @@ celery_app.conf.update(
             # daha hızlı yakalamak için
             "schedule": 604800.0,
         },
-        "refresh-tefas-nav-cache": {
-            "task": "tasks.refresh_tefas_nav_task",
-            # Her 15 dakikada bir — performans grafiği artık get_tefas_nav'ı
-            # live_fetch=False ile çağırıyor (isteği bloke etmemek için), bu görev
-            # olmadan önbellek asla dolmaz/tazelenmez. Yeni eklenen bir TEFAS fonu
-            # en fazla bu kadar süre "düz çizgi" gösterir.
+        "refresh-market-history-cache": {
+            "task": "tasks.refresh_market_history_task",
+            # Her 15 dakikada bir — performans grafiği artık get_ticker_historical_prices'ı
+            # live_fetch=False ile çağırıyor (isteği asla bloke etmemek için), bu görev
+            # olmadan önbellek (döviz kurları, benchmark'lar, TEFAS/hisse/kripto geçmişi)
+            # asla dolmaz/tazelenmez. Yeni eklenen bir varlık en fazla bu kadar süre
+            # "düz çizgi" gösterir.
             "schedule": 900.0,
         }
     }

@@ -398,14 +398,16 @@ def test_ticker_historical_prices_for_tefas_fund_returns_empty_on_failure(monkey
     assert services.get_ticker_historical_prices("ZZZ", "fund", date(2026, 7, 1), date(2026, 7, 4)) == {}
 
 
-def test_ticker_historical_prices_for_tefas_fund_never_blocks_on_live_fetch(monkeypatch):
-    """REGRESYON: ilk düzeltme get_tefas_nav'ı live_fetch=True (varsayılan) ile çağırıyordu —
-    bu, pytefas'ın 27 günlük parçalar halindeki SENKRON scrape'ini (parça başına ~6sn'ye
-    kadar) HTTP isteğinin içine soktu ve performans grafiğini kullanılamayacak kadar
-    yavaşlattı (production'da canlı olarak gözlemlendi). get_ticker_historical_prices
-    ARTIK live_fetch=False geçmeli — sadece önbellekten okumalı, asla canlı ağ isteği
-    tetiklememeli. Önbellek ayrı bir arka plan görevi ile doldurulur (bkz. tasks.py
-    refresh_tefas_nav_task / scheduler.py refresh_tefas_nav_cache_job)."""
+def test_ticker_historical_prices_live_fetch_flag_passes_through_to_tefas_nav(monkeypatch):
+    """REGRESYON: get_tefas_nav'ı her zaman live_fetch=True (varsayılan) ile çağırmak,
+    pytefas'ın 27 günlük parçalar halindeki SENKRON scrape'ini (parça başına ~6sn'ye
+    kadar) HTTP isteğinin içine sokuyordu ve performans grafiğini kullanılamayacak kadar
+    yavaşlatıyordu (production'da canlı olarak gözlemlendi). get_ticker_historical_prices
+    artık kendi live_fetch parametresini get_tefas_nav'a olduğu gibi aktarmalı —
+    calculate_twrr_and_metrics (HTTP istek yolu) bunu HER ZAMAN False ile çağırır, sadece
+    önbellekten okur, asla canlı ağ isteği tetiklemez. Önbellek ayrı bir arka plan görevi
+    ile doldurulur (bkz. tasks.py refresh_market_history_task / scheduler.py
+    refresh_market_history_job)."""
     captured_kwargs = {}
 
     def fake_get_tefas_nav(ticker, start, end, **kwargs):
@@ -414,6 +416,42 @@ def test_ticker_historical_prices_for_tefas_fund_never_blocks_on_live_fetch(monk
         return pd.Series(dtype=float)
 
     monkeypatch.setattr(services.td, "get_tefas_nav", fake_get_tefas_nav)
-    services.get_ticker_historical_prices("AFA", "fund", date(2026, 7, 1), date(2026, 7, 4))
 
+    services.get_ticker_historical_prices("AFA", "fund", date(2026, 7, 1), date(2026, 7, 4), live_fetch=False)
     assert captured_kwargs.get("live_fetch") is False
+
+    services.get_ticker_historical_prices("AFA", "fund", date(2026, 7, 1), date(2026, 7, 4), live_fetch=True)
+    assert captured_kwargs.get("live_fetch") is True
+
+
+def test_calculate_twrr_never_triggers_live_network_fetch(monkeypatch):
+    """calculate_twrr_and_metrics (performans grafiğinin HTTP istek yolu), hiçbir
+    çağrısında canlı ağ isteği tetiklememeli — hem TEFAS (get_tefas_nav) hem de genel
+    Twelve Data (get_time_series) yolu için. Aksi halde önbelleksiz bir varlık (döviz
+    kuru/benchmark dahil) tüm isteği yavaşlatır/bloke eder."""
+    live_fetch_calls = []
+
+    def fake_get_tefas_nav(ticker, start, end, live_fetch=True):
+        live_fetch_calls.append(("tefas", ticker, live_fetch))
+        import pandas as pd
+        return pd.Series(dtype=float)
+
+    def fake_get_time_series(*a, **kw):
+        live_fetch_calls.append(("twelve_data", a, kw))
+        return []
+
+    monkeypatch.setattr(services.td, "get_tefas_nav", fake_get_tefas_nav)
+    monkeypatch.setattr(services.td, "get_time_series", fake_get_time_series)
+    monkeypatch.setattr(services, "get_transactions", lambda *a, **kw: [
+        {"ticker": "AFA", "asset_class": "TEFAS Fonu", "asset_type": "fund",
+         "transaction_type": "BUY", "quantity": 100, "price": 1.0, "currency": "TRY",
+         "transaction_date": date(2026, 6, 1)},
+    ])
+
+    services.invalidate_twrr_cache()
+    services.calculate_twrr_and_metrics(999999, days=30, currency="TRY")
+
+    # get_time_series HİÇ çağrılmamalı (canlı Twelve Data isteği yok); get_tefas_nav
+    # çağrılabilir ama SADECE live_fetch=False ile.
+    assert all(call[0] != "twelve_data" for call in live_fetch_calls)
+    assert all(call[2] is False for call in live_fetch_calls if call[0] == "tefas")

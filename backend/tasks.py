@@ -14,40 +14,69 @@ def _td_symbol(ticker: str, asset_class: str) -> str:
         return f"{ticker}-USD"
     return ticker
 
-@celery_app.task
-def refresh_tefas_nav_task():
-    """TEFAS fonu tutan pozisyonların NAV geçmişini ARKA PLANDA doldurur/tazeler.
+_ASSET_CLASS_TO_TYPE = {
+    "TEFAS Fonu": "fund",
+    "BIST Hissesi": "stock_tr",
+    "ABD Hisse/ETF": "stock_us",
+    "Kripto": "crypto",
+    "Emtia": "commodity",
+}
 
-    services.get_ticker_historical_prices (performans grafiği), pytefas'ın 27 günlük
-    parçalar halindeki SENKRON scrape'inin (parça başına ~6sn'ye kadar) bir HTTP isteğini
-    dakikalarca bloke etmesini önlemek için get_tefas_nav'ı live_fetch=False ile çağırır —
-    yani SADECE bu görevin önceden doldurduğu önbellekten okur, kendisi asla canlı bir
-    istek içinde ağa gitmez. Bu görev olmadan yeni eklenen bir TEFAS fonu, bu görev bir
-    sonraki çalışmasına kadar performans grafiğinde düz bir çizgi olarak kalır — kabul
-    edilebilir bir gecikme, isteği bloke etmekten çok daha iyi."""
+@celery_app.task
+def refresh_market_history_task():
+    """Performans grafiğinin ihtiyaç duyduğu TÜM tarihsel serileri (döviz kurları,
+    BIST100/S&P500/BTC benchmark'ları, portföydeki her varlığın fiyat geçmişi — TEFAS
+    fonları dahil) ARKA PLANDA doldurur/tazeler.
+
+    services.get_ticker_historical_prices (performans grafiğinin kullandığı yol) artık
+    HER çağrıda live_fetch=False kullanıyor — yani hiçbir dış kaynağa (Twelve Data,
+    Fonoloji, pytefas) canlı ağ isteği ATMIYOR, sadece bu görevin önceden doldurduğu
+    yerel önbellekten okuyor. Bu görev olmadan yeni eklenen/hiç görülmemiş bir varlık,
+    bu görev bir sonraki çalışmasına kadar performans grafiğinde düz bir çizgi olarak
+    kalır — kabul edilebilir bir gecikme, bir HTTP isteğini (TEFAS için dakikalarca,
+    diğerleri için saniyelerce) bloke etmekten çok daha iyi. Bkz. services.py
+    get_ticker_historical_prices docstring'i — bu regresyon production'da canlı olarak
+    gözlemlendi (kullanıcı: "3m-6m-1y-2y hiç sağlıklı çalışmıyor").
+    """
     from datetime import date, timedelta
+    from services import get_ticker_historical_prices
+
+    end = date.today()
+    start = end - timedelta(days=730)  # 2Y grafik aralığını kapsar
+
+    # 1) Döviz kurları ve endeks/kripto benchmark'ları — HER kullanıcının grafiği
+    # bunlara bağımlı, portföyünde ne olursa olsun.
+    universal = [
+        ("USDTRY=X", "exchange_rate"), ("EURTRY=X", "exchange_rate"), ("GBPTRY=X", "exchange_rate"),
+        ("XU100.IS", "index"), ("^GSPC", "index"), ("BTC-USD", "crypto"),
+    ]
+    for ticker, asset_type in universal:
+        try:
+            get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
+        except Exception as u_err:
+            logger.warning(f"[CELERY] Market history refresh failed for '{ticker}': {u_err}")
+
+    # 2) Portföylerdeki her benzersiz varlık.
     db = SessionLocal()
     try:
-        tickers = {
-            p.ticker for p in db.query(DBPosition.ticker)
-            .filter(DBPosition.asset_class == "TEFAS Fonu").distinct().all()
-        }
-        if not tickers:
-            logger.info("[CELERY] No TEFAS positions found for NAV cache refresh.")
-            return
-        logger.info(f"[CELERY] Refreshing TEFAS NAV cache for {len(tickers)} funds.")
-        end = date.today()
-        start = end - timedelta(days=730)  # 2Y grafik aralığını kapsar
-        for ticker in tickers:
-            try:
-                td.get_tefas_nav(ticker, start, end, live_fetch=True)
-            except Exception as t_err:
-                logger.warning(f"[CELERY] TEFAS NAV refresh failed for '{ticker}': {t_err}")
-        logger.info("[CELERY] TEFAS NAV cache refresh complete.")
-    except Exception as e:
-        logger.error(f"[CELERY] TEFAS NAV cache refresh task failed: {e}")
+        rows = db.query(DBPosition.ticker, DBPosition.asset_class).distinct().all()
     finally:
         db.close()
+
+    if not rows:
+        logger.info("[CELERY] No positions found for market history refresh.")
+        return
+
+    logger.info(f"[CELERY] Refreshing market history cache for {len(rows)} ticker/asset_class pairs.")
+    for ticker, asset_class in rows:
+        asset_type = _ASSET_CLASS_TO_TYPE.get(asset_class)
+        if not asset_type:  # Nakit, AMFI Fonu (henüz canlı fiyatlandırma yok) vb.
+            continue
+        try:
+            get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
+        except Exception as t_err:
+            logger.warning(f"[CELERY] Market history refresh failed for '{ticker}': {t_err}")
+    logger.info("[CELERY] Market history cache refresh complete.")
 
 @celery_app.task
 def check_price_alerts_and_rebalancing_task(user_id: int, portfolio: dict):
