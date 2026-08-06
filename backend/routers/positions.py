@@ -28,9 +28,10 @@ def add_position(
     _limit_guard: None = Depends(check_position_limit)
 ):
     """Yeni pozisyon ekle"""
+    created = create_position(user_id, pos, db=db)
     invalidate_twrr_cache()
     invalidate_portfolio_cache(user_id)
-    return create_position(user_id, pos, db=db)
+    return created
 
 @router.get("/{position_id}", response_model=Position)
 def get_pos(
@@ -52,11 +53,11 @@ def update_pos(
     db: Session = Depends(get_db)
 ):
     """Pozisyon güncelle"""
-    invalidate_twrr_cache()
-    invalidate_portfolio_cache(user_id)
     updated = update_position(user_id, position_id, update, db=db)
     if not updated:
         raise HTTPException(status_code=404, detail="Position not found")
+    invalidate_twrr_cache()
+    invalidate_portfolio_cache(user_id)
     return Position(**updated)
 
 @router.delete("/{position_id}")
@@ -68,9 +69,9 @@ def remove_pos(
 ):
     """Pozisyon sil. sell_price verilirse, işlem geçmişine eklenen SELL kaydı gerçek satış
     fiyatıyla yazılır (verilmezse eski davranış: alım fiyatıyla yazılır, geriye dönük uyum)."""
-    invalidate_twrr_cache()
-    invalidate_portfolio_cache(user_id)
     success = delete_position(user_id, position_id, sell_price=sell_price, db=db)
     if not success:
         raise HTTPException(status_code=404, detail="Position not found")
+    invalidate_twrr_cache()
+    invalidate_portfolio_cache(user_id)
     return {"message": "Position deleted"}

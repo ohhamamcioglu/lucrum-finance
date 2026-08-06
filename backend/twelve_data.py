@@ -2976,7 +2976,7 @@ def get_tefas_nav(fund_code: str, start_date: date, end_date: date, live_fetch: 
                                 c.close()
                                 
                     c_curr = c_end + timedelta(days=1)
-                    time.sleep(0.05)
+                    time.sleep(0.3)
             except Exception as e:
                 logging.warning("[TEFAS CACHE] Fetch failed for %s: %s", code, e)
                 

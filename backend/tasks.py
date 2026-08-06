@@ -94,6 +94,14 @@ def refresh_market_history_task(days: int = 100):
             asset_type = _ASSET_CLASS_TO_TYPE.get(asset_class)
             if not asset_type:  # Nakit, AMFI Fonu (henüz canlı fiyatlandırma yok) vb.
                 continue
+            # TEFAS NAV'ı günde bir kez (gece) yayınlanıyor — sık (15dk) geçişte tekrar
+            # tekrar sorgulamanın hiçbir faydası yok, sadece TEFAS'ın scrape kaynağına
+            # (pytefas) gereksiz yük bindirip IP bazlı hız sınırlamasını tetikleme riskini
+            # artırıyor (bkz. get_tefas_nav'daki pytefas parçalı scrape). Bu yüzden TEFAS
+            # fonları sadece günde bir kez çalışan tam-menzilli (days=730) geçişte
+            # yenileniyor.
+            if asset_type == "fund" and days < 365:
+                continue
             try:
                 get_ticker_historical_prices(ticker, asset_type, start, end, live_fetch=True)
             except Exception as t_err:

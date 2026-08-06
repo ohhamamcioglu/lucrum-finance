@@ -1112,14 +1112,23 @@ def get_fund_breakdown(fund_code: str):
     # bir fonun fiyatı (382 TL) döndü. Artık eşleşme yoksa o kind atlanır, asla
     # başka bir fonun verisi kullanılmaz.
     if price is None or not allocation:
-        try:
+        # NOT: pytefas'ın Crawler.fetch()'i kendi başına bir zaman aşımı uygulamıyor —
+        # TEFAS'ın scrape kaynağı yavaşladığında/IP bazlı sınırladığında bu çağrı
+        # dakikalarca (canlıda 154s ölçüldü) askıda kalıp isteği tamamen bloke
+        # edebiliyordu. get_tefas_nav'daki aynı desen (td._tefas_executor + bounded
+        # future.result(timeout=...)) burada da uygulanıyor — zaman aşımında o kind
+        # atlanır, kalan kind'lar/önceden Fonoloji'den gelen kısmi veri kullanılır.
+        for kind in ("YAT", "EMK", "BYF"):
             from pytefas import Crawler
-            c = Crawler()
             today = date.today()
-            for kind in ("YAT", "EMK", "BYF"):
-                if price is None:
-                    info_df = c.fetch(today.isoformat(), today.isoformat(), kind=kind, columns="info", fund_code=code)
-                    if not info_df.empty:
+            if price is None:
+                try:
+                    c = Crawler()
+                    info_df = td._tefas_executor.submit(
+                        c.fetch, today.isoformat(), today.isoformat(),
+                        kind=kind, columns="info", fund_code=code
+                    ).result(timeout=6.0)
+                    if info_df is not None and not info_df.empty:
                         info_sub = info_df[info_df["fund_code"] == code]
                         if not info_sub.empty:
                             info_row = info_sub.sort_values("date").iloc[-1].to_dict()
@@ -1128,9 +1137,16 @@ def get_fund_breakdown(fund_code: str):
                             portfolio_size = portfolio_size or info_row.get("portfolio_size")
                             investor_count = investor_count or info_row.get("investor_count")
                             breakdown_date = breakdown_date or str(info_row.get("date", today))
-                if not allocation:
-                    df = c.fetch(today.isoformat(), today.isoformat(), kind=kind, columns="breakdown", fund_code=code)
-                    if not df.empty:
+                except Exception as e:
+                    logging.warning("[BREAKDOWN] pytefas info fetch failed for %s (%s): %s", code, kind, e)
+            if not allocation:
+                try:
+                    c = Crawler()
+                    df = td._tefas_executor.submit(
+                        c.fetch, today.isoformat(), today.isoformat(),
+                        kind=kind, columns="breakdown", fund_code=code
+                    ).result(timeout=6.0)
+                    if df is not None and not df.empty:
                         sub = df[df["fund_code"] == code]
                         if not sub.empty:
                             row = sub.sort_values("date").iloc[-1].to_dict()
@@ -1140,10 +1156,10 @@ def get_fund_breakdown(fund_code: str):
                                 if val > 0:
                                     allocation.append({"label": label, "pct": round(val, 2)})
                             allocation.sort(key=lambda x: x["pct"], reverse=True)
-                if price is not None and allocation:
-                    break
-        except Exception as e:
-            logging.warning("[BREAKDOWN] pytefas fallback failed for %s: %s", code, e)
+                except Exception as e:
+                    logging.warning("[BREAKDOWN] pytefas breakdown fetch failed for %s (%s): %s", code, kind, e)
+            if price is not None and allocation:
+                break
 
     if fund_name is None and price is None and not allocation:
         raise HTTPException(status_code=404, detail=f"Fon bulunamadı: {fund_code}")
