@@ -606,6 +606,19 @@ def update_position(user_id: int, position_id: int, update: PositionUpdate, db: 
         delta_quantity = fields.pop("delta_quantity", None)
         delta_price = fields.pop("delta_price", None)
 
+        # BUGFIX: buy_price EXPLICIT olarak güncelleniyorsa (top-up/kısmi satış/"Maliyeti
+        # Düzelt") ama cost_basis_tly bu istekte AYRICA verilmemişse, eski cost_basis_tly
+        # STALE kalırdı — services.calculate_portfolio yatırılan tutarı hesaplarken
+        # cost_basis_tly'yi buy_price'tan HER ZAMAN öncelikli kullanıyor (bkz. o dosyadaki
+        # "elle kaydedilmişse o esas alınır" notu). Sonuç: kullanıcı ortalama maliyeti
+        # düzeltse bile (buy_price güncellendiği halde) dashboard'da görüntülenen ortalama
+        # maliyet DEĞİŞMİYORMUŞ gibi görünüyordu — cost_basis_tly hâlâ eski değere işaret
+        # ediyordu. buy_price güncelleniyorsa ve cost_basis_tly bu istekte açıkça
+        # verilmemişse, artık otomatik temizlenir; böylece yeni buy_price gerçek kaynak
+        # haline gelir.
+        if "buy_price" in fields and "cost_basis_tly" not in fields:
+            fields["cost_basis_tly"] = None
+
         # Update fields dynamically
         for key, value in fields.items():
             setattr(pos, key, value)

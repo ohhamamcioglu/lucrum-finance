@@ -231,6 +231,36 @@ def test_correct_avg_cost_updates_price_without_creating_a_transaction(client):
     assert len(txns_after) == 1  # HİÇBİR yeni işlem eklenmedi — sadece kayıt düzeltildi
 
 
+def test_correcting_buy_price_clears_stale_cost_basis_tly(client):
+    """BUGFIX regresyon testi: bir pozisyonda cost_basis_tly (elle girilmiş TL karşılığı)
+    set edilmişse, services.calculate_portfolio yatırılan tutarı hesaplarken bunu
+    buy_price'tan HER ZAMAN öncelikli kullanıyor. Kullanıcı 'Maliyeti Düzelt' ile buy_price'ı
+    güncellese bile, cost_basis_tly aynı istekte AYRICA verilmezse eski (stale) değer
+    kalırdı — dashboard'da ortalama maliyet DEĞİŞMİYORMUŞ gibi görünürdü (kullanıcı: 'yine
+    değişmiyor'). buy_price güncellenirken cost_basis_tly bu istekte açıkça verilmemişse
+    artık otomatik temizlenmeli."""
+    _, user_id = _new_user(client)
+
+    created = crud.create_position(user_id, PositionCreate(
+        ticker="COSTBASIS-TEST",
+        asset_class="ABD Hisse/ETF",
+        quantity=10,
+        buy_price=100.0,
+        buy_date=date.today() - timedelta(days=30),
+        buy_currency="USD",
+        cost_basis_tly=35000.0,  # elle girilmiş, eski/stale TL karşılığı
+    ))
+    assert created.cost_basis_tly == 35000.0
+
+    updated = crud.update_position(user_id, created.id, PositionUpdate(
+        quantity=10, delta_quantity=0, delta_price=90.0, buy_price=90.0,
+        # cost_basis_tly BU İSTEKTE verilmiyor — otomatik temizlenmeli
+    ))
+
+    assert updated["buy_price"] == 90.0
+    assert updated["cost_basis_tly"] is None
+
+
 def test_explicit_buy_date_override_is_respected(client):
     """Frontend top-up sırasında AÇIKÇA bir buy_date gönderirse, otomatik ağırlıklı
     ortalama hesaplaması devre dışı kalmalı (kullanıcının açık isteği önceliklidir)."""
