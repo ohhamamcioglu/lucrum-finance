@@ -329,9 +329,14 @@ export default function DashboardView({
 
   // ── Edit modal ───────────────────────────────────────────────────
   const [editingHolding, setEditingHolding] = useState<EnrichedHolding | null>(null);
-  const [editMode, setEditMode] = useState<'increase' | 'decrease'>('increase');
+  const [editMode, setEditMode] = useState<'increase' | 'decrease' | 'correct'>('increase');
   const [editQty, setEditQty] = useState(0);
   const [editPrice, setEditPrice] = useState(0);
+  // "correct" modu: miktarı DEĞİŞTİRMEDEN sadece ortalama maliyeti düzeltir (ör. hatalı
+  // veri girişi/içe aktarım düzeltmesi) — top-up'ın aksine GERÇEK bir alım/satım işlemi
+  // OLUŞTURMAZ (backend'e delta_quantity=0 gönderilir, crud.update_position bu durumda
+  // işlem geçmişine hiçbir kayıt eklemez).
+  const [editCorrectedAvg, setEditCorrectedAvg] = useState(0);
 
   // ── Detail modal ──────────────────────────────────────────────────
   const [selectedAssetForDetail, setSelectedAssetForDetail] = useState<EnrichedHolding | null>(null);
@@ -421,7 +426,9 @@ export default function DashboardView({
   const editNewTotal = editingHolding
     ? editMode === 'increase'
       ? editingHolding.shares + editQty
-      : Math.max(0, editingHolding.shares - editQty)
+      : editMode === 'decrease'
+        ? Math.max(0, editingHolding.shares - editQty)
+        : editingHolding.shares // 'correct': miktar değişmez
     : 0;
 
   // KRİTİK: editPrice/editNewAvg NATIVE (pozisyonun kendi buyCurrency'si) cinsinden olmalı,
@@ -434,7 +441,9 @@ export default function DashboardView({
   const editingHoldingNativeAvg = editingHolding?.nativeAvgPrice ?? editingHolding?.avgBuyPrice ?? 0;
   const editNewAvg = editingHolding && editMode === 'increase' && editQty > 0 && editNewTotal > 0
     ? (editingHolding.shares * editingHoldingNativeAvg + editQty * editPrice) / editNewTotal
-    : editingHoldingNativeAvg;
+    : editMode === 'correct'
+      ? editCorrectedAvg
+      : editingHoldingNativeAvg;
 
   const handleEditSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -442,13 +451,17 @@ export default function DashboardView({
     // deltaQuantity/deltaPrice, bu düzenlemeyi GERÇEK bir işlem (top-up=BUY, azaltma=SELL)
     // olarak işlem geçmişine ekletmek için — editPrice, artırmada "bu ek payları hangi
     // fiyattan aldın", azaltmada "bu payları hangi fiyattan sattın" anlamına gelir.
-    const deltaQuantity = editMode === 'increase' ? editQty : -editQty;
+    // 'correct' modunda deltaQuantity=0 gönderilir — crud.update_position bu durumda işlem
+    // geçmişine HİÇBİR kayıt eklemez (sadece buy_price alanını düzeltir), çünkü bu gerçek
+    // bir alım/satım değil, veri düzeltmesidir.
+    const deltaQuantity = editMode === 'increase' ? editQty : editMode === 'decrease' ? -editQty : 0;
+    const submitPrice = editMode === 'correct' ? editCorrectedAvg : editPrice;
     onEditHolding(editingHolding.id, {
       symbol: editingHolding.symbol, name: editingHolding.name, category: editingHolding.category,
       sector: editingHolding.sector, shares: editingHolding.shares, avgBuyPrice: editingHolding.avgBuyPrice,
       currentPrice: editingHolding.currentPrice, riskScore: editingHolding.riskScore,
       buyDate: editingHolding.buyDate,
-    }, editNewTotal, editNewAvg, deltaQuantity, editPrice);
+    }, editNewTotal, editNewAvg, deltaQuantity, submitPrice);
     setEditingHolding(null);
   };
 
@@ -458,7 +471,10 @@ export default function DashboardView({
     // yorumu). Ham kayan-nokta değeri (örn. 14.377510000000002) input'a doğrudan konursa
     // kullanıcıya çirkin/okunaksız bir ondalık gösteriyordu, bu yüzden toFixed(4) korunuyor.
     const nativePrice = h.nativeCurrentPrice ?? h.currentPrice;
-    setEditingHolding(h); setEditMode('increase'); setEditQty(0); setEditPrice(Number(nativePrice.toFixed(4)));
+    const nativeAvg = h.nativeAvgPrice ?? h.avgBuyPrice;
+    setEditingHolding(h); setEditMode('increase'); setEditQty(0);
+    setEditPrice(Number(nativePrice.toFixed(4)));
+    setEditCorrectedAvg(Number(nativeAvg.toFixed(4)));
   };
 
   // ── Add modal helpers ────────────────────────────────────────────
@@ -1216,25 +1232,27 @@ export default function DashboardView({
 
                 {/* Mode toggle */}
                 <div className="flex gap-2">
-                  {(['increase', 'decrease'] as const).map(m => (
+                  {(['increase', 'decrease', 'correct'] as const).map(m => (
                     <button key={m} type="button" onClick={() => { setEditMode(m); setEditQty(0); }}
-                      className={`flex-1 py-2 rounded-lg border text-xs font-bold uppercase tracking-widest transition-all ${editMode === m ? (m === 'increase' ? 'bg-[#8C9A86] text-white border-[#8C9A86]' : 'bg-[#B5836F] text-white border-[#B5836F]') : 'bg-[#F1EFE9] text-[#6B645E] border-[#E8E2D9] hover:bg-[#E8E2D9]'}`}>
-                      {m === 'increase' ? `+ ${t.addMore}` : `− ${t.reducePosition}`}
+                      className={`flex-1 py-2 rounded-lg border text-[11px] font-bold uppercase tracking-wide transition-all ${editMode === m ? (m === 'increase' ? 'bg-[#8C9A86] text-white border-[#8C9A86]' : m === 'decrease' ? 'bg-[#B5836F] text-white border-[#B5836F]' : 'bg-[#6B8CAE] text-white border-[#6B8CAE]') : 'bg-[#F1EFE9] text-[#6B645E] border-[#E8E2D9] hover:bg-[#E8E2D9]'}`}>
+                      {m === 'increase' ? `+ ${t.addMore}` : m === 'decrease' ? `− ${t.reducePosition}` : t.correctAvgCost}
                     </button>
                   ))}
                 </div>
 
-                {/* Qty */}
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5">
-                    {editMode === 'increase' ? t.additionalQtyLabel : t.reduceQtyLabel}
-                  </label>
-                  <input type="number" step="any" min="0.0001"
-                    max={editMode === 'decrease' ? editingHolding.shares : undefined}
-                    required value={editQty || ''}
-                    onChange={e => setEditQty(Number(e.target.value))}
-                    className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
-                </div>
+                {/* Qty (increase/decrease only — 'correct' miktarı değiştirmez) */}
+                {editMode !== 'correct' && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5">
+                      {editMode === 'increase' ? t.additionalQtyLabel : t.reduceQtyLabel}
+                    </label>
+                    <input type="number" step="any" min="0.0001"
+                      max={editMode === 'decrease' ? editingHolding.shares : undefined}
+                      required value={editQty || ''}
+                      onChange={e => setEditQty(Number(e.target.value))}
+                      className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#8C9A86] focus:border-[#8C9A86] font-mono font-medium" />
+                  </div>
+                )}
 
                 {/* Price (increase only) */}
                 {editMode === 'increase' && (
@@ -1246,16 +1264,29 @@ export default function DashboardView({
                   </div>
                 )}
 
+                {/* Yeni ortalama maliyet (correct only) — miktar/işlem geçmişi ETKİLENMEZ */}
+                {editMode === 'correct' && (
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#9E958C] mb-1.5">{t.correctedAvgCostLabel} ({editingHolding.buyCurrency || settings.baseCurrency})</label>
+                    <input type="number" step="any" min="0.0001" required value={editCorrectedAvg || ''}
+                      onChange={e => setEditCorrectedAvg(Number(e.target.value))}
+                      className="w-full bg-white border border-[#E8E2D9] text-sm text-[#2D2926] rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#6B8CAE] focus:border-[#6B8CAE] font-mono font-medium" />
+                    <p className="text-[10px] text-[#9E958C] mt-1.5">{t.correctAvgCostHint}</p>
+                  </div>
+                )}
+
                 {/* Live preview */}
-                {editQty > 0 && (
+                {(editQty > 0 || (editMode === 'correct' && editCorrectedAvg > 0 && editCorrectedAvg !== editingHoldingNativeAvg)) && (
                   <div className="bg-[#F1EFE9] border border-[#E8E2D9] rounded-xl p-4 grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-[10px] text-[#9E958C] font-semibold">{t.newTotalQtyLabel}</div>
-                      <div className={`text-sm font-mono font-bold ${editMode === 'increase' ? 'text-[#7A8874]' : 'text-[#B5836F]'}`}>
-                        {editNewTotal.toLocaleString('tr-TR', { maximumFractionDigits: 4 })}
+                    {editMode !== 'correct' && (
+                      <div>
+                        <div className="text-[10px] text-[#9E958C] font-semibold">{t.newTotalQtyLabel}</div>
+                        <div className={`text-sm font-mono font-bold ${editMode === 'increase' ? 'text-[#7A8874]' : 'text-[#B5836F]'}`}>
+                          {editNewTotal.toLocaleString('tr-TR', { maximumFractionDigits: 4 })}
+                        </div>
                       </div>
-                    </div>
-                    {editMode === 'increase' && editQty > 0 && (
+                    )}
+                    {(editMode === 'increase' || editMode === 'correct') && (
                       <div>
                         <div className="text-[10px] text-[#9E958C] font-semibold">{t.newAvgPriceLabel} ({editingHolding.buyCurrency || settings.baseCurrency})</div>
                         <div className="text-sm font-mono font-bold text-[#8C9A86]">{formatCurrency(editNewAvg, editingHolding.buyCurrency || settings.baseCurrency)}</div>
@@ -1277,7 +1308,7 @@ export default function DashboardView({
                     className="px-5 py-2 border border-[#E8E2D9] text-xs font-bold text-[#6B645E] rounded-full hover:bg-[#F1EFE9] transition-all">
                     {t.cancel}
                   </button>
-                  <button type="submit" disabled={editQty <= 0}
+                  <button type="submit" disabled={editMode === 'correct' ? editCorrectedAvg <= 0 : editQty <= 0}
                     className="px-6 py-2.5 bg-[#8C9A86] hover:bg-[#7A8874] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-full uppercase tracking-widest transition-all shadow-sm">
                     {t.confirmEdit}
                   </button>

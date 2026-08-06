@@ -101,6 +101,9 @@ const en = {
   confirmEdit: 'Confirm Changes',
   currentPositionLabel: 'Current Position',
   sellAll: 'Sell All (Close Position)',
+  correctAvgCost: 'Correct Cost',
+  correctedAvgCostLabel: 'New Average Cost',
+  correctAvgCostHint: 'This only corrects the recorded cost basis — it does not create a real buy/sell transaction and does not change your transaction history.',
 
   // Import (CSV/Excel)
   importFromFile: 'Import from File',
@@ -647,6 +650,9 @@ const tr: typeof en = {
   confirmEdit: 'Değişiklikleri Onayla',
   currentPositionLabel: 'Mevcut Pozisyon',
   sellAll: 'Tamamını Sat (Pozisyonu Kapat)',
+  correctAvgCost: 'Maliyeti Düzelt',
+  correctedAvgCostLabel: 'Yeni Ortalama Maliyet',
+  correctAvgCostHint: 'Bu sadece kayıtlı maliyet bazını düzeltir — gerçek bir alım/satım işlemi oluşturmaz, işlem geçmişinizi değiştirmez.',
 
   // İçe Aktarma (CSV/Excel)
   importFromFile: 'Dosyadan İçe Aktar',

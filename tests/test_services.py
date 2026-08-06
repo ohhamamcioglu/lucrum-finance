@@ -198,6 +198,39 @@ def test_partial_sell_does_not_recalculate_buy_date(client):
     assert updated["buy_date"] == old_buy_date
 
 
+def test_correct_avg_cost_updates_price_without_creating_a_transaction(client):
+    """YENİ ÖZELLİK: pozisyon düzenleme ekranındaki 'Maliyeti Düzelt' modu — miktarı
+    DEĞİŞTİRMEDEN sadece ortalama maliyeti düzeltir (ör. hatalı veri girişi/içe aktarım
+    düzeltmesi). Frontend bunu delta_quantity=0 ile gönderir; bu, top-up/kısmi satıştan
+    farklı olarak GERÇEK bir alım/satım işlemi OLUŞTURMAMALI — sadece buy_price alanını
+    günceller, işlem geçmişi (transactions) tablosuna hiçbir yeni kayıt eklenmemeli."""
+    _, user_id = _new_user(client)
+
+    created = crud.create_position(user_id, PositionCreate(
+        ticker="DUZELT-TEST",
+        asset_class="BIST Hissesi",
+        quantity=100,
+        buy_price=50.0,
+        buy_date=date.today() - timedelta(days=30),
+        buy_currency="TRY",
+    ))
+    txns_before = crud.get_transactions(user_id, ticker="DUZELT-TEST")
+    assert len(txns_before) == 1  # create_position'ın kendi BUY kaydı
+
+    updated = crud.update_position(user_id, created.id, PositionUpdate(
+        quantity=100,  # değişmiyor
+        delta_quantity=0,
+        delta_price=42.5,
+        buy_price=42.5,  # düzeltilmiş ortalama maliyet
+    ))
+
+    assert updated["quantity"] == 100
+    assert updated["buy_price"] == 42.5
+
+    txns_after = crud.get_transactions(user_id, ticker="DUZELT-TEST")
+    assert len(txns_after) == 1  # HİÇBİR yeni işlem eklenmedi — sadece kayıt düzeltildi
+
+
 def test_explicit_buy_date_override_is_respected(client):
     """Frontend top-up sırasında AÇIKÇA bir buy_date gönderirse, otomatik ağırlıklı
     ortalama hesaplaması devre dışı kalmalı (kullanıcının açık isteği önceliklidir)."""
