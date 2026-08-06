@@ -113,14 +113,15 @@ _BREAKDOWN_LABEL_MAP = {
     "other_pct": "Diğer",
 }
 
-# Fonoloji'nin /funds/{code} portfolio alanı pytefas'tan daha sade (8 kategori);
-# sadece pytefas breakdown alınamadığında yedek olarak kullanılır.
+# BUGFIX: Fonoloji canlı OpenAPI şeması (fonoloji.com/v1/openapi.json) doğrulandı —
+# /funds/{code}'un inline "portfolio" alanı artık SADECE 5 kategori döndürüyor
+# (eskiden 8'di, treasury_bill/corporate_bond/eurobond API'den tamamen kaldırılmış —
+# muhtemelen ayrı, daha detaylı /funds/{code}/portfolio ucuna taşındılar). Eski map'te
+# hâlâ duran 3 ölü anahtar sessizce hiç eşleşmiyordu (portfolio.get(col, 0) → 0 →
+# filtrelenip atılıyordu, çökme yoktu ama yanıltıcıydı) — kaldırıldı.
 _FONOLOJI_BREAKDOWN_LABEL_MAP = {
     "stock": "Hisse Senedi",
     "government_bond": "Devlet Tahvili",
-    "treasury_bill": "Hazine Bonosu",
-    "corporate_bond": "Özel Sektör Tahvili",
-    "eurobond": "Eurobond",
     "gold": "Altın",
     "cash": "Nakit",
     "other": "Diğer",

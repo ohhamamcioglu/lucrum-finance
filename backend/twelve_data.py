@@ -742,7 +742,14 @@ def seed_tefas_fund_catalog() -> int:
     rows: list[tuple] = []
 
     if FONOLOJI_API_KEY:
-        offset, page_size, total = 0, 1000, None
+        # BUGFIX: Fonoloji'nin canlı OpenAPI şeması (fonoloji.com/v1/openapi.json)
+        # doğrulandı — /funds'ta limit artık en fazla 500 (eskiden burada 1000
+        # isteniyordu, API'nin güncel sınırını aşıyordu). Ayrıca yeni bir kota sistemi
+        # var: dönen HER FON KAYDI 1 kota düşer, kota tükenirse istek reddedilmez ama
+        # `_meta.capped=true` ile eksik/kısıtlı sonuç döner — bu durumda `total`'a kadar
+        # döngüye devam etmek (offset hep artarken items hep boş dönerdi) anlamsız,
+        # kalan kotanın bittiğini görünce döngüden çıkılmalı.
+        offset, page_size, total = 0, 500, None
         while total is None or offset < total:
             data = _fonoloji_api("/funds", {"limit": page_size, "offset": offset})
             if not data:
@@ -760,7 +767,10 @@ def seed_tefas_fund_catalog() -> int:
                     it.get("type") or "Fund", "TR", "", "", ts, it.get("risk_score")
                 ))
             offset += page_size
-            if not items:
+            if not items or (data.get("_meta") or {}).get("capped"):
+                if (data.get("_meta") or {}).get("capped"):
+                    logging.warning("[CATALOG] Fonoloji /funds kota sınırına takıldı (_meta.capped) — "
+                                     "katalog kısmi kalabilir, kalanı pytefas'a düşülecek.")
                 break
         if not rows:
             logging.warning("[CATALOG] Fonoloji /funds boş/başarısız döndü, pytefas'a düşülüyor.")
