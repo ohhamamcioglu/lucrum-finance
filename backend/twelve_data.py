@@ -2946,7 +2946,19 @@ def get_tefas_nav(fund_code: str, start_date: date, end_date: date, live_fetch: 
                     # loglayıp bu fonun kalan aralıklarını atlayarak bir sonraki fona geçiyor.
                     # Arka plandaki yavaş istek pool'da kendi başına bitmeye devam eder,
                     # sonucu zaten kullanılmayacağı için beklenmiyor.
-                    df = future.result(timeout=6.0)
+                    #
+                    # 120s zaman aşımı bilinçli olarak yüksek: TEFAS'ın kendi API'si
+                    # dakikada 6 istekle sınırlı (pytefas/_ratelimit.py) ve 429 aldığında
+                    # pytefas KENDİ İÇİNDE doğru şekilde geri çekilip yeniden deniyor
+                    # (reset header'ına göre, en kötü senaryoda ~30s × birkaç deneme).
+                    # Bu fonksiyona canlı bir HTTP isteği artık ASLA live_fetch=True ile
+                    # gelmiyor (bkz. get_tefas_current_price/get_ticker_historical_prices
+                    # docstring'leri — tek canlı çağıran arka plan görevi) — o yüzden burada
+                    # pytefas'ın kendi backoff'unu KESMEK yerine tamamlamasına izin vermek
+                    # daha doğru; önceki 6s'lik kısa zaman aşımı rate-limit'e takılan fonları
+                    # gereksiz yere "başarısız" işaretleyip atlıyordu ("bazısı geliyor bazısı
+                    # gelmiyor" şikayetinin kök nedeni).
+                    df = future.result(timeout=120.0)
 
                     if df is not None and not df.empty:
                         db_rows = []
@@ -3006,13 +3018,24 @@ def get_tefas_risk_score(fund_code: str) -> Optional[float]:
     return float(risk) if risk is not None else None
 
 
-def get_tefas_current_price(fund_code: str) -> Optional[float]:
-    """TEFAS fonunun en güncel fiyatını döner. 1 günlük cache."""
+def get_tefas_current_price(fund_code: str, live_fetch: bool = True) -> Optional[float]:
+    """TEFAS fonunun en güncel fiyatını döner. 1 günlük cache.
+
+    live_fetch=False: TEFAS'ın kendi API'si dakikada 6 istek ile sınırlı (bkz.
+    pytefas/_ratelimit.py). Portföydeki HER TEFAS fonu için bu fonksiyon canlı bir
+    HTTP isteği içinde PARALEL çağrıldığında (services.batch_fetch_prices) bu limit
+    anında aşılıyor — bazı fonlar 429 alıyor, pytefas kendi içinde geri çekilmeye
+    çalışıyor ama get_tefas_nav'daki dış zaman aşımı bunu kesiyor, sonuç: "bazısı
+    geliyor bazısı gelmiyor". TEFAS NAV zaten günde bir kez yayınlanıyor — canlı
+    istek yolunun ANLIK olarak daha güncel bir fiyat elde etmesi mümkün değil, o
+    yüzden canlı HTTP istek yolu (services.get_current_price/batch_fetch_prices)
+    live_fetch=False kullanmalı; önbellek SADECE arka plan işinde (bkz.
+    tasks.refresh_market_history_task), tek seferde/seri olarak doldurulur."""
     from datetime import timedelta
     code = fund_code.upper().strip()
     today = date.today()
     yesterday = today - timedelta(days=5)
-    
+
     with _db_lock:
         c = _conn()
         row = c.execute(
@@ -3020,10 +3043,13 @@ def get_tefas_current_price(fund_code: str) -> Optional[float]:
             (code,)
         ).fetchone()
         c.close()
-        
+
     if row and _fresh(row["fetched_at"], TTL_TEFAS_NAV):
         return row["price"]
-        
+
+    if not live_fetch:
+        return row["price"] if row else None
+
     series = get_tefas_nav(code, yesterday, today)
     if not series.empty:
         return float(series.iloc[-1])

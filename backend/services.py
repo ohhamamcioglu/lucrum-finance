@@ -124,12 +124,19 @@ def get_price_currency(asset_class: str) -> str:
     return "USD"
 
 
-def get_current_price(ticker: str, asset_class: str) -> Optional[float]:
-    """Guncel fiyat al (yfinance / CoinMarketCap / pytefas)"""
+def get_current_price(ticker: str, asset_class: str, live_fetch: bool = True) -> Optional[float]:
+    """Guncel fiyat al (yfinance / CoinMarketCap / pytefas)
+
+    live_fetch: sadece TEFAS Fonu için anlamlı. TEFAS'ın kendi API'si dakikada 6
+    istekle sınırlı — dashboard yüklemesi (calculate_portfolio'nun batch_fetch_prices
+    ve tek-tek fallback yolları) portföydeki HER TEFAS fonu için bunu çağırdığında
+    limit anında aşılıp bazı fonların fiyatı gelmiyordu ("bazısı geliyor bazısı
+    gelmiyor"). Bu yollar live_fetch=False geçmeli; önbellek arka plan işinde
+    (tasks.refresh_market_history_task) günde bir kez seri olarak doldurulur."""
     global _tefas_cache, _tefas_cache_date
     try:
         if asset_class == "TEFAS Fonu":
-            return td.get_tefas_current_price(ticker)
+            return td.get_tefas_current_price(ticker, live_fetch=live_fetch)
 
         elif asset_class == "BIST Hissesi":
             return td.get_price(ticker)
@@ -552,7 +559,7 @@ def batch_fetch_prices(positions: List[Dict]) -> tuple[Dict[str, float], Dict[st
         from concurrent.futures import ThreadPoolExecutor
         def _fetch_one_tefas(code):
             try:
-                price = td.get_tefas_current_price(code)
+                price = td.get_tefas_current_price(code, live_fetch=False)
                 chg = td.get_tefas_daily_change_pct(code) if price is not None else None
                 return code, price, chg
             except Exception as e:
@@ -678,7 +685,7 @@ def calculate_portfolio(user_id: int, bypass_cache: bool = False) -> Dict:
             # Stocks, funds, crypto, paper commodities
             current_price = batch_prices.get(ticker)
             if current_price is None:
-                current_price = get_current_price(ticker, asset_class)
+                current_price = get_current_price(ticker, asset_class, live_fetch=False)
             price_currency = get_price_currency(asset_class)
 
         buy_date_str = buy_date if isinstance(buy_date, str) else str(buy_date)
